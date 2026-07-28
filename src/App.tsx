@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import type { SessionMode } from './types';
 import { getSession, setSession, clearSession } from './auth';
 import type { Session } from './auth';
@@ -51,25 +52,48 @@ export default function App() {
   };
 
   // ── Not logged in ─────────────────────────────────────────────────────────
-  if (!session) return <Login onLogin={handleLogin} />;
+  if (!session) return (
+    <>
+      <Login onLogin={handleLogin} />
+      <Analytics />
+    </>
+  );
 
   // ── Parent view ───────────────────────────────────────────────────────────
-  if (session.role === 'parent') return <ParentDashboard onLogout={handleLogout} />;
+  if (session.role === 'parent') return (
+    <>
+      <ParentDashboard onLogout={handleLogout} />
+      <Analytics />
+    </>
+  );
 
   // ── Kid: full-screen pages (no nav) ───────────────────────────────────────
   if (page.tag === 'practice') {
     return (
-      <Practice
-        mode={page.mode}
-        initialLevelSlice={page.levelSlice}
-        initialDifficulty={page.difficulty}
-        onExit={() => setPage({ tag: 'home' })}
-        onComplete={() => setPage({ tag: 'home' })}
-      />
+      <>
+        <Practice
+          mode={page.mode}
+          initialLevelSlice={page.levelSlice}
+          initialDifficulty={page.difficulty}
+          onExit={() => setPage({ tag: 'home' })}
+          onComplete={() => setPage({ tag: 'home' })}
+        />
+        <Analytics />
+      </>
     );
   }
-  if (page.tag === 'conversation') return <Conversation onBack={() => setPage({ tag: 'home' })} />;
-  if (page.tag === 'journal')      return <Journal onBack={() => setPage({ tag: 'home' })} />;
+  if (page.tag === 'conversation') return (
+    <>
+      <Conversation onBack={() => setPage({ tag: 'home' })} />
+      <Analytics />
+    </>
+  );
+  if (page.tag === 'journal') return (
+    <>
+      <Journal onBack={() => setPage({ tag: 'home' })} />
+      <Analytics />
+    </>
+  );
 
   // ── Kid: main tabbed view ─────────────────────────────────────────────────
   const initial = session.username[0]?.toUpperCase() ?? '?';
@@ -129,6 +153,8 @@ export default function App() {
           onLogout={handleLogout}
         />
       )}
+
+      <Analytics />
     </div>
   );
 }
