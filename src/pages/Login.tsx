@@ -101,8 +101,6 @@ function SetupForm({ onDone }: { onDone: () => void }) {
     onDone();
   };
 
-  const stepLabels = ['Student account', 'Parent account', 'Daily goal'];
-
   return (
     <div className="space-y-5">
       <div>
