@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyUser } from '../server/verifyUser';
-import { supabaseAdmin } from '../server/supabaseAdmin';
+import { verifyUser } from '../server/verifyUser.js';
+import { supabaseAdmin } from '../server/supabaseAdmin.js';
 
 const DEFAULT_LEVELS = { social: 2, nonverbal: 2, inference: 2 };
 const DEFAULT_STREAKS = {

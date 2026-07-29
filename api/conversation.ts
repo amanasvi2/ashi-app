@@ -1,5 +1,5 @@
-import { verifyUser } from '../server/verifyUser';
-import { groqChatStream, type ChatMessage } from '../server/groq';
+import { verifyUser } from '../server/verifyUser.js';
+import { groqChatStream, type ChatMessage } from '../server/groq.js';
 
 // Edge runtime so we can stream the response straight through to the
 // browser instead of buffering the whole reply.

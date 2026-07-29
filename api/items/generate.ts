@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyUser } from '../../server/verifyUser';
-import { groqChat } from '../../server/groq';
-import { supabaseAsUser } from '../../server/asUser';
-import { deriveItemTypeWeights } from '../../server/skillMapping';
+import { verifyUser } from '../../server/verifyUser.js';
+import { groqChat } from '../../server/groq.js';
+import { supabaseAsUser } from '../../server/asUser.js';
+import { deriveItemTypeWeights } from '../../server/skillMapping.js';
 import type { Item, SessionMode, DifficultyState, Difficulty, ItemType } from '../../src/types';
 
 function difficultyLabel(d: Difficulty): string {

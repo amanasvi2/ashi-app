@@ -1,5 +1,5 @@
 import type { ItemType } from '../src/types';
-import { isActionableFocusSkill, type ActionableFocusSkillId } from '../src/skills';
+import { isActionableFocusSkill, type ActionableFocusSkillId } from '../src/skills.js';
 
 const ITEM_TYPES: ItemType[] = ['social', 'nonverbal', 'inference'];
 

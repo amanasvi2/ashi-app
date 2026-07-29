@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyUser } from '../../server/verifyUser';
-import { supabaseAsUser } from '../../server/asUser';
-import { validateStudentProfile } from '../../src/profileValidation';
+import { verifyUser } from '../../server/verifyUser.js';
+import { supabaseAsUser } from '../../server/asUser.js';
+import { validateStudentProfile } from '../../src/profileValidation.js';
 import type { StudentProfileInput } from '../../src/profileTypes';
 
 // Uses the caller's own token (not the service-role client) — RLS's

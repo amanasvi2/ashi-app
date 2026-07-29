@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { supabaseAdmin } from '../server/supabaseAdmin';
+import { supabaseAdmin } from '../server/supabaseAdmin.js';
 
 // Kids only have a username, not an email, so Supabase Auth's own
 // signInWithPassword can't be called directly from the client. This looks

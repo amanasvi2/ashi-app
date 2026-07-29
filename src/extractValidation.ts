@@ -1,5 +1,5 @@
-import { isValidSkillId, isValidSupportId } from './skills';
-import { MAX_FOCUS_SKILLS } from './profileValidation';
+import { isValidSkillId, isValidSupportId } from './skills.js';
+import { MAX_FOCUS_SKILLS } from './profileValidation.js';
 import type { ExtractedProfileDraft } from './profileTypes';
 
 function emptyDraft(): ExtractedProfileDraft {

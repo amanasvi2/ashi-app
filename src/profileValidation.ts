@@ -1,5 +1,5 @@
 import type { StudentProfileInput } from './profileTypes';
-import { isValidSkillId, isValidSupportId } from './skills';
+import { isValidSkillId, isValidSupportId } from './skills.js';
 
 export interface ValidationResult {
   valid: boolean;

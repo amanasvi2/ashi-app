@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyUser } from '../../server/verifyUser';
-import { groqChat } from '../../server/groq';
-import { SKILLS, SUPPORTS } from '../../src/skills';
-import { sanitizeExtractedDraft } from '../../src/extractValidation';
+import { verifyUser } from '../../server/verifyUser.js';
+import { groqChat } from '../../server/groq.js';
+import { SKILLS, SUPPORTS } from '../../src/skills.js';
+import { sanitizeExtractedDraft } from '../../src/extractValidation.js';
 
 function buildPrompt(description: string): string {
   const skillLines = SKILLS.map(s => `${s.id}: ${s.label}`).join('\n');
