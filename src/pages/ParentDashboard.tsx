@@ -6,12 +6,26 @@ import {
   parentJournalWrittenToday, parentJournalActivity,
   loadConfig, saveConfig, loadCoins,
   loadCustomRewards, addCustomReward, deleteCustomReward,
-  loadFloorAlarms, initialDifficulty,
+  loadFloorAlarms, loadStudentProfile, initialDifficulty,
 } from '../storage';
 import type { ItemType } from '../types';
+import type { StudentProfileInput } from '../profileTypes';
+import { skillById, supportById, isActionableFocusSkill, type ActionableFocusSkillId } from '../skills';
 
 const TYPE_LABELS: Record<ItemType, string> = {
   social: 'Social Problems', nonverbal: 'Nonverbal Cues', inference: 'Text Inference',
+};
+
+// Display-only mirror of server/skillMapping.ts's weight table — which
+// item types a focus skill feeds, in plain words for the parent
+// explanation. Not the source of truth for actual generation weights.
+const SKILL_FEEDS_TYPES: Record<ActionableFocusSkillId, ItemType[]> = {
+  identify_problem_and_solutions: ['social'],
+  perspective_taking: ['social', 'inference'],
+  nonverbal_cues: ['nonverbal'],
+  inference_from_text: ['inference'],
+  main_idea_summarizing: ['inference'],
+  nonliteral_language: ['inference'],
 };
 import type { StudentSummary } from '../students';
 import { LoadingScreen } from '../components/LoadingScreen';
@@ -61,6 +75,7 @@ export function ParentDashboard({ onLogout, student }: Props) {
   const [journalToday, setJournalToday]   = useState(false);
   const [activityDays, setActivityDays]   = useState<{ date: string; hasEntry: boolean }[]>([]);
   const [floorAlarms, setFloorAlarms]     = useState<Record<ItemType, boolean>>({ social: false, nonverbal: false, inference: false });
+  const [profile, setProfile]             = useState<StudentProfileInput | null>(null);
 
   const [showAddReward, setShowAddReward] = useState(false);
   const [newLabel, setNewLabel] = useState('');
@@ -70,13 +85,14 @@ export function ParentDashboard({ onLogout, student }: Props) {
 
   useEffect(() => {
     (async () => {
-      const [s, l, d, c, cfg, rewards, jToday, days, alarms] = await Promise.all([
+      const [s, l, d, c, cfg, rewards, jToday, days, alarms, prof] = await Promise.all([
         loadSessions(), loadLevelSlice(), loadDifficulty(), loadCoins(), loadConfig(),
         loadCustomRewards(), parentJournalWrittenToday(student.id), parentJournalActivity(student.id, 7),
-        loadFloorAlarms(student.id),
+        loadFloorAlarms(student.id), loadStudentProfile(student.id),
       ]);
       setSessions(s); setLevelSlice(l); setDifficulty(d); setCoins(c); setConfig(cfg);
       setCustomRewards(rewards); setJournalToday(jToday); setActivityDays(days); setFloorAlarms(alarms);
+      setProfile(prof);
       setLoading(false);
     })();
   }, [student.id]);
@@ -295,6 +311,94 @@ export function ParentDashboard({ onLogout, student }: Props) {
             })}
           </div>
         </section>
+
+        {/* How this is tailored — plain-language explanation of the profile */}
+        {/* the parent gave at intake, and what it actually changes in the app */}
+        {profile && (
+          <section>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+              How this is tailored to {kidName}
+            </h2>
+            <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-5">
+              <p className="text-sm text-slate-600">
+                This comes from what you told us about {kidName} when you set up her profile.
+                It shapes which kinds of questions she gets and how much support she starts with.
+              </p>
+
+              {profile.focus.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 mb-2">Focus areas</p>
+                  <div className="space-y-2">
+                    {profile.focus.map(id => {
+                      const label = skillById(id)?.label ?? id;
+                      const actionable = isActionableFocusSkill(id);
+                      const types = actionable ? SKILL_FEEDS_TYPES[id] : [];
+                      return (
+                        <div key={id} className="flex items-start justify-between gap-3">
+                          <span className="text-sm text-slate-700">{label}</span>
+                          {actionable ? (
+                            <span className="text-xs text-slate-400 text-right shrink-0">
+                              More {types.map(t => TYPE_LABELS[t]).join(' & ')}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-amber-600 text-right shrink-0">
+                              Not in practice sessions yet
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {profile.strengths.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 mb-2">Strengths</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.strengths.map(id => (
+                      <span key={id} className="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                        {skillById(id)?.label ?? id}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {profile.supports.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 mb-2">Supports we use</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.supports.map(id => (
+                      <span key={id} className="text-xs text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full">
+                        {supportById(id)?.label ?? id}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {profile.interests.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 mb-2">Interests</p>
+                  <p className="text-xs text-slate-500 mb-2">Used to make scenarios feel more familiar to her.</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.interests.map(interest => (
+                      <span key={interest} className="text-xs text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+                        {interest}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <p className="text-xs text-slate-400 pt-1 border-t border-slate-50">
+                The support level and question difficulty shown above adjust automatically based on
+                how {kidName} is doing — you don't need to change anything here as she improves.
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Recent sessions */}
         {sessions.length > 0 && (

@@ -7,6 +7,7 @@ import type {
 } from './types';
 import type { LevelSlice, PersistedLevelState } from './adaptiveEngine';
 import { initialPersistedLevelState, resolveSessionStart } from './adaptiveEngine';
+import type { StudentProfileInput } from './profileTypes';
 
 async function currentUserId(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -165,6 +166,28 @@ export async function loadFloorAlarms(studentId: string): Promise<Record<ItemTyp
     .eq('student_id', studentId)
     .maybeSingle();
   return data?.floor_alarm ?? DEFAULT_FLAGS;
+}
+
+// Same explicit-studentId reasoning as loadFloorAlarms above — the parent
+// dashboard reads this about their child, not about the signed-in user.
+export async function loadStudentProfile(studentId: string): Promise<StudentProfileInput | null> {
+  const { data } = await supabase
+    .from('student_profiles')
+    .select('display_name, grade, reading_level, strengths, focus, supports, session_length_min, interests')
+    .eq('student_id', studentId)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    display_name: data.display_name,
+    grade: data.grade,
+    reading_level: data.reading_level,
+    strengths: data.strengths ?? [],
+    focus: data.focus ?? [],
+    supports: data.supports ?? [],
+    session_length_min: data.session_length_min,
+    interests: data.interests ?? [],
+  };
 }
 
 // One row per answered item — feeds the rolling-window calculations above.
