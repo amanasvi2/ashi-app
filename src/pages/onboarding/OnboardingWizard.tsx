@@ -84,7 +84,8 @@ export function OnboardingWizard({ parentId, onDone }: Props) {
       setExtractedText(text);
       setDraft(result);
       setStep(2);
-    } catch {
+    } catch (err) {
+      console.error('IEP analyze failed:', err);
       setError('Something went wrong reading that IEP. You can try again or paste the text instead.');
     } finally {
       setAnalyzing(false);
@@ -141,7 +142,8 @@ export function OnboardingWizard({ parentId, onDone }: Props) {
       }
 
       onDone(student);
-    } catch {
+    } catch (err) {
+      console.error('Create student failed:', err);
       setError('Could not create the account — that username might already be taken.');
     } finally {
       setCreating(false);

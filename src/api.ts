@@ -13,7 +13,10 @@ export async function callApi<T>(path: string, body: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(`${path} failed: ${res.status} ${body?.error ?? ''}`);
+  }
   return res.json();
 }
 
