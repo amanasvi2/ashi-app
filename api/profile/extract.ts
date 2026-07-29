@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyUser } from '../../server/verifyUser.js';
-import { groqChat } from '../../server/groq.js';
+import { groqChat, GroqRequestError } from '../../server/groq.js';
 import { SKILLS, SUPPORTS } from '../../src/skills.js';
 import { sanitizeExtractedDraft } from '../../src/extractValidation.js';
 
@@ -64,10 +64,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         temperature: 0.3,
         maxTokens: 1024,
       });
-    } catch {
+    } catch (err) {
       // Genuine infra failure (Groq unreachable, auth, rate limit, etc) —
-      // surface an error the parent can retry.
-      console.error('Profile extraction: Groq request failed');
+      // surface an error the parent can retry. Only the numeric status is
+      // ever logged — never the error's own text — since a number can't
+      // leak request or response content.
+      const status = err instanceof GroqRequestError ? err.status : 'unknown';
+      console.error('Profile extraction: Groq request failed, status:', status);
       return res.status(502).json({ error: 'Could not reach the extraction service' });
     }
 

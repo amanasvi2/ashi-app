@@ -11,6 +11,17 @@ export interface ChatMessage {
   content: string;
 }
 
+// Carries only the numeric HTTP status — a number can never leak request or
+// response content, so this is always safe to log even for endpoints (like
+// profile extraction) that must never log the underlying request text.
+export class GroqRequestError extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`Groq request failed with status ${status}`);
+    this.status = status;
+  }
+}
+
 export async function groqChat(
   messages: ChatMessage[],
   opts: { temperature?: number; maxTokens?: number } = {},
@@ -29,7 +40,7 @@ export async function groqChat(
     }),
   });
 
-  if (!res.ok) throw new Error(`Groq request failed: ${res.status} ${await res.text()}`);
+  if (!res.ok) throw new GroqRequestError(res.status);
 
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   return json.choices?.[0]?.message?.content ?? '';
