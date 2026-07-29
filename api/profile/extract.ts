@@ -70,9 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // ever logged — never the error's own text — since a number can't
       // leak request or response content.
       const status = err instanceof GroqRequestError ? err.status : 'unknown';
-      // Temporary diagnostic: length only, never the key itself.
-      console.error('Profile extraction: Groq request failed, status:', status,
-        'key length:', (process.env.GROQ_API_KEY ?? '').length);
+      console.error('Profile extraction: Groq request failed, status:', status);
       return res.status(502).json({ error: 'Could not reach the extraction service' });
     }
 
