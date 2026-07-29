@@ -1,9 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyUser } from '../server/verifyUser';
 import { supabaseAdmin } from '../server/supabaseAdmin';
+import { deriveInitialDifficulty } from '../server/skillMapping';
+import { validateStudentProfile } from '../src/profileValidation';
+import type { StudentProfileInput } from '../src/profileTypes';
 
-const DEFAULT_ITEM_TYPE_WEIGHTS = { social: 1, nonverbal: 1, inference: 1 };
-const DEFAULT_DIFFICULTY = { social: 1, nonverbal: 1, inference: 1 };
 const DEFAULT_LEVELS = { social: 2, nonverbal: 2, inference: 2 };
 const DEFAULT_STREAKS = {
   social: { correct: 0, incorrect: 0 },
@@ -11,18 +12,10 @@ const DEFAULT_STREAKS = {
   inference: { correct: 0, incorrect: 0 },
 };
 
-interface TailoringProfileInput {
-  iepId?: string;
-  itemTypeWeights: Record<string, number>;
-  initialDifficulty: Record<string, number>;
-  goalsSummary: string[];
-  parentExplanation: string;
-}
-
 // Creates a kid's Supabase Auth user (synthetic email under the hood — see
-// src/auth.ts) plus their students row and default state rows. Only ever
-// called by an authenticated parent, and only ever the one place that uses
-// the service-role key to admin-create an Auth user.
+// src/auth.ts) plus their students row, structured profile, and default
+// state rows. Only ever called by an authenticated parent, and the one
+// place that uses the service-role key to admin-create an Auth user.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -35,18 +28,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       password,
       displayName,
       gender,
-      tailoringProfile,
+      profile,
     }: {
       username?: string;
       password?: string;
       displayName?: string;
       gender?: 'girl' | 'boy' | 'other';
-      tailoringProfile?: TailoringProfileInput;
+      profile?: StudentProfileInput;
     } = req.body ?? {};
 
     if (!username?.trim() || !password || password.length < 4 || !displayName?.trim()) {
       return res.status(400).json({ error: 'Missing or invalid fields' });
     }
+    if (!profile) return res.status(400).json({ error: 'Missing profile' });
+
+    const { valid, errors } = validateStudentProfile(profile);
+    if (!valid) return res.status(400).json({ error: errors[0] });
 
     const normalizedUsername = username.trim().toLowerCase();
 
@@ -82,11 +79,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Could not create student profile' });
     }
 
-    const difficulty = tailoringProfile?.initialDifficulty ?? DEFAULT_DIFFICULTY;
+    const difficulty = deriveInitialDifficulty(profile.targets);
 
     await Promise.all([
       supabaseAdmin.from('parent_config').insert({
-        student_id: studentId, daily_minimum: 1, interests: [], kid_gender: gender ?? 'other',
+        student_id: studentId, daily_minimum: 1, interests: profile.interests, kid_gender: gender ?? 'other',
       }),
       supabaseAdmin.from('coins_state').insert({
         student_id: studentId, balance: 0, total_earned: 0, hint_tokens: 0,
@@ -95,13 +92,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         student_id: studentId, levels: DEFAULT_LEVELS, streaks: DEFAULT_STREAKS,
       }),
       supabaseAdmin.from('difficulty_state').insert({ student_id: studentId, state: difficulty }),
-      supabaseAdmin.from('tailoring_profiles').insert({
+      supabaseAdmin.from('student_profiles').insert({
         student_id: studentId,
-        iep_id: tailoringProfile?.iepId ?? null,
-        item_type_weights: tailoringProfile?.itemTypeWeights ?? DEFAULT_ITEM_TYPE_WEIGHTS,
-        initial_difficulty: difficulty,
-        goals_summary: tailoringProfile?.goalsSummary ?? [],
-        parent_explanation: tailoringProfile?.parentExplanation ?? '',
+        grade: profile.grade,
+        instructional_reading_level: profile.instructional_reading_level,
+        english_learner: profile.english_learner,
+        strengths: profile.strengths,
+        targets: profile.targets,
+        format_constraints: profile.format_constraints,
+        session_length_target_min: profile.session_length_target_min,
+        motivation: profile.motivation,
+        interests: profile.interests,
         is_active: true,
       }),
     ]);

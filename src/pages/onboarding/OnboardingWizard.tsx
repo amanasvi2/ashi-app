@@ -1,24 +1,13 @@
-import { useState } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-// eslint-disable-next-line import/no-unresolved
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
-import { supabase } from '../../supabase';
-import { analyzeIep, createStudent } from '../../students';
-import type { StudentSummary, TailoringDraft } from '../../students';
+import { useEffect, useState } from 'react';
+import { SKILLS, DOMAIN_LABELS, ACTIONABLE_TARGET_SKILL_IDS, skillById } from '../../skills';
+import type { SkillDomain } from '../../skills';
+import { createStudent } from '../../students';
+import type { StudentSummary, StudentProfileInput, ProfileTarget, FormatConstraints } from '../../students';
+import { validateStudentProfile, DEFAULT_FORMAT_CONSTRAINTS } from '../../profileValidation';
+import { saveDraft, loadDraft, clearDraft } from './draftStorage';
+import type { IntakeDraft } from './draftStorage';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-
-async function extractPdfText(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-  const pages: string[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    pages.push(content.items.map(item => ('str' in item ? item.str : '')).join(' '));
-  }
-  return pages.join('\n').trim();
-}
+const TOTAL_STEPS = 10;
 
 const INTEREST_OPTIONS = [
   { id: 'gaming',  label: 'Gaming',       emoji: '🎮' },
@@ -33,74 +22,120 @@ const INTEREST_OPTIONS = [
   { id: 'nature',  label: 'Nature',       emoji: '🌿' },
 ];
 
-const TYPE_LABELS = { social: 'Social problems', nonverbal: 'Nonverbal cues', inference: 'Reading inference' } as const;
-const DIFF_LABELS: Record<1 | 2 | 3, string> = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
+const FORMAT_TOGGLES: { key: keyof FormatConstraints; label: string; hint: string }[] = [
+  { key: 'one_step_at_a_time', label: 'One step at a time', hint: 'Give one instruction before the next, not several at once.' },
+  { key: 'short_directions', label: 'Short directions', hint: 'Keep wording brief and simple.' },
+  { key: 'read_aloud', label: 'Read things aloud', hint: 'Text gets read out loud automatically.' },
+  { key: 'extended_response_time', label: 'Extra time to respond', hint: 'No rushing between questions.' },
+  { key: 'graphic_organizers_for_writing', label: 'Graphic organizers for writing', hint: 'Visual structure before writing tasks.' },
+];
+
+const DOMAINS: SkillDomain[] = ['reading', 'writing', 'math', 'comm', 'exec'];
+
+function skillsByDomain(domain: SkillDomain) {
+  return SKILLS.filter(s => s.domain === domain);
+}
+
+function emptyTargetDetail() {
+  return { current: null as number | null, goal: null as number | null, level: null as number | null };
+}
 
 interface Props {
-  parentId: string;
   onDone: (student: StudentSummary) => void;
 }
 
-export function OnboardingWizard({ parentId, onDone }: Props) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+export function OnboardingWizard({ onDone }: Props) {
+  const [loaded, setLoaded] = useState(false);
+  const [step, setStep] = useState(1);
   const [error, setError] = useState('');
 
-  // Step 1
-  const [file, setFile] = useState<File | null>(null);
-  const [pastedText, setPastedText] = useState('');
-  const [inputMode, setInputMode] = useState<'upload' | 'paste'>('upload');
-  const [analyzing, setAnalyzing] = useState(false);
-  const [extractedText, setExtractedText] = useState('');
-
-  // Step 2 (editable draft)
-  const [draft, setDraft] = useState<TailoringDraft | null>(null);
-
-  // Step 3
   const [displayName, setDisplayName] = useState('');
+  const [grade, setGrade] = useState<number | ''>('');
+  const [readingLevel, setReadingLevel] = useState<number | ''>('');
+  const [englishLearner, setEnglishLearner] = useState(false);
+  const [strengths, setStrengths] = useState<string[]>([]);
+  const [targetSkills, setTargetSkills] = useState<string[]>([]);
+  const [targetDetails, setTargetDetails] = useState<Record<string, ReturnType<typeof emptyTargetDetail>>>({});
+  const [formatConstraints, setFormatConstraints] = useState<FormatConstraints>({ ...DEFAULT_FORMAT_CONSTRAINTS });
+  const [sessionLength, setSessionLength] = useState(12);
+  const [motivation, setMotivation] = useState('');
+  const [interests, setInterests] = useState<string[]>([]);
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [gender, setGender] = useState<'girl' | 'boy' | 'other'>('other');
-  const [interests, setInterests] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
 
-  const toggleInterest = (id: string) =>
-    setInterests(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+  // Load any resumable draft on mount (password is never persisted).
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      setStep(draft.step);
+      setDisplayName(draft.displayName);
+      setUsername(draft.username);
+      setGrade(Number.isFinite(draft.grade) ? draft.grade : '');
+      setReadingLevel(draft.instructional_reading_level ?? '');
+      setEnglishLearner(draft.english_learner);
+      setStrengths(draft.strengths);
+      setTargetSkills(draft.targets.map(t => t.skill));
+      setTargetDetails(Object.fromEntries(draft.targets.map(t => [t.skill, { current: t.current, goal: t.goal, level: t.level }])));
+      setFormatConstraints(draft.format_constraints);
+      setSessionLength(draft.session_length_target_min);
+      setMotivation(draft.motivation ?? '');
+      setInterests(draft.interests);
+    }
+    setLoaded(true);
+  }, []);
 
-  const handleAnalyze = async () => {
-    setError('');
-    setAnalyzing(true);
-    try {
-      const text = inputMode === 'upload' && file ? await extractPdfText(file) : pastedText.trim();
-      if (text.length < 50) {
-        setError(
-          inputMode === 'upload'
-            ? "Couldn't read enough text from that file — try pasting the text instead."
-            : 'Paste a bit more of the IEP text.',
-        );
-        return;
-      }
-      const result = await analyzeIep(text);
-      setExtractedText(text);
-      setDraft(result);
-      setStep(2);
-    } catch (err) {
-      console.error('IEP analyze failed:', err);
-      setError('Something went wrong reading that IEP. You can try again or paste the text instead.');
-    } finally {
-      setAnalyzing(false);
+  // Persist a resumable draft on every change (never the password).
+  useEffect(() => {
+    if (!loaded) return;
+    const targets: ProfileTarget[] = targetSkills.map(skill => ({ skill, ...(targetDetails[skill] ?? emptyTargetDetail()) }));
+    const draft: IntakeDraft = {
+      step, displayName, username,
+      grade: typeof grade === 'number' ? grade : NaN,
+      instructional_reading_level: readingLevel === '' ? null : readingLevel,
+      english_learner: englishLearner,
+      strengths, targets,
+      format_constraints: formatConstraints,
+      session_length_target_min: sessionLength,
+      motivation: motivation.trim() || null,
+      interests,
+    };
+    saveDraft(draft);
+  }, [loaded, step, displayName, username, grade, readingLevel, englishLearner, strengths, targetSkills, targetDetails, formatConstraints, sessionLength, motivation, interests]);
+
+  const toggleInList = (list: string[], setList: (v: string[]) => void, id: string) =>
+    setList(list.includes(id) ? list.filter(x => x !== id) : [...list, id]);
+
+  const toggleTarget = (id: string) => {
+    if (targetSkills.includes(id)) {
+      setTargetSkills(targetSkills.filter(x => x !== id));
+    } else {
+      setTargetSkills([...targetSkills, id]);
+      setTargetDetails(prev => ({ ...prev, [id]: prev[id] ?? emptyTargetDetail() }));
     }
   };
 
-  const updateWeight = (type: keyof TailoringDraft['itemTypeWeights'], value: number) => {
-    if (!draft) return;
-    setDraft({ ...draft, itemTypeWeights: { ...draft.itemTypeWeights, [type]: value } });
+  const updateTargetDetail = (id: string, field: 'current' | 'goal' | 'level', value: number | null) => {
+    setTargetDetails(prev => ({ ...prev, [id]: { ...(prev[id] ?? emptyTargetDetail()), [field]: value } }));
   };
 
-  const updateDifficulty = (type: keyof TailoringDraft['initialDifficulty'], value: 1 | 2 | 3) => {
-    if (!draft) return;
-    setDraft({ ...draft, initialDifficulty: { ...draft.initialDifficulty, [type]: value } });
-  };
+  const next = () => { setError(''); setStep(s => Math.min(TOTAL_STEPS, s + 1)); };
+  const back = () => { setError(''); setStep(s => Math.max(1, s - 1)); };
+
+  const buildProfile = (): StudentProfileInput => ({
+    grade: typeof grade === 'number' ? grade : NaN,
+    instructional_reading_level: readingLevel === '' ? null : readingLevel,
+    english_learner: englishLearner,
+    strengths,
+    targets: targetSkills.map(skill => ({ skill, ...(targetDetails[skill] ?? emptyTargetDetail()) })),
+    format_constraints: formatConstraints,
+    session_length_target_min: sessionLength,
+    motivation: motivation.trim() || null,
+    interests,
+  });
 
   const handleCreate = async () => {
     setError('');
@@ -108,39 +143,14 @@ export function OnboardingWizard({ parentId, onDone }: Props) {
     if (password.length < 4) { setError('Password needs at least 4 characters.'); return; }
     if (password !== confirm) { setError('Passwords do not match.'); return; }
 
+    const profile = buildProfile();
+    const { valid, errors } = validateStudentProfile(profile);
+    if (!valid) { setError(errors[0]); return; }
+
     setCreating(true);
     try {
-      const student = await createStudent({
-        username, password, displayName, gender,
-        tailoringProfile: draft ? {
-          itemTypeWeights: draft.itemTypeWeights,
-          initialDifficulty: draft.initialDifficulty,
-          goalsSummary: draft.goalsSummary,
-          parentExplanation: draft.parentExplanation,
-        } : undefined,
-      });
-
-      // Attach interests (create-student.ts doesn't take these — parent_config
-      // is otherwise parent-managed, so set it here as a normal authenticated write).
-      await supabase.from('parent_config').update({ interests }).eq('student_id', student.id);
-
-      // Persist the IEP itself now that we have a student to attach it to.
-      if (extractedText) {
-        let storagePath: string | null = null;
-        if (file) {
-          storagePath = `${parentId}/${student.id}/${file.name}`;
-          await supabase.storage.from('iep-documents').upload(storagePath, file);
-        }
-        const { data: iepRow } = await supabase
-          .from('ieps')
-          .insert({ student_id: student.id, storage_path: storagePath, original_filename: file?.name ?? null, extracted_text: extractedText })
-          .select('id')
-          .single();
-        if (iepRow) {
-          await supabase.from('tailoring_profiles').update({ iep_id: iepRow.id }).eq('student_id', student.id).eq('is_active', true);
-        }
-      }
-
+      const student = await createStudent({ username, password, displayName, gender, profile });
+      clearDraft();
       onDone(student);
     } catch (err) {
       console.error('Create student failed:', err);
@@ -150,14 +160,17 @@ export function OnboardingWizard({ parentId, onDone }: Props) {
     }
   };
 
+  const canLeaveStep1 = displayName.trim().length > 0 && typeof grade === 'number';
+  const canLeaveStep4 = targetSkills.length > 0;
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10">
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 w-full max-w-lg space-y-6">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">Set up your child's account</p>
-          <p className="text-sm text-slate-500">Step {step} of 3</p>
-          <div className="flex gap-2 mt-3">
-            {[1, 2, 3].map(s => (
+          <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">Tell us about your child</p>
+          <p className="text-sm text-slate-500">Step {step} of {TOTAL_STEPS}</p>
+          <div className="flex gap-1.5 mt-3">
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(s => (
               <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors ${s <= step ? 'bg-blue-500' : 'bg-slate-200'}`} />
             ))}
           </div>
@@ -167,124 +180,44 @@ export function OnboardingWizard({ parentId, onDone }: Props) {
 
         {step === 1 && (
           <div className="space-y-4">
-            <div>
-              <h2 className="text-base font-semibold text-slate-800">Upload your child's IEP</h2>
-              <p className="text-sm text-slate-500 mt-1">
-                We'll read the goals and set up practice that matches them. You'll be able to review and
-                adjust everything before it's saved.
-              </p>
+            <h2 className="text-base font-semibold text-slate-800">Name and grade</h2>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-600">Her name or nickname</label>
+              <input value={displayName} onChange={e => setDisplayName(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setInputMode('upload')}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all
-                  ${inputMode === 'upload' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-200 text-slate-600'}`}
-              >
-                Upload PDF
-              </button>
-              <button
-                onClick={() => setInputMode('paste')}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all
-                  ${inputMode === 'paste' ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-200 text-slate-600'}`}
-              >
-                Paste text instead
-              </button>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-600">Grade (0 for Kindergarten)</label>
+              <input type="number" min={0} max={12} value={grade}
+                onChange={e => setGrade(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
-
-            {inputMode === 'upload' ? (
-              <label className="block border-2 border-dashed border-slate-200 rounded-xl px-4 py-8 text-center cursor-pointer hover:border-blue-300 transition-colors">
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  className="hidden"
-                  onChange={e => setFile(e.target.files?.[0] ?? null)}
-                />
-                <p className="text-sm text-slate-600">{file ? file.name : 'Click to choose a PDF'}</p>
-                <p className="text-xs text-slate-400 mt-1">If it's a scanned document, try "Paste text instead."</p>
-              </label>
-            ) : (
-              <textarea
-                value={pastedText}
-                onChange={e => setPastedText(e.target.value)}
-                rows={8}
-                placeholder="Paste the goals and present-levels sections here..."
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-300
-                           focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
-              />
-            )}
-
-            <button
-              onClick={handleAnalyze}
-              disabled={analyzing || (inputMode === 'upload' ? !file : pastedText.trim().length < 50)}
-              className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700
-                         disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              {analyzing ? 'Reading the IEP…' : 'Analyze IEP →'}
+            <button onClick={next} disabled={!canLeaveStep1}
+              className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40">
+              Next →
             </button>
           </div>
         )}
 
-        {step === 2 && draft && (
-          <div className="space-y-5">
-            <div>
-              <h2 className="text-base font-semibold text-slate-800">Review what we found</h2>
-              <p className="text-sm text-slate-500 mt-1">Check this over — you can adjust the emphasis below.</p>
+        {step === 2 && (
+          <div className="space-y-4">
+            <h2 className="text-base font-semibold text-slate-800">Reading level</h2>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-600">Instructional reading level (grade equivalent, optional)</label>
+              <input type="number" step={0.1} min={0} max={13} value={readingLevel}
+                placeholder="e.g. 4.5"
+                onChange={e => setReadingLevel(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
-
-            <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-blue-500">Goals this app supports</p>
-              <ul className="space-y-1.5">
-                {draft.goalsSummary.map((g, i) => (
-                  <li key={i} className="text-sm text-blue-800 flex gap-2">
-                    <span className="text-blue-400">•</span>{g}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Practice emphasis</p>
-              {(Object.keys(TYPE_LABELS) as (keyof typeof TYPE_LABELS)[]).map(type => (
-                <div key={type} className="bg-white rounded-xl border border-slate-100 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-slate-800">{TYPE_LABELS[type]}</span>
-                    <span className="text-xs text-slate-400">{Math.round(draft.itemTypeWeights[type] * 100)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0.1}
-                    max={1}
-                    step={0.05}
-                    value={draft.itemTypeWeights[type]}
-                    onChange={e => updateWeight(type, Number(e.target.value))}
-                    className="w-full accent-blue-600"
-                  />
-                  <div className="flex gap-2 mt-2">
-                    {([1, 2, 3] as const).map(d => (
-                      <button
-                        key={d}
-                        onClick={() => updateDifficulty(type, d)}
-                        className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all
-                          ${draft.initialDifficulty[type] === d ? 'bg-slate-800 text-white border-slate-800' : 'border-slate-200 text-slate-500'}`}
-                      >
-                        {DIFF_LABELS[d]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
+            <button onClick={() => setEnglishLearner(!englishLearner)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-medium transition-all
+                ${englishLearner ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-200 text-slate-600'}`}>
+              English learner
+              <span>{englishLearner ? '✓' : ''}</span>
+            </button>
             <div className="flex gap-3">
-              <button onClick={() => setStep(1)}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">
-                ← Back
-              </button>
-              <button onClick={() => setStep(3)}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">
-                Looks good →
-              </button>
+              <button onClick={back} className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">← Back</button>
+              <button onClick={next} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">Next →</button>
             </div>
           </div>
         )}
@@ -292,14 +225,207 @@ export function OnboardingWizard({ parentId, onDone }: Props) {
         {step === 3 && (
           <div className="space-y-4">
             <div>
+              <h2 className="text-base font-semibold text-slate-800">Strengths</h2>
+              <p className="text-sm text-slate-500 mt-1">What is she already good at? (optional)</p>
+            </div>
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+              {DOMAINS.map(domain => (
+                <div key={domain}>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">{DOMAIN_LABELS[domain]}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {skillsByDomain(domain).map(s => (
+                      <button key={s.id} onClick={() => toggleInList(strengths, setStrengths, s.id)}
+                        className={`px-3 py-1.5 rounded-full text-xs border transition-all text-left
+                          ${strengths.includes(s.id) ? 'bg-blue-100 border-blue-400 text-blue-700 font-medium' : 'border-slate-200 text-slate-600'}`}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={back} className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">← Back</button>
+              <button onClick={next} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">Next →</button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-base font-semibold text-slate-800">Practice targets</h2>
+              <p className="text-sm text-slate-500 mt-1">Pick at least one — these are what practice sessions will focus on.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {ACTIONABLE_TARGET_SKILL_IDS.map(id => {
+                const s = skillById(id)!;
+                return (
+                  <button key={id} onClick={() => toggleTarget(id)}
+                    className={`px-3 py-2 rounded-xl text-sm border transition-all text-left
+                      ${targetSkills.includes(id) ? 'bg-blue-600 text-white border-blue-600 font-medium' : 'border-slate-200 text-slate-600'}`}>
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={back} className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">← Back</button>
+              <button onClick={next} disabled={!canLeaveStep4}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40">
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-base font-semibold text-slate-800">Target details</h2>
+              <p className="text-sm text-slate-500 mt-1">Optional — helps us pick the right starting difficulty.</p>
+            </div>
+            <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
+              {targetSkills.map(id => {
+                const s = skillById(id)!;
+                const detail = targetDetails[id] ?? emptyTargetDetail();
+                return (
+                  <div key={id} className="bg-slate-50 rounded-xl border border-slate-100 p-4 space-y-2">
+                    <p className="text-sm font-medium text-slate-800">{s.label}</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Current %</label>
+                        <input type="number" min={0} max={100} value={detail.current === null ? '' : Math.round(detail.current * 100)}
+                          onChange={e => updateTargetDetail(id, 'current', e.target.value === '' ? null : Number(e.target.value) / 100)}
+                          className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Goal %</label>
+                        <input type="number" min={0} max={100} value={detail.goal === null ? '' : Math.round(detail.goal * 100)}
+                          onChange={e => updateTargetDetail(id, 'goal', e.target.value === '' ? null : Number(e.target.value) / 100)}
+                          className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-1">Level</label>
+                        <input type="number" value={detail.level === null ? '' : detail.level}
+                          onChange={e => updateTargetDetail(id, 'level', e.target.value === '' ? null : Number(e.target.value))}
+                          className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={back} className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">← Back</button>
+              <button onClick={next} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">Next →</button>
+            </div>
+          </div>
+        )}
+
+        {step === 6 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-base font-semibold text-slate-800">What helps her most</h2>
+              <p className="text-sm text-slate-500 mt-1">Optional — check any that apply.</p>
+            </div>
+            <div className="space-y-2">
+              {FORMAT_TOGGLES.map(t => (
+                <button key={t.key}
+                  onClick={() => setFormatConstraints({ ...formatConstraints, [t.key]: !formatConstraints[t.key] })}
+                  className={`w-full flex items-start justify-between gap-3 px-4 py-3 rounded-xl border text-left transition-all
+                    ${formatConstraints[t.key] ? 'bg-blue-50 border-blue-300' : 'border-slate-200'}`}>
+                  <span>
+                    <span className="block text-sm font-medium text-slate-800">{t.label}</span>
+                    <span className="block text-xs text-slate-500 mt-0.5">{t.hint}</span>
+                  </span>
+                  <span className="text-blue-600 mt-0.5">{formatConstraints[t.key] ? '✓' : ''}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={back} className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">← Back</button>
+              <button onClick={next} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">Next →</button>
+            </div>
+          </div>
+        )}
+
+        {step === 7 && (
+          <div className="space-y-4">
+            <h2 className="text-base font-semibold text-slate-800">Session length</h2>
+            <p className="text-sm text-slate-500">How long should a practice session run before it ends?</p>
+            <div className="flex gap-2">
+              {[5, 8, 12, 15, 20].map(n => (
+                <button key={n} onClick={() => setSessionLength(n)}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all
+                    ${sessionLength === n ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-200 text-slate-600'}`}>
+                  {n}m
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={back} className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">← Back</button>
+              <button onClick={next} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">Next →</button>
+            </div>
+          </div>
+        )}
+
+        {step === 8 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-base font-semibold text-slate-800">Motivation and interests</h2>
+              <p className="text-sm text-slate-500 mt-1">Optional — helps us make practice feel less generic.</p>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-600">What motivates her?</label>
+              <textarea value={motivation} onChange={e => setMotivation(e.target.value)} rows={3}
+                placeholder="e.g. earning screen time, stickers, a favorite show..."
+                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">What does she like?</p>
+              <div className="flex flex-wrap gap-2">
+                {INTEREST_OPTIONS.map(opt => (
+                  <button key={opt.id} onClick={() => toggleInList(interests, setInterests, opt.id)}
+                    className={`px-3 py-1.5 rounded-full text-sm border transition-all
+                      ${interests.includes(opt.id) ? 'bg-blue-100 border-blue-400 text-blue-700 font-medium' : 'border-slate-200 text-slate-600'}`}>
+                    {opt.emoji} {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={back} className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">← Back</button>
+              <button onClick={next} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">Next →</button>
+            </div>
+          </div>
+        )}
+
+        {step === 9 && (
+          <div className="space-y-4">
+            <h2 className="text-base font-semibold text-slate-800">Review</h2>
+            <div className="bg-slate-50 rounded-xl border border-slate-100 p-4 space-y-2 text-sm text-slate-700">
+              <p><span className="text-slate-400">Name:</span> {displayName || '—'}</p>
+              <p><span className="text-slate-400">Grade:</span> {grade === '' ? '—' : grade}</p>
+              <p><span className="text-slate-400">Reading level:</span> {readingLevel === '' ? '—' : readingLevel}</p>
+              <p><span className="text-slate-400">English learner:</span> {englishLearner ? 'Yes' : 'No'}</p>
+              <p><span className="text-slate-400">Strengths:</span> {strengths.length ? strengths.map(id => skillById(id)?.label).join(', ') : '—'}</p>
+              <p><span className="text-slate-400">Targets:</span> {targetSkills.map(id => skillById(id)?.label).join(', ')}</p>
+              <p><span className="text-slate-400">Session length:</span> {sessionLength} minutes</p>
+              <p><span className="text-slate-400">Interests:</span> {interests.length ? interests.join(', ') : '—'}</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={back} className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">← Back</button>
+              <button onClick={next} className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">Looks good →</button>
+            </div>
+          </div>
+        )}
+
+        {step === 10 && (
+          <div className="space-y-4">
+            <div>
               <h2 className="text-base font-semibold text-slate-800">Create her login</h2>
               <p className="text-sm text-slate-500 mt-1">She'll use this username and password to sign in.</p>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-600">Her name</label>
-              <input value={displayName} onChange={e => setDisplayName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
             <div className="space-y-1">
               <label className="block text-xs font-medium text-slate-600">Username</label>
@@ -318,7 +444,6 @@ export function OnboardingWizard({ parentId, onDone }: Props) {
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
             </div>
-
             <div>
               <p className="text-xs font-medium text-slate-600 mb-2">How does she identify? (optional)</p>
               <div className="flex gap-2">
@@ -331,30 +456,10 @@ export function OnboardingWizard({ parentId, onDone }: Props) {
                 ))}
               </div>
             </div>
-
-            <div>
-              <p className="text-xs font-medium text-slate-600 mb-2">What does she like? (optional)</p>
-              <div className="flex flex-wrap gap-2">
-                {INTEREST_OPTIONS.map(opt => (
-                  <button key={opt.id} onClick={() => toggleInterest(opt.id)}
-                    className={`px-3 py-1.5 rounded-full text-sm border transition-all
-                      ${interests.includes(opt.id) ? 'bg-blue-100 border-blue-400 text-blue-700 font-medium' : 'border-slate-200 text-slate-600'}`}>
-                    {opt.emoji} {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div className="flex gap-3">
-              <button onClick={() => setStep(2)}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">
-                ← Back
-              </button>
-              <button
-                onClick={handleCreate}
-                disabled={creating}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40"
-              >
+              <button onClick={back} className="flex-1 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50">← Back</button>
+              <button onClick={handleCreate} disabled={creating}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40">
                 {creating ? 'Creating…' : "Done! Let's go"}
               </button>
             </div>

@@ -82,7 +82,7 @@ export default function App() {
   // ── Parent view ───────────────────────────────────────────────────────────
   if (session.role === 'parent') {
     if (studentLoading) return <LoadingScreen />;
-    if (!student) return <OnboardingWizard parentId={session.userId} onDone={setStudent} />;
+    if (!student) return <OnboardingWizard onDone={setStudent} />;
     return <ParentDashboard onLogout={handleLogout} student={student} />;
   }
 

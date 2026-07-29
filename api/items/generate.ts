@@ -1,6 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyUser } from '../../server/verifyUser';
 import { groqChat } from '../../server/groq';
+import { supabaseAsUser } from '../../server/asUser';
+import { deriveItemTypeWeights } from '../../server/skillMapping';
+import type { Target } from '../../server/skillMapping';
 import type { Item, SessionMode, DifficultyState, Difficulty, ItemType } from '../../src/types';
 
 function difficultyLabel(d: Difficulty): string {
@@ -84,8 +87,9 @@ function isValidItem(raw: unknown): raw is Item {
 }
 
 // Splits `count` items across social/nonverbal/inference. If `weights` is
-// provided (from the student's tailoring_profiles row — see Phase D) counts
-// are proportional to it; otherwise falls back to the original even split.
+// provided (derived server-side from the student's own active
+// student_profiles.targets) counts are proportional to it; otherwise falls
+// back to an even split.
 function buildRequests(
   mode: SessionMode,
   difficulty: DifficultyState,
@@ -134,16 +138,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       difficulty,
       count,
       interests = [],
-      itemTypeWeights,
     }: {
       mode: SessionMode;
       difficulty: DifficultyState;
       count: number;
       interests?: string[];
-      itemTypeWeights?: Partial<Record<ItemType, number>>;
     } = req.body ?? {};
 
     if (!mode || !difficulty || !count) return res.status(400).json({ error: 'Missing mode, difficulty, or count' });
+
+    // Weights come from the caller's own active profile, never the client —
+    // fetched through an RLS-scoped client so a kid can only ever read their
+    // own row (and a parent calling this, which shouldn't normally happen,
+    // just gets no match and falls back to an even split).
+    let itemTypeWeights: Record<ItemType, number> | undefined;
+    if (mode === 'mixed') {
+      const token = String(req.headers.authorization).replace(/^Bearer\s+/i, '');
+      const { data: profileRow } = await supabaseAsUser(token)
+        .from('student_profiles')
+        .select('targets')
+        .eq('student_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (profileRow) itemTypeWeights = deriveItemTypeWeights(profileRow.targets as Target[]);
+    }
 
     const requests = buildRequests(mode, difficulty, count, itemTypeWeights);
     const text = await groqChat([{ role: 'user', content: buildPrompt(requests, interests) }], {
