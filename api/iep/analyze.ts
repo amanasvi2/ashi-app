@@ -61,17 +61,17 @@ function isValidDraft(raw: unknown): raw is TailoringDraft {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  const parent = await verifyUser(req.headers.authorization);
-  if (!parent) return res.status(401).json({ error: 'Unauthorized' });
-
-  const { extractedText }: { extractedText?: string } = req.body ?? {};
-  if (!extractedText || extractedText.trim().length < 50) {
-    return res.status(400).json({ error: 'IEP text is too short to analyze' });
-  }
-
   try {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+    const parent = await verifyUser(req.headers.authorization);
+    if (!parent) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { extractedText }: { extractedText?: string } = req.body ?? {};
+    if (!extractedText || extractedText.trim().length < 50) {
+      return res.status(400).json({ error: 'IEP text is too short to analyze' });
+    }
+
     const prompt = `${PROMPT_HEADER}${extractedText.slice(0, 12000)}\n"""`;
     const text = await groqChat([{ role: 'user', content: prompt }], { temperature: 0.4, maxTokens: 1024 });
 
@@ -84,6 +84,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({ draft: parsed });
   } catch (err) {
     console.error(err);
-    res.status(502).json({ error: 'IEP analysis failed' });
+    res.status(500).json({ error: err instanceof Error ? err.message : 'IEP analysis failed' });
   }
 }

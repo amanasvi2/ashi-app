@@ -123,28 +123,28 @@ function buildRequests(
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  const user = await verifyUser(req.headers.authorization);
-  if (!user) return res.status(401).json({ error: 'Unauthorized' });
-
-  const {
-    mode,
-    difficulty,
-    count,
-    interests = [],
-    itemTypeWeights,
-  }: {
-    mode: SessionMode;
-    difficulty: DifficultyState;
-    count: number;
-    interests?: string[];
-    itemTypeWeights?: Partial<Record<ItemType, number>>;
-  } = req.body ?? {};
-
-  if (!mode || !difficulty || !count) return res.status(400).json({ error: 'Missing mode, difficulty, or count' });
-
   try {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+    const user = await verifyUser(req.headers.authorization);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const {
+      mode,
+      difficulty,
+      count,
+      interests = [],
+      itemTypeWeights,
+    }: {
+      mode: SessionMode;
+      difficulty: DifficultyState;
+      count: number;
+      interests?: string[];
+      itemTypeWeights?: Partial<Record<ItemType, number>>;
+    } = req.body ?? {};
+
+    if (!mode || !difficulty || !count) return res.status(400).json({ error: 'Missing mode, difficulty, or count' });
+
     const requests = buildRequests(mode, difficulty, count, itemTypeWeights);
     const text = await groqChat([{ role: 'user', content: buildPrompt(requests, interests) }], {
       temperature: 0.85,
@@ -164,6 +164,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(200).json({ items });
   } catch (err) {
     console.error(err);
-    res.status(502).json({ error: 'Item generation failed' });
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Item generation failed' });
   }
 }
