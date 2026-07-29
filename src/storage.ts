@@ -17,12 +17,13 @@ async function currentUserId(): Promise<string> {
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
 
-export async function loadSessions(): Promise<SessionRecord[]> {
-  const { data } = await supabase
-    .from('practice_sessions')
-    .select('*')
-    .order('date', { ascending: false })
-    .limit(100);
+// No implicit RLS-only filtering — an owner with several students would
+// otherwise get every student's sessions interleaved into one list. Same
+// optional-studentId pattern as loadConfig/loadCustomRewards above.
+export async function loadSessions(studentId?: string): Promise<SessionRecord[]> {
+  let query = supabase.from('practice_sessions').select('*').order('date', { ascending: false }).limit(100);
+  if (studentId) query = query.eq('student_id', studentId);
+  const { data } = await query;
   return (data ?? []).map(row => ({
     id: row.id,
     date: row.date,
@@ -96,12 +97,33 @@ export function calculateStreak(sessions: SessionRecord[]): number {
 // or 14-day gap re-entry (see adaptiveEngine.ts's resolveSessionStart) and
 // persists the result — so a change earned last session applies exactly
 // once, here, and never mid-session.
-export async function loadLevelSlice(): Promise<LevelSlice> {
-  const studentId = await currentUserId();
+// `studentId` is optional and defaults to the caller's own id (the kid,
+// mid-session). An owner reading a specific student's levels for display
+// (the parent dashboard / roster) must pass it explicitly — same real bug
+// as loadConfig/loadSessions above: without this, an owner's own call
+// resolved to *their* id, which matches no real level_state row, so the
+// dashboard always silently showed the default (level 3 / no data) rather
+// than the student's actual levels. Passing an explicit studentId also
+// skips the session-boundary resolve-and-write below, which only makes
+// sense when the kid herself is starting a session, not when an owner is
+// just looking.
+export async function loadLevelSlice(studentId?: string): Promise<LevelSlice> {
+  if (studentId) {
+    const { data } = await supabase
+      .from('level_state')
+      .select('levels, streaks, pending')
+      .eq('student_id', studentId)
+      .maybeSingle();
+    return data
+      ? { levels: data.levels, streaks: data.streaks, pending: data.pending }
+      : { levels: initialPersistedLevelState.levels, streaks: initialPersistedLevelState.streaks, pending: initialPersistedLevelState.pending };
+  }
+
+  const id = await currentUserId();
   const { data } = await supabase
     .from('level_state')
     .select('levels, streaks, pending, last_session_at')
-    .eq('student_id', studentId)
+    .eq('student_id', id)
     .maybeSingle();
 
   const persisted: PersistedLevelState = data
@@ -115,7 +137,7 @@ export async function loadLevelSlice(): Promise<LevelSlice> {
     streaks: resolved.streaks,
     pending: resolved.pending,
     last_session_at: resolved.lastSessionAt,
-  }).eq('student_id', studentId);
+  }).eq('student_id', id);
 
   return { levels: resolved.levels, streaks: resolved.streaks, pending: resolved.pending };
 }
@@ -134,12 +156,12 @@ export async function saveLevelSlice(slice: LevelSlice): Promise<void> {
 
 export const initialDifficulty: DifficultyState = { social: 1, nonverbal: 1, inference: 1 };
 
-export async function loadDifficulty(): Promise<DifficultyState> {
-  const studentId = await currentUserId();
+export async function loadDifficulty(studentId?: string): Promise<DifficultyState> {
+  const id = studentId ?? await currentUserId();
   const { data } = await supabase
     .from('difficulty_state')
     .select('state')
-    .eq('student_id', studentId)
+    .eq('student_id', id)
     .maybeSingle();
   return data ? (data.state as DifficultyState) : initialDifficulty;
 }
@@ -250,7 +272,7 @@ export async function parentJournalActivity(
   studentId: string,
   pastDays = 7,
 ): Promise<{ date: string; hasEntry: boolean }[]> {
-  const { data } = await supabase.rpc('journal_activity_for_parent', { p_student_id: studentId });
+  const { data } = await supabase.rpc('journal_activity_for_owner', { p_student_id: studentId });
   const entryDates = new Set((data ?? []).map((row: { date: string }) => new Date(row.date).toDateString()));
   return Array.from({ length: pastDays }, (_, i) => {
     const d = new Date();
@@ -268,12 +290,12 @@ export async function parentJournalWrittenToday(studentId: string): Promise<bool
 
 const defaultCoins: CoinsState = { balance: 0, totalEarned: 0, hintTokens: 0 };
 
-export async function loadCoins(): Promise<CoinsState> {
-  const studentId = await currentUserId();
+export async function loadCoins(studentId?: string): Promise<CoinsState> {
+  const id = studentId ?? await currentUserId();
   const { data } = await supabase
     .from('coins_state')
     .select('balance, total_earned, hint_tokens')
-    .eq('student_id', studentId)
+    .eq('student_id', id)
     .maybeSingle();
   return data ? { balance: data.balance, totalEarned: data.total_earned, hintTokens: data.hint_tokens } : defaultCoins;
 }
@@ -349,53 +371,65 @@ export function pickSessionCount(sessions: SessionRecord[]): number {
 
 const defaultConfig: ParentConfig = { dailyMinimum: 1 };
 
-export async function loadConfig(): Promise<ParentConfig> {
-  const studentId = await currentUserId();
+// `studentId` is optional and defaults to the caller's own id — every kid-
+// self call site (Home.tsx, ProfilePanel.tsx, RewardsPage.tsx) is
+// unaffected. An owner viewing a specific one of their (possibly several)
+// students must pass it explicitly, the same way loadFloorAlarms/
+// loadStudentProfile above already do. Passing it explicitly is also the
+// fix for a real pre-existing bug: these previously always resolved via
+// the *caller's own* id, so calling them from the parent dashboard (the
+// parent's id, not the student's) silently matched zero rows.
+export async function loadConfig(studentId?: string): Promise<ParentConfig> {
+  const id = studentId ?? await currentUserId();
   const { data } = await supabase
     .from('parent_config')
     .select('daily_minimum, kid_gender')
-    .eq('student_id', studentId)
+    .eq('student_id', id)
     .maybeSingle();
   return data ? { dailyMinimum: data.daily_minimum, kidGender: data.kid_gender ?? undefined } : defaultConfig;
 }
 
 // Parent-driven (daily goal).
-export async function saveConfig(c: ParentConfig): Promise<void> {
-  const studentId = await currentUserId();
-  await supabase.from('parent_config').update({ daily_minimum: c.dailyMinimum }).eq('student_id', studentId);
+export async function saveConfig(c: ParentConfig, studentId?: string): Promise<void> {
+  const id = studentId ?? await currentUserId();
+  await supabase.from('parent_config').update({ daily_minimum: c.dailyMinimum }).eq('student_id', id);
 }
 
 // Kid-driven (self-edited via ProfilePanel, same as the original app).
-export async function updateKidGender(gender: 'girl' | 'boy' | 'other'): Promise<void> {
-  const studentId = await currentUserId();
-  await supabase.from('parent_config').update({ kid_gender: gender }).eq('student_id', studentId);
+export async function updateKidGender(gender: 'girl' | 'boy' | 'other', studentId?: string): Promise<void> {
+  const id = studentId ?? await currentUserId();
+  await supabase.from('parent_config').update({ kid_gender: gender }).eq('student_id', id);
 }
 
 // ── Interests (student_profiles — kid self-edits these directly) ─────────────
 
-export async function loadInterests(): Promise<string[]> {
-  const studentId = await currentUserId();
+export async function loadInterests(studentId?: string): Promise<string[]> {
+  const id = studentId ?? await currentUserId();
   const { data } = await supabase
     .from('student_profiles')
     .select('interests')
-    .eq('student_id', studentId)
+    .eq('student_id', id)
     .eq('is_active', true)
     .maybeSingle();
   return data?.interests ?? [];
 }
 
-export async function saveInterests(interests: string[]): Promise<void> {
-  const studentId = await currentUserId();
+export async function saveInterests(interests: string[], studentId?: string): Promise<void> {
+  const id = studentId ?? await currentUserId();
   await supabase.from('student_profiles')
     .update({ interests })
-    .eq('student_id', studentId)
+    .eq('student_id', id)
     .eq('is_active', true);
 }
 
 // ── Custom rewards ────────────────────────────────────────────────────────────
 
-export async function loadCustomRewards(): Promise<CustomReward[]> {
-  const { data } = await supabase.from('custom_rewards').select('*');
+// No implicit RLS-only filtering here on purpose — with one owner able to
+// have several students, an unfiltered select would return rewards across
+// *all* of the owner's students, not just the one being viewed.
+export async function loadCustomRewards(studentId?: string): Promise<CustomReward[]> {
+  const id = studentId ?? await currentUserId();
+  const { data } = await supabase.from('custom_rewards').select('*').eq('student_id', id);
   return (data ?? []).map(row => ({ id: row.id, label: row.label, emoji: row.emoji, url: row.url, cost: row.cost }));
 }
 

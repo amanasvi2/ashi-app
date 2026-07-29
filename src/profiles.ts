@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { callApi } from './api';
 import type { StudentProfileInput, ExtractedProfileDraft } from './profileTypes';
+import type { OwnerType } from './ownerCaps';
 
 export interface ProfileSummary {
   id: string;
@@ -8,16 +9,23 @@ export interface ProfileSummary {
   studentId: string | null; // null until a login has been created and linked
 }
 
-// A parent has at most one profile in the current UI (the schema allows
-// more, but there's no switcher yet).
-export async function getMyProfile(parentId: string): Promise<ProfileSummary | null> {
+export async function listMyProfiles(ownerId: string): Promise<ProfileSummary[]> {
   const { data } = await supabase
     .from('student_profiles')
     .select('id, display_name, student_id')
-    .eq('parent_id', parentId)
+    .eq('owner_id', ownerId)
     .eq('is_active', true)
-    .maybeSingle();
-  return data ? { id: data.id, displayName: data.display_name, studentId: data.student_id } : null;
+    .order('created_at', { ascending: true });
+  return (data ?? []).map(row => ({ id: row.id, displayName: row.display_name, studentId: row.student_id }));
+}
+
+// Recorded once at signup (src/auth.ts) and never changed afterward —
+// determines the student cap (server-enforced, see api/profile/save.ts)
+// and which owner-facing view App.tsx renders (dashboard+switcher vs. the
+// clinician roster).
+export async function getMyOwnerType(ownerId: string): Promise<OwnerType> {
+  const { data } = await supabase.from('owners').select('owner_type').eq('id', ownerId).maybeSingle();
+  return (data?.owner_type as OwnerType | undefined) ?? 'parent';
 }
 
 export async function extractProfile(description: string): Promise<ExtractedProfileDraft> {

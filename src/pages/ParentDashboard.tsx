@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { SupportLevel, Difficulty, CustomReward, ParentConfig, SessionRecord, DifficultyState, CoinsState } from '../types';
+import type { Difficulty, CustomReward, ParentConfig, SessionRecord, DifficultyState, CoinsState } from '../types';
 import {
   loadSessions, getTotalScore, practicedToday,
   loadLevelSlice, loadDifficulty,
@@ -11,10 +11,7 @@ import {
 import type { ItemType } from '../types';
 import type { StudentProfileInput } from '../profileTypes';
 import { skillById, supportById, isActionableFocusSkill, type ActionableFocusSkillId } from '../skills';
-
-const TYPE_LABELS: Record<ItemType, string> = {
-  social: 'Social Problems', nonverbal: 'Nonverbal Cues', inference: 'Text Inference',
-};
+import { TYPE_LABELS, LEVEL_LABELS, LEVEL_COLORS, LevelPips } from '../components/LevelDisplay';
 
 // Display-only mirror of server/skillMapping.ts's weight table — which
 // item types a focus skill feeds, in plain words for the parent
@@ -28,17 +25,11 @@ const SKILL_FEEDS_TYPES: Record<ActionableFocusSkillId, ItemType[]> = {
   nonliteral_language: ['inference'],
 };
 import type { StudentSummary } from '../students';
+import type { ProfileSummary } from '../profiles';
 import { LoadingScreen } from '../components/LoadingScreen';
 import type { LevelSlice } from '../adaptiveEngine';
 import { initialLevelState } from '../adaptiveEngine';
 
-const LEVEL_LABELS: Record<SupportLevel, string> = { 3: 'Most help', 2: 'Word bank', 1: 'Some help', 0: 'No hints' };
-const LEVEL_COLORS: Record<SupportLevel, string> = {
-  3: 'text-slate-500 bg-slate-100',
-  2: 'text-sky-700 bg-sky-50',
-  1: 'text-amber-700 bg-amber-50',
-  0: 'text-emerald-700 bg-emerald-50',
-};
 const DIFF_LABELS: Record<Difficulty, string> = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
 const DIFF_COLORS: Record<Difficulty, string> = {
   1: 'text-emerald-700 bg-emerald-50',
@@ -46,23 +37,23 @@ const DIFF_COLORS: Record<Difficulty, string> = {
   3: 'text-rose-700 bg-rose-50',
 };
 
-function LevelPips({ level }: { level: SupportLevel }) {
-  const filled = 3 - level;
-  return (
-    <span className="flex gap-1">
-      {[0, 1, 2].map(i => (
-        <span key={i} className={`w-2 h-2 rounded-full ${i < filled ? 'bg-blue-500' : 'bg-slate-200'}`} />
-      ))}
-    </span>
-  );
-}
-
 interface Props {
   onLogout: () => void;
   student: StudentSummary;
+  // Only set for a parent with 2+ students — renders the pill switcher.
+  students?: StudentSummary[];
+  onSwitchStudent?: (id: string) => void;
+  // Undefined once the owner is at their student cap (hides the CTA).
+  onAddStudent?: () => void;
+  // Only set for a clinician viewing one row of their roster.
+  onBackToRoster?: () => void;
+  incompleteProfile?: ProfileSummary | null;
+  onFinishSetup?: (profile: ProfileSummary) => void;
 }
 
-export function ParentDashboard({ onLogout, student }: Props) {
+export function ParentDashboard({
+  onLogout, student, students, onSwitchStudent, onAddStudent, onBackToRoster, incompleteProfile, onFinishSetup,
+}: Props) {
   const kidName = student.displayName;
 
   const [loading, setLoading]   = useState(true);
@@ -86,8 +77,9 @@ export function ParentDashboard({ onLogout, student }: Props) {
   useEffect(() => {
     (async () => {
       const [s, l, d, c, cfg, rewards, jToday, days, alarms, prof] = await Promise.all([
-        loadSessions(), loadLevelSlice(), loadDifficulty(), loadCoins(), loadConfig(),
-        loadCustomRewards(), parentJournalWrittenToday(student.id), parentJournalActivity(student.id, 7),
+        loadSessions(student.id), loadLevelSlice(student.id), loadDifficulty(student.id),
+        loadCoins(student.id), loadConfig(student.id),
+        loadCustomRewards(student.id), parentJournalWrittenToday(student.id), parentJournalActivity(student.id, 7),
         loadFloorAlarms(student.id), loadStudentProfile(student.id),
       ]);
       setSessions(s); setLevelSlice(l); setDifficulty(d); setCoins(c); setConfig(cfg);
@@ -102,7 +94,7 @@ export function ParentDashboard({ onLogout, student }: Props) {
 
   const updateDailyMinimum = async (n: number) => {
     setConfig({ ...config, dailyMinimum: n });
-    await saveConfig({ ...config, dailyMinimum: n });
+    await saveConfig({ ...config, dailyMinimum: n }, student.id);
   };
 
   const handleAddReward = async () => {
@@ -146,6 +138,14 @@ export function ParentDashboard({ onLogout, student }: Props) {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
+            {onBackToRoster && (
+              <button
+                onClick={onBackToRoster}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors mb-1.5"
+              >
+                ← Back to caseload
+              </button>
+            )}
             <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-0.5">Parent view</p>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight capitalize">{kidName}'s Progress</h1>
           </div>
@@ -156,6 +156,56 @@ export function ParentDashboard({ onLogout, student }: Props) {
             Log out
           </button>
         </div>
+
+        {/* Student switcher — only meaningful for a parent (a clinician adds ─ */}
+        {/* students from the roster instead, see onBackToRoster below) ────── */}
+        {!onBackToRoster && (students?.length ?? 0) > 1 && (
+          <div className="flex gap-2 flex-wrap">
+            {students!.map(s => (
+              <button
+                key={s.id}
+                onClick={() => onSwitchStudent?.(s.id)}
+                className={`px-3.5 py-1.5 rounded-full text-sm font-medium capitalize transition-colors
+                  ${s.id === student.id ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:border-blue-300'}`}
+              >
+                {s.displayName}
+              </button>
+            ))}
+            {onAddStudent && (
+              <button
+                onClick={onAddStudent}
+                className="px-3.5 py-1.5 rounded-full text-sm font-medium border border-dashed border-slate-300 text-slate-400 hover:border-blue-300 hover:text-blue-500 transition-colors"
+              >
+                + Add student
+              </button>
+            )}
+          </div>
+        )}
+        {!onBackToRoster && (students?.length ?? 0) <= 1 && onAddStudent && (
+          <button
+            onClick={onAddStudent}
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            + Add another student
+          </button>
+        )}
+
+        {/* Finish-setup nudge — a profile exists (this owner's or another */}
+        {/* one of theirs) with no login created yet */}
+        {incompleteProfile && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+            <p className="text-sm text-amber-800">
+              <span className="font-semibold capitalize">{incompleteProfile.displayName}</span>'s profile is saved,
+              but they don't have a login yet.
+            </p>
+            <button
+              onClick={() => onFinishSetup?.(incompleteProfile)}
+              className="shrink-0 text-sm font-semibold text-amber-700 hover:text-amber-900 transition-colors"
+            >
+              Finish setup
+            </button>
+          </div>
+        )}
 
         {/* Floor alarm — the adaptive engine has nothing left to offer for */}
         {/* this type (max support, easiest content) and has stopped serving it */}

@@ -68,10 +68,12 @@ function ModeCard({ mode, label, description, icon, onStart }: {
   return (
     <button
       onClick={() => onStart(mode)}
-      className="flex items-center gap-3 px-4 py-4 bg-white rounded-2xl border border-slate-200 text-left w-full
-                 hover:border-blue-300 hover:bg-blue-50/30 active:scale-[0.98] transition-all duration-150"
+      className="flex items-center gap-3.5 px-4 py-4 bg-white rounded-2xl border border-slate-200/70 text-left w-full
+                 shadow-[0_1px_2px_rgba(0,0,0,0.03)]
+                 hover:border-blue-300 hover:bg-blue-50/30 hover:shadow-[0_4px_16px_-8px_rgba(23,50,58,0.25)]
+                 active:scale-[0.98] transition-all duration-150"
     >
-      <span className="text-blue-600 shrink-0">{icon}</span>
+      <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800">{label}</p>
         <p className="text-xs text-slate-400 mt-0.5">{description}</p>
@@ -121,17 +123,19 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 capitalize">{username}</h1>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight capitalize">{username}</h1>
             <p className="text-xs text-slate-400 mt-0.5">
               {goalMet ? 'Goal done for today' : `${todayCount} of ${config.dailyMinimum} sessions done`}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {coins.balance > 0 && (
-              <span className="text-sm font-semibold text-amber-600">⭐ {coins.balance}</span>
+              <span className="flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-full">
+                ⭐ {coins.balance}
+              </span>
             )}
             {streak > 0 && (
-              <span className="text-sm font-semibold text-slate-500">{streak}d streak</span>
+              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1.5 rounded-full">{streak}d streak</span>
             )}
             <button
               onClick={onOpenProfile}
@@ -144,7 +148,7 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
         </div>
 
         {/* Daily goal bar */}
-        <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4">
+        <div className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] px-5 py-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-slate-700">Today's goal</p>
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full
@@ -178,9 +182,9 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
         </section>
 
         {/* Talk with Alex */}
-        <section className="bg-white rounded-2xl border border-slate-200 p-5">
+        <section className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-5">
           <div className="flex items-start gap-4 mb-4">
-            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-base shrink-0">
+            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base shrink-0">
               A
             </div>
             <div>

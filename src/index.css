@@ -1,10 +1,46 @@
 @import "tailwindcss";
 
+/*
+ * Reskins Tailwind's stock `blue` (accent) and `slate` (neutral) palettes
+ * in one place rather than touching every className across the app —
+ * every existing `bg-blue-600` / `text-slate-400` / etc. picks up these
+ * values automatically. Swaps the default saturated corporate blue for a
+ * muted, slightly cool petrol teal, and the default cool blue-gray neutral
+ * for a warmer, teal-tinted charcoal — a considered, single-accent palette
+ * per the product's "calm, a little stylish, not a template" design brief,
+ * rather than the default Tailwind demo look.
+ */
 @theme {
   --animate-soundbar: soundbar 0.6s ease-in-out infinite;
+
+  --color-blue-50:  #f0f5f6;
+  --color-blue-100: #dceaec;
+  --color-blue-200: #b9d5da;
+  --color-blue-300: #8fb9c1;
+  --color-blue-400: #5e97a3;
+  --color-blue-500: #3d7a87;
+  --color-blue-600: #2c6270;
+  --color-blue-700: #234e59;
+  --color-blue-800: #1c3e47;
+  --color-blue-900: #17323a;
+
+  --color-slate-50:  #f7f8f7;
+  --color-slate-100: #eff1f0;
+  --color-slate-200: #e1e4e2;
+  --color-slate-300: #c9cecb;
+  --color-slate-400: #9ca3a0;
+  --color-slate-500: #7c837f;
+  --color-slate-600: #5c635f;
+  --color-slate-700: #454b47;
+  --color-slate-800: #2e332f;
+  --color-slate-900: #1d211e;
 }
 
 @keyframes soundbar {
   0%, 100% { transform: scaleY(0.5); }
   50% { transform: scaleY(1); }
+}
+
+body {
+  font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
 }

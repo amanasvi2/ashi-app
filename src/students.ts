@@ -7,15 +7,13 @@ export interface StudentSummary {
   displayName: string;
 }
 
-// A parent has at most one student in the current UI (the schema allows
-// more, but there's no switcher yet).
-export async function getMyStudent(parentId: string): Promise<StudentSummary | null> {
+export async function listMyStudents(ownerId: string): Promise<StudentSummary[]> {
   const { data } = await supabase
     .from('students')
     .select('id, username, display_name')
-    .eq('parent_id', parentId)
-    .maybeSingle();
-  return data ? { id: data.id, username: data.username, displayName: data.display_name } : null;
+    .eq('owner_id', ownerId)
+    .order('created_at', { ascending: true });
+  return (data ?? []).map(row => ({ id: row.id, username: row.username, displayName: row.display_name }));
 }
 
 export interface CreateStudentInput {

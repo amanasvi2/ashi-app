@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { OwnerType } from './ownerCaps';
 
 export type Role = 'kid' | 'parent';
 
@@ -13,15 +14,23 @@ interface AuthResult {
   session?: Session;
 }
 
-// ── Parent auth (ordinary Supabase email/password) ──────────────────────────
+// ── Owner auth (parent or clinician — ordinary Supabase email/password) ─────
 
-export async function signUpParent(email: string, password: string): Promise<AuthResult> {
+export async function signUpOwner(email: string, password: string, ownerType: OwnerType): Promise<AuthResult> {
   const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password });
   if (error) return { error: error.message };
   if (!data.user) return { error: 'Something went wrong creating your account.' };
   // If email confirmation is enabled on the Supabase project, no session is
-  // issued yet — the parent has to confirm their email, then sign in.
+  // issued yet — the owner has to confirm their email, then sign in. (This
+  // project has mailer_autoconfirm on, so this branch doesn't fire today,
+  // but it's kept as a safety net for a differently-configured project.)
   if (!data.session) return { error: 'Check your email to confirm your account, then sign in.' };
+
+  // Self-declared, not a trust boundary — RLS only lets an owner insert
+  // their own row (see migration 0007), and it can never be updated after.
+  const { error: ownerError } = await supabase.from('owners').insert({ id: data.user.id, owner_type: ownerType });
+  if (ownerError) return { error: 'Could not finish setting up your account.' };
+
   return { session: { role: 'parent', userId: data.user.id, username: data.user.email ?? '' } };
 }
 

@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import type { SessionMode } from './types';
 import { getSession, signOut } from './auth';
 import type { Session } from './auth';
-import { getMyStudent } from './students';
+import { listMyStudents } from './students';
 import type { StudentSummary } from './students';
-import { getMyProfile } from './profiles';
+import { listMyProfiles, getMyOwnerType } from './profiles';
 import type { ProfileSummary } from './profiles';
+import { STUDENT_CAP, type OwnerType } from './ownerCaps';
 import { loadLevelSlice, loadDifficulty } from './storage';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Login } from './pages/Login';
@@ -18,6 +19,7 @@ import { Journal } from './pages/Journal';
 import { ProgressPage } from './pages/ProgressPage';
 import { RewardsPage } from './pages/RewardsPage';
 import { ParentDashboard } from './pages/ParentDashboard';
+import { StudentRoster } from './pages/StudentRoster';
 import { ProfilePanel } from './pages/ProfilePanel';
 import { JournalFAB } from './components/JournalFAB';
 import { BottomNav } from './components/BottomNav';
@@ -40,8 +42,16 @@ const TAB_LABELS: { key: MainTab; label: string }[] = [
 export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [session, setSessionState] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<ProfileSummary | null>(null);
-  const [student, setStudent] = useState<StudentSummary | null>(null);
+  const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
+  const [students, setStudents] = useState<StudentSummary[]>([]);
+  const [ownerType, setOwnerType] = useState<OwnerType>('parent');
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  // Non-null whenever a profile needs its login created — either the very
+  // first student (forced, nothing else to render yet), the one just
+  // created via "Add another student," or one the owner explicitly chose
+  // to finish setting up from the switcher/roster's banner.
+  const [pendingLoginProfile, setPendingLoginProfile] = useState<ProfileSummary | null>(null);
+  const [addingStudent, setAddingStudent] = useState(false);
   const [parentDataLoading, setParentDataLoading] = useState(false);
   const [page, setPage]       = useState<Page>({ tag: 'home' });
   const [mainTab, setMainTab] = useState<MainTab>('home');
@@ -52,12 +62,26 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (session?.role !== 'parent') { setProfile(null); setStudent(null); return; }
+    if (session?.role !== 'parent') {
+      setProfiles([]); setStudents([]); setSelectedStudentId(null); setPendingLoginProfile(null);
+      return;
+    }
     setParentDataLoading(true);
     (async () => {
-      const p = await getMyProfile(session.userId);
-      setProfile(p);
-      setStudent(p?.studentId ? await getMyStudent(session.userId) : null);
+      const [profs, studs, ot] = await Promise.all([
+        listMyProfiles(session.userId),
+        listMyStudents(session.userId),
+        getMyOwnerType(session.userId),
+      ]);
+      setProfiles(profs);
+      setStudents(studs);
+      setOwnerType(ot);
+      // Nothing to show yet — force the (oldest) incomplete profile's login
+      // screen, same as the old single-student "no student yet" case.
+      if (studs.length === 0 && profs.length > 0) setPendingLoginProfile(profs[0]);
+      // A parent lands straight on their (first) kid's dashboard; a
+      // clinician lands on the roster (selectedStudentId stays null).
+      if (ot === 'parent' && studs.length > 0) setSelectedStudentId(studs[0].id);
       setParentDataLoading(false);
     })();
   }, [session]);
@@ -76,8 +100,11 @@ export default function App() {
   const handleLogout = async () => {
     await signOut();
     setSessionState(null);
-    setProfile(null);
-    setStudent(null);
+    setProfiles([]);
+    setStudents([]);
+    setSelectedStudentId(null);
+    setPendingLoginProfile(null);
+    setAddingStudent(false);
     setPage({ tag: 'home' });
     setMainTab('home');
   };
@@ -87,19 +114,71 @@ export default function App() {
   // ── Not logged in ─────────────────────────────────────────────────────────
   if (!session) return <Login onLogin={handleLogin} />;
 
-  // ── Parent view ───────────────────────────────────────────────────────────
+  // ── Parent / clinician view ─────────────────────────────────────────────
   if (session.role === 'parent') {
     if (parentDataLoading) return <LoadingScreen />;
-    if (!profile) return <IntakeFlow onDone={setProfile} />;
-    if (!student) {
+
+    if (profiles.length === 0 || addingStudent) {
       return (
-        <CreateLoginScreen
-          profile={profile}
-          onDone={s => { setStudent(s); setProfile(p => (p ? { ...p, studentId: s.id } : p)); }}
+        <IntakeFlow
+          onDone={p => {
+            setProfiles(prev => [...prev, p]);
+            setAddingStudent(false);
+            setPendingLoginProfile(p);
+          }}
         />
       );
     }
-    return <ParentDashboard onLogout={handleLogout} student={student} />;
+
+    if (pendingLoginProfile) {
+      return (
+        <CreateLoginScreen
+          profile={pendingLoginProfile}
+          onDone={s => {
+            setStudents(prev => [...prev, s]);
+            setProfiles(prev => prev.map(p => (p.id === pendingLoginProfile.id ? { ...p, studentId: s.id } : p)));
+            setPendingLoginProfile(null);
+            setSelectedStudentId(s.id);
+          }}
+        />
+      );
+    }
+
+    // Shouldn't happen (the effect above forces pendingLoginProfile whenever
+    // there's no student yet), but keeps this branch honest rather than
+    // rendering the dashboard with an undefined student.
+    if (students.length === 0) return <LoadingScreen />;
+
+    const incompleteProfile = profiles.find(p => !p.studentId) ?? null;
+    const atCap = profiles.length >= STUDENT_CAP[ownerType];
+
+    if (ownerType === 'clinician' && selectedStudentId === null) {
+      return (
+        <StudentRoster
+          students={students}
+          incompleteProfile={incompleteProfile}
+          canAddStudent={!atCap}
+          onSelectStudent={setSelectedStudentId}
+          onFinishSetup={setPendingLoginProfile}
+          onAddStudent={() => setAddingStudent(true)}
+          onLogout={handleLogout}
+        />
+      );
+    }
+
+    const currentStudent = students.find(s => s.id === selectedStudentId) ?? students[0];
+    return (
+      <ParentDashboard
+        onLogout={handleLogout}
+        student={currentStudent}
+        students={ownerType === 'parent' && students.length > 1 ? students : undefined}
+        onSwitchStudent={setSelectedStudentId}
+        onAddStudent={!atCap ? () => setAddingStudent(true) : undefined}
+        onBackToRoster={ownerType === 'clinician' ? () => setSelectedStudentId(null) : undefined}
+        incompleteProfile={incompleteProfile}
+        onFinishSetup={setPendingLoginProfile}
+      />
+    );
   }
 
   // ── Kid: full-screen pages (no nav) ───────────────────────────────────────

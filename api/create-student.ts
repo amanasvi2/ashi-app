@@ -15,14 +15,15 @@ const DEFAULT_DIFFICULTY = { social: 1, nonverbal: 1, inference: 1 };
 // Creates a kid's Supabase Auth user (synthetic email under the hood — see
 // src/auth.ts) and links it to an existing, already-saved student_profiles
 // row (profile creation and login creation are decoupled — see
-// api/profile/save.ts). Only ever called by an authenticated parent, and
-// the one place that uses the service-role key to admin-create an Auth user.
+// api/profile/save.ts). Only ever called by an authenticated owner (parent
+// or clinician), and the one place that uses the service-role key to
+// admin-create an Auth user.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const parent = await verifyUser(req.headers.authorization);
-    if (!parent) return res.status(401).json({ error: 'Unauthorized' });
+    const owner = await verifyUser(req.headers.authorization);
+    if (!owner) return res.status(401).json({ error: 'Unauthorized' });
 
     const {
       profileId,
@@ -43,12 +44,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Confirm the caller owns this profile and it isn't already linked.
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('student_profiles')
-      .select('id, parent_id, student_id, display_name, interests')
+      .select('id, owner_id, student_id, display_name, interests')
       .eq('id', profileId)
       .maybeSingle();
 
     if (profileError || !profile) return res.status(404).json({ error: 'Profile not found' });
-    if (profile.parent_id !== parent.id) return res.status(403).json({ error: 'Not your profile' });
+    if (profile.owner_id !== owner.id) return res.status(403).json({ error: 'Not your profile' });
     if (profile.student_id) return res.status(409).json({ error: 'This profile already has a login' });
 
     const normalizedUsername = username.trim().toLowerCase();
@@ -75,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { error: insertError } = await supabaseAdmin.from('students').insert({
       id: studentId,
-      parent_id: parent.id,
+      owner_id: owner.id,
       username: normalizedUsername,
       display_name: profile.display_name,
       gender: gender ?? 'other',

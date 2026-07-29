@@ -3,16 +3,17 @@ import { verifyUser } from '../../server/verifyUser.js';
 import { supabaseAsUser } from '../../server/asUser.js';
 import { validateStudentProfile } from '../../src/profileValidation.js';
 import type { StudentProfileInput } from '../../src/profileTypes';
+import { isUnderStudentCap, type OwnerType } from '../../src/ownerCaps.js';
 
 // Uses the caller's own token (not the service-role client) — RLS's
-// "parent_id = auth.uid()" policy already permits exactly this insert, so
+// "owner_id = auth.uid()" policy already permits exactly this insert, so
 // there's no need to bypass it.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    const parent = await verifyUser(req.headers.authorization);
-    if (!parent) return res.status(401).json({ error: 'Unauthorized' });
+    const owner = await verifyUser(req.headers.authorization);
+    if (!owner) return res.status(401).json({ error: 'Unauthorized' });
 
     const { profile }: { profile?: StudentProfileInput } = req.body ?? {};
     if (!profile) return res.status(400).json({ error: 'Missing profile' });
@@ -21,10 +22,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!valid) return res.status(400).json({ error: errors[0] });
 
     const token = String(req.headers.authorization).replace(/^Bearer\s+/i, '');
-    const { data, error } = await supabaseAsUser(token)
+    const client = supabaseAsUser(token);
+
+    // A Student is a profile (with or without a login yet), so this is
+    // the one place a new Student gets created — the cap is checked here,
+    // server-side, regardless of what the UI does or doesn't gate on.
+    const [{ data: ownerRow }, { count: activeCount }] = await Promise.all([
+      client.from('owners').select('owner_type').eq('id', owner.id).maybeSingle(),
+      client.from('student_profiles').select('id', { count: 'exact', head: true })
+        .eq('owner_id', owner.id).eq('is_active', true),
+    ]);
+    const ownerType: OwnerType = (ownerRow?.owner_type as OwnerType | undefined) ?? 'parent';
+    if (!isUnderStudentCap(activeCount ?? 0, ownerType)) {
+      return res.status(409).json({ error: `You've reached the limit of students for this account.` });
+    }
+
+    const { data, error } = await client
       .from('student_profiles')
       .insert({
-        parent_id: parent.id,
+        owner_id: owner.id,
         student_id: null,
         display_name: profile.display_name.trim(),
         grade: profile.grade,
