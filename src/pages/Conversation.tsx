@@ -242,7 +242,7 @@ interface Props {
 }
 
 export function Conversation({ onBack }: Props) {
-  const kidGender = loadConfig().kidGender;
+  const [kidGender, setKidGender] = useState<'girl' | 'boy' | 'other' | undefined>(undefined);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [history, setHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
@@ -253,6 +253,10 @@ export function Conversation({ onBack }: Props) {
   const [conversationEnded, setConversationEnded] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    loadConfig().then(c => setKidGender(c.kidGender));
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

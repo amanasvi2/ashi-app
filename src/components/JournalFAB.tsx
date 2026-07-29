@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { journalWrittenToday } from '../storage';
 
 interface Props {
@@ -5,7 +6,12 @@ interface Props {
 }
 
 export function JournalFAB({ onOpen }: Props) {
-  const done = journalWrittenToday();
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    journalWrittenToday().then(setDone);
+  }, []);
+
   return (
     <button
       onClick={onOpen}

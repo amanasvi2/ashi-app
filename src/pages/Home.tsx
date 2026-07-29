@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
-import type { SessionMode } from '../types';
+import { useEffect, useState } from 'react';
+import type { SessionMode, SessionRecord, ParentConfig, CoinsState } from '../types';
 import { loadSessions, calculateStreak, sessionsTodayCount, loadConfig, loadCoins, journalWrittenToday } from '../storage';
+import { LoadingScreen } from '../components/LoadingScreen';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -91,13 +92,24 @@ interface Props {
 }
 
 export function Home({ username, onStart, onConversation, onOpenProfile }: Props) {
-  const sessions    = useMemo(() => loadSessions(), []);
-  const config      = useMemo(() => loadConfig(), []);
-  const coins       = useMemo(() => loadCoins(), []);
+  const [loading, setLoading]   = useState(true);
+  const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const [config, setConfig]     = useState<ParentConfig>({ dailyMinimum: 1 });
+  const [coins, setCoins]       = useState<CoinsState>({ balance: 0, totalEarned: 0, hintTokens: 0 });
+  const [journalDone, setJournalDone] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const [s, c, co, j] = await Promise.all([loadSessions(), loadConfig(), loadCoins(), journalWrittenToday()]);
+      setSessions(s); setConfig(c); setCoins(co); setJournalDone(j);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return <LoadingScreen />;
 
   const streak      = calculateStreak(sessions);
   const todayCount  = sessionsTodayCount(sessions);
-  const journalDone = journalWrittenToday();
   const goalMet     = todayCount >= config.dailyMinimum;
 
   const initial = username[0]?.toUpperCase() ?? '?';

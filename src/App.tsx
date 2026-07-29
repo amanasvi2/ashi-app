@@ -7,6 +7,7 @@ import type { StudentSummary } from './students';
 import { getMyProfile } from './profiles';
 import type { ProfileSummary } from './profiles';
 import { loadLevelSlice, loadDifficulty } from './storage';
+import { LoadingScreen } from './components/LoadingScreen';
 import { Login } from './pages/Login';
 import { IntakeFlow } from './pages/onboarding/IntakeFlow';
 import { CreateLoginScreen } from './pages/onboarding/CreateLoginScreen';
@@ -35,14 +36,6 @@ const TAB_LABELS: { key: MainTab; label: string }[] = [
   { key: 'progress', label: 'Progress' },
   { key: 'rewards',  label: 'Rewards'  },
 ];
-
-function LoadingScreen() {
-  return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <p className="text-sm text-slate-400">Loading…</p>
-    </div>
-  );
-}
 
 export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
@@ -73,6 +66,11 @@ export default function App() {
     setSessionState(s);
     setPage({ tag: 'home' });
     setMainTab('home');
+  };
+
+  const handleStart = async (mode: SessionMode) => {
+    const [levelSlice, difficulty] = await Promise.all([loadLevelSlice(), loadDifficulty()]);
+    setPage({ tag: 'practice', mode, levelSlice, difficulty });
   };
 
   const handleLogout = async () => {
@@ -155,9 +153,7 @@ export default function App() {
         {mainTab === 'home'     && (
           <Home
             username={session.username}
-            onStart={(mode: SessionMode) =>
-              setPage({ tag: 'practice', mode, levelSlice: loadLevelSlice(), difficulty: loadDifficulty() })
-            }
+            onStart={handleStart}
             onConversation={() => setPage({ tag: 'conversation' })}
             onLogout={handleLogout}
             onOpenProfile={() => setShowProfile(true)}

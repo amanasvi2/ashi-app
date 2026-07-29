@@ -1,9 +1,13 @@
-import { useMemo } from 'react';
-import type { SupportLevel, Difficulty } from '../types';
+import { useEffect, useState } from 'react';
+import type { SupportLevel, Difficulty, SessionRecord, ParentConfig, CoinsState, DifficultyState } from '../types';
 import {
   loadSessions, getTotalScore, calculateStreak,
   sessionsTodayCount, loadConfig, loadLevelSlice, loadDifficulty, loadCoins,
+  initialDifficulty,
 } from '../storage';
+import { LoadingScreen } from '../components/LoadingScreen';
+import type { LevelSlice } from '../levelReducer';
+import { initialLevelState } from '../levelReducer';
 
 const LEVEL_LABELS: Record<SupportLevel, string> = { 2: 'Most help', 1: 'Some help', 0: 'No hints' };
 const LEVEL_COLORS: Record<SupportLevel, string> = {
@@ -45,11 +49,24 @@ const MODE_LABELS: Record<string, string> = {
 };
 
 export function ProgressPage() {
-  const sessions   = useMemo(() => loadSessions(), []);
-  const levelSlice = useMemo(() => loadLevelSlice(), []);
-  const difficulty = useMemo(() => loadDifficulty(), []);
-  const coins      = useMemo(() => loadCoins(), []);
-  const config     = useMemo(() => loadConfig(), []);
+  const [loading, setLoading]     = useState(true);
+  const [sessions, setSessions]   = useState<SessionRecord[]>([]);
+  const [levelSlice, setLevelSlice] = useState<LevelSlice>(initialLevelState);
+  const [difficulty, setDifficulty] = useState<DifficultyState>(initialDifficulty);
+  const [coins, setCoins]         = useState<CoinsState>({ balance: 0, totalEarned: 0, hintTokens: 0 });
+  const [config, setConfig]       = useState<ParentConfig>({ dailyMinimum: 1 });
+
+  useEffect(() => {
+    (async () => {
+      const [s, l, d, c, cfg] = await Promise.all([
+        loadSessions(), loadLevelSlice(), loadDifficulty(), loadCoins(), loadConfig(),
+      ]);
+      setSessions(s); setLevelSlice(l); setDifficulty(d); setCoins(c); setConfig(cfg);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return <LoadingScreen />;
 
   const streak      = calculateStreak(sessions);
   const todayCount  = sessionsTodayCount(sessions);

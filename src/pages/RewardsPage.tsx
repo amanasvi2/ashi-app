@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import type { CustomReward } from '../types';
-import { loadCoins, spendCoins, addHintTokens, loadConfig } from '../storage';
+import { useEffect, useState } from 'react';
+import type { CustomReward, CoinsState } from '../types';
+import { loadCoins, spendCoins, addHintTokens, loadCustomRewards } from '../storage';
+import { LoadingScreen } from '../components/LoadingScreen';
 
 const HINT_COST = 25;
 const HINT_AMOUNT = 10;
@@ -187,21 +188,32 @@ function RewardCard({ reward, coinBalance, onRedeem }: RewardCardProps) {
 }
 
 export function RewardsPage() {
-  const [coins, setCoins] = useState(() => loadCoins());
-  const config = loadConfig();
+  const [loading, setLoading] = useState(true);
+  const [coins, setCoins] = useState<CoinsState>({ balance: 0, totalEarned: 0, hintTokens: 0 });
+  const [customRewards, setCustomRewards] = useState<CustomReward[]>([]);
 
-  const handleBuyHints = () => {
-    const next = spendCoins(HINT_COST);
+  useEffect(() => {
+    (async () => {
+      const [c, r] = await Promise.all([loadCoins(), loadCustomRewards()]);
+      setCoins(c); setCustomRewards(r);
+      setLoading(false);
+    })();
+  }, []);
+
+  const handleBuyHints = async () => {
+    const next = await spendCoins(HINT_COST);
     if (!next) return;
-    addHintTokens(HINT_AMOUNT);
+    await addHintTokens(HINT_AMOUNT);
     setCoins({ ...next, hintTokens: next.hintTokens + HINT_AMOUNT });
   };
 
-  const handleRedeemReward = (reward: CustomReward) => {
-    const next = spendCoins(reward.cost);
+  const handleRedeemReward = async (reward: CustomReward) => {
+    const next = await spendCoins(reward.cost);
     if (!next) return;
     setCoins(next);
   };
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 lg:pb-8">
@@ -223,10 +235,10 @@ export function RewardsPage() {
           />
         </section>
 
-        {config.customRewards.length > 0 && (
+        {customRewards.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Video rewards</h2>
-            {config.customRewards.map(reward => (
+            {customRewards.map(reward => (
               <RewardCard
                 key={reward.id}
                 reward={reward}
@@ -237,7 +249,7 @@ export function RewardsPage() {
           </section>
         )}
 
-        {config.customRewards.length === 0 && (
+        {customRewards.length === 0 && (
           <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
             <p className="text-slate-400 text-sm">No video rewards yet.</p>
             <p className="text-slate-400 text-xs mt-1">Ask your parent to add some!</p>

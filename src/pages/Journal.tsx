@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JournalMood, JournalEntry } from '../types';
 import { loadJournalEntries, saveJournalEntry, todaysJournalEntry } from '../storage';
+import { LoadingScreen } from '../components/LoadingScreen';
 
 // ── Mood data ─────────────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ function calcJournalStreak(entries: JournalEntry[]): number {
 
 function TodayEditor({ existing, onSave }: {
   existing: JournalEntry | null;
-  onSave: (entry: JournalEntry) => void;
+  onSave: (entry: JournalEntry) => Promise<void>;
 }) {
   const [mood, setMood]       = useState<JournalMood>(existing?.mood ?? 'okay');
   const [content, setContent] = useState(existing?.content ?? '');
@@ -84,7 +85,7 @@ function TodayEditor({ existing, onSave }: {
     textareaRef.current?.focus();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!content.trim()) return;
     const entry: JournalEntry = {
       id: existing?.id ?? crypto.randomUUID(),
@@ -93,8 +94,8 @@ function TodayEditor({ existing, onSave }: {
       emoji: extraEmoji || undefined,
       content: content.trim(),
     };
-    saveJournalEntry(entry);
-    onSave(entry);
+    await saveJournalEntry(entry);
+    await onSave(entry);
     setSaved(true);
   };
 
@@ -248,20 +249,31 @@ interface Props {
 }
 
 export function Journal({ onBack }: Props) {
-  const [todayEntry, setTodayEntry] = useState<JournalEntry | null>(() => todaysJournalEntry());
-  const [allEntries, setAllEntries] = useState<JournalEntry[]>(() => loadJournalEntries());
+  const [loading, setLoading]       = useState(true);
+  const [todayEntry, setTodayEntry] = useState<JournalEntry | null>(null);
+  const [allEntries, setAllEntries] = useState<JournalEntry[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const [t, all] = await Promise.all([todaysJournalEntry(), loadJournalEntries()]);
+      setTodayEntry(t); setAllEntries(all);
+      setLoading(false);
+    })();
+  }, []);
 
   const streak = calcJournalStreak(allEntries);
   const today = new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
 
-  const handleSave = (entry: JournalEntry) => {
+  const handleSave = async (entry: JournalEntry) => {
     setTodayEntry(entry);
-    setAllEntries(loadJournalEntries());
+    setAllEntries(await loadJournalEntries());
   };
 
   const pastEntries = allEntries.filter(
     e => new Date(e.date).toDateString() !== new Date().toDateString()
   );
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="min-h-screen bg-slate-50">

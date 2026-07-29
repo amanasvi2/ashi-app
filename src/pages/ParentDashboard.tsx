@@ -1,12 +1,17 @@
-import { useMemo, useState } from 'react';
-import type { SupportLevel, Difficulty, CustomReward, ParentConfig } from '../types';
+import { useEffect, useState } from 'react';
+import type { SupportLevel, Difficulty, CustomReward, ParentConfig, SessionRecord, DifficultyState, CoinsState } from '../types';
 import {
   loadSessions, getTotalScore, practicedToday,
   loadLevelSlice, loadDifficulty,
-  journalWrittenToday, journalActiveDays,
+  parentJournalWrittenToday, parentJournalActivity,
   loadConfig, saveConfig, loadCoins,
+  loadCustomRewards, addCustomReward, deleteCustomReward,
+  initialDifficulty,
 } from '../storage';
 import type { StudentSummary } from '../students';
+import { LoadingScreen } from '../components/LoadingScreen';
+import type { LevelSlice } from '../levelReducer';
+import { initialLevelState } from '../levelReducer';
 
 const LEVEL_LABELS: Record<SupportLevel, string> = { 2: 'Most help', 1: 'Some help', 0: 'No hints' };
 const LEVEL_COLORS: Record<SupportLevel, string> = {
@@ -38,44 +43,57 @@ interface Props {
 }
 
 export function ParentDashboard({ onLogout, student }: Props) {
-  const sessions   = useMemo(() => loadSessions(), []);
-  const levelSlice = useMemo(() => loadLevelSlice(), []);
-  const difficulty = useMemo(() => loadDifficulty(), []);
-  const coins      = useMemo(() => loadCoins(), []);
-  const kidName    = student.displayName;
-  const totalScore = getTotalScore(sessions);
-  const doneToday  = practicedToday(sessions);
-  const journalToday = journalWrittenToday();
-  const activityDays = journalActiveDays(7);
+  const kidName = student.displayName;
 
-  const [config, setConfig] = useState<ParentConfig>(() => loadConfig());
+  const [loading, setLoading]   = useState(true);
+  const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const [levelSlice, setLevelSlice] = useState<LevelSlice>(initialLevelState);
+  const [difficulty, setDifficulty] = useState<DifficultyState>(initialDifficulty);
+  const [coins, setCoins]       = useState<CoinsState>({ balance: 0, totalEarned: 0, hintTokens: 0 });
+  const [config, setConfig]     = useState<ParentConfig>({ dailyMinimum: 1 });
+  const [customRewards, setCustomRewards] = useState<CustomReward[]>([]);
+  const [journalToday, setJournalToday]   = useState(false);
+  const [activityDays, setActivityDays]   = useState<{ date: string; hasEntry: boolean }[]>([]);
+
   const [showAddReward, setShowAddReward] = useState(false);
   const [newLabel, setNewLabel] = useState('');
   const [newEmoji, setNewEmoji] = useState('🎬');
   const [newUrl, setNewUrl] = useState('');
   const [newCost, setNewCost] = useState(50);
 
-  const updateConfig = (next: ParentConfig) => {
-    saveConfig(next);
-    setConfig(next);
+  useEffect(() => {
+    (async () => {
+      const [s, l, d, c, cfg, rewards, jToday, days] = await Promise.all([
+        loadSessions(), loadLevelSlice(), loadDifficulty(), loadCoins(), loadConfig(),
+        loadCustomRewards(), parentJournalWrittenToday(student.id), parentJournalActivity(student.id, 7),
+      ]);
+      setSessions(s); setLevelSlice(l); setDifficulty(d); setCoins(c); setConfig(cfg);
+      setCustomRewards(rewards); setJournalToday(jToday); setActivityDays(days);
+      setLoading(false);
+    })();
+  }, [student.id]);
+
+  const totalScore = getTotalScore(sessions);
+  const doneToday  = practicedToday(sessions);
+
+  const updateDailyMinimum = async (n: number) => {
+    setConfig({ ...config, dailyMinimum: n });
+    await saveConfig({ ...config, dailyMinimum: n });
   };
 
-  const handleAddReward = () => {
+  const handleAddReward = async () => {
     if (!newLabel.trim() || !newUrl.trim()) return;
-    const reward: CustomReward = {
-      id: crypto.randomUUID(),
-      label: newLabel.trim(),
-      emoji: newEmoji,
-      url: newUrl.trim(),
-      cost: newCost,
-    };
-    updateConfig({ ...config, customRewards: [...config.customRewards, reward] });
+    const reward = await addCustomReward(student.id, {
+      label: newLabel.trim(), emoji: newEmoji, url: newUrl.trim(), cost: newCost,
+    });
+    setCustomRewards([...customRewards, reward]);
     setNewLabel(''); setNewUrl(''); setNewEmoji('🎬'); setNewCost(50);
     setShowAddReward(false);
   };
 
-  const handleDeleteReward = (id: string) => {
-    updateConfig({ ...config, customRewards: config.customRewards.filter(r => r.id !== id) });
+  const handleDeleteReward = async (id: string) => {
+    await deleteCustomReward(id);
+    setCustomRewards(customRewards.filter(r => r.id !== id));
   };
 
   function formatDate(iso: string) {
@@ -94,6 +112,8 @@ export function ParentDashboard({ onLogout, student }: Props) {
   };
 
   const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -296,7 +316,7 @@ export function ParentDashboard({ onLogout, student }: Props) {
                 {[1, 2, 3].map(n => (
                   <button
                     key={n}
-                    onClick={() => updateConfig({ ...config, dailyMinimum: n })}
+                    onClick={() => updateDailyMinimum(n)}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all
                       ${config.dailyMinimum === n
                         ? 'bg-blue-600 text-white border-blue-600'
@@ -314,7 +334,7 @@ export function ParentDashboard({ onLogout, student }: Props) {
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Video rewards</h2>
           <div className="space-y-2">
-            {config.customRewards.map(r => (
+            {customRewards.map(r => (
               <div key={r.id} className="bg-white rounded-xl border border-slate-100 px-4 py-3 flex items-center gap-3">
                 <span className="text-xl">{r.emoji}</span>
                 <div className="flex-1 min-w-0">

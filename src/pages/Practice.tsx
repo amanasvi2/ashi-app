@@ -12,7 +12,7 @@ import {
   saveSession, saveLevelSlice, saveDifficulty, updateDifficultyAfterSession,
   loadCoins, addCoins, useHintToken as spendHintToken,
   sessionsTodayCount, loadSessions, loadConfig, journalWrittenToday,
-  pickSessionCount,
+  pickSessionCount, loadInterests,
 } from '../storage';
 import { generateItems } from '../generateItems';
 
@@ -345,7 +345,6 @@ interface Props {
 
 export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, onComplete }: Props) {
   // ── State & refs ──────────────────────────────────────────────────────────
-  const [sessionCount] = useState(() => pickSessionCount(loadSessions()));
   const [items, setItems]       = useState<Item[]>([]);
   const [loading, setLoading]   = useState(true);
   const [itemIdx, setItemIdx]   = useState(0);
@@ -356,7 +355,8 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
   const [feedback, setFeedback] = useState<{ result: AnswerResult; text: string } | null>(null);
   const [done, setDone]         = useState(false);
   const [coinsEarned, setCoinsEarned] = useState(0);
-  const [hintTokens, setHintTokens]   = useState(() => loadCoins().hintTokens);
+  const [journalDone, setJournalDone] = useState(false);
+  const [hintTokens, setHintTokens]   = useState(0);
   const [hintActiveQ, setHintActiveQ] = useState<string | null>(null);
   const [readingReady, setReadingReady] = useState(false);
   const [readProgress, setReadProgress] = useState(0);
@@ -369,17 +369,31 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
 
   // ── Effects ───────────────────────────────────────────────────────────────
 
-  useEffect(() => { saveLevelSlice(levelSlice); }, [levelSlice]);
+  useEffect(() => { void saveLevelSlice(levelSlice); }, [levelSlice]);
 
-  // Generate AI items on mount; fall back to hardcoded on failure
+  // Resolve session count + hint tokens + interests, then generate AI items
+  // (fall back to hardcoded on failure) — all under the one existing
+  // "Creating your session..." loading gate.
   useEffect(() => {
-    const config = loadConfig();
-    generateItems(mode, initialDifficulty, sessionCount, config.interests)
-      .then(setItems)
-      .catch(() => setItems(pickFallbackItems(mode, initialDifficulty, sessionCount)))
-      .finally(() => setLoading(false));
+    (async () => {
+      const [sessions, coins, interests] = await Promise.all([loadSessions(), loadCoins(), loadInterests()]);
+      const count = pickSessionCount(sessions);
+      setHintTokens(coins.hintTokens);
+      try {
+        setItems(await generateItems(mode, initialDifficulty, count, interests));
+      } catch {
+        setItems(pickFallbackItems(mode, initialDifficulty, count));
+      } finally {
+        setLoading(false);
+      }
+    })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Journal status for the finished screen, resolved once the session ends.
+  useEffect(() => {
+    if (done) journalWrittenToday().then(setJournalDone);
+  }, [done]);
 
   // Reading gate timer
   useEffect(() => {
@@ -408,24 +422,24 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
     return ['social', 'nonverbal', 'inference'] as const;
   }, [mode]);
 
-  const finishSession = useCallback(() => {
+  const finishSession = useCallback(async () => {
     const pct = maxScore > 0 ? score / maxScore : 0;
     const newDiff = updateDifficultyAfterSession(difficulty, pct, [...affectedTypes]);
-    saveDifficulty(newDiff);
+    await saveDifficulty(newDiff);
     setDifficulty(newDiff);
 
-    const config = loadConfig();
-    const countBefore = sessionsTodayCount(loadSessions());
+    const [config, sessions] = await Promise.all([loadConfig(), loadSessions()]);
+    const countBefore = sessionsTodayCount(sessions);
     let earned = 0;
-    if (countBefore >= config.dailyMinimum) { addCoins(10); earned += 10; }
-    if (maxScore > 0 && score === maxScore)  { addCoins(5);  earned += 5; }
+    if (countBefore >= config.dailyMinimum) { await addCoins(10); earned += 10; }
+    if (maxScore > 0 && score === maxScore)  { await addCoins(5);  earned += 5; }
     setCoinsEarned(earned);
 
     const avgResponseMs = answeredCountRef.current > 0
       ? Math.round(totalResponseMsRef.current / answeredCountRef.current)
       : undefined;
 
-    saveSession({
+    await saveSession({
       id: crypto.randomUUID(),
       date: new Date().toISOString(),
       mode, score, maxScore,
@@ -445,7 +459,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
       <FinishedScreen
         score={score} maxScore={maxScore} mode={mode}
         coinsEarned={coinsEarned}
-        journalDone={journalWrittenToday()}
+        journalDone={journalDone}
         onGoHome={onComplete}
       />
     );
@@ -465,8 +479,8 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
-  const handleUseHint = () => {
-    const ok = spendHintToken();
+  const handleUseHint = async () => {
+    const ok = await spendHintToken();
     if (ok) { setHintTokens(t => t - 1); setHintActiveQ(`${itemIdx}`); }
   };
 

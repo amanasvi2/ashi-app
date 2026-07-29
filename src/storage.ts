@@ -1,23 +1,54 @@
+import { supabase } from './supabase';
 import type {
   SessionRecord, DifficultyState, Difficulty,
-  JournalEntry, ParentConfig, CoinsState,
+  JournalEntry, ParentConfig, CoinsState, CustomReward,
 } from './types';
 import type { LevelSlice } from './levelReducer';
 import { initialLevelState } from './levelReducer';
 
-// ── Sessions ──────────────────────────────────────────────────────────────────
-
-const SESSIONS_KEY = 'ashi_sessions_v1';
-
-export function loadSessions(): SessionRecord[] {
-  try { return JSON.parse(localStorage.getItem(SESSIONS_KEY) ?? '[]'); }
-  catch { return []; }
+async function currentUserId(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+  return user.id;
 }
 
-export function saveSession(record: SessionRecord): void {
-  const s = loadSessions();
-  s.unshift(record);
-  localStorage.setItem(SESSIONS_KEY, JSON.stringify(s.slice(0, 100)));
+// ── Sessions ──────────────────────────────────────────────────────────────────
+
+export async function loadSessions(): Promise<SessionRecord[]> {
+  const { data } = await supabase
+    .from('practice_sessions')
+    .select('*')
+    .order('date', { ascending: false })
+    .limit(100);
+  return (data ?? []).map(row => ({
+    id: row.id,
+    date: row.date,
+    mode: row.mode,
+    score: row.score,
+    maxScore: row.max_score,
+    itemCount: row.item_count,
+    endedBy: row.ended_by,
+    levelSnapshot: row.level_snapshot,
+    difficultySnapshot: row.difficulty_snapshot,
+    avgResponseMs: row.avg_response_ms ?? undefined,
+  }));
+}
+
+export async function saveSession(record: SessionRecord): Promise<void> {
+  const studentId = await currentUserId();
+  await supabase.from('practice_sessions').insert({
+    id: record.id,
+    student_id: studentId,
+    date: record.date,
+    mode: record.mode,
+    score: record.score,
+    max_score: record.maxScore,
+    item_count: record.itemCount,
+    ended_by: record.endedBy,
+    level_snapshot: record.levelSnapshot,
+    difficulty_snapshot: record.difficultySnapshot,
+    avg_response_ms: record.avgResponseMs ?? null,
+  });
 }
 
 export function getTotalScore(sessions: SessionRecord[]): number {
@@ -58,34 +89,40 @@ export function calculateStreak(sessions: SessionRecord[]): number {
 
 // ── Support levels ────────────────────────────────────────────────────────────
 
-const LEVELS_KEY = 'ashi_levels_v1';
-
-export function loadLevelSlice(): LevelSlice {
-  try {
-    const raw = localStorage.getItem(LEVELS_KEY);
-    return raw ? JSON.parse(raw) : initialLevelState;
-  } catch { return initialLevelState; }
+export async function loadLevelSlice(): Promise<LevelSlice> {
+  const studentId = await currentUserId();
+  const { data } = await supabase
+    .from('level_state')
+    .select('levels, streaks')
+    .eq('student_id', studentId)
+    .maybeSingle();
+  return data ? { levels: data.levels, streaks: data.streaks } : initialLevelState;
 }
 
-export function saveLevelSlice(slice: LevelSlice): void {
-  localStorage.setItem(LEVELS_KEY, JSON.stringify(slice));
+export async function saveLevelSlice(slice: LevelSlice): Promise<void> {
+  const studentId = await currentUserId();
+  await supabase.from('level_state')
+    .update({ levels: slice.levels, streaks: slice.streaks })
+    .eq('student_id', studentId);
 }
 
 // ── Difficulty preferences ────────────────────────────────────────────────────
 
-const DIFFICULTY_KEY = 'ashi_difficulty_v1';
-
 export const initialDifficulty: DifficultyState = { social: 1, nonverbal: 1, inference: 1 };
 
-export function loadDifficulty(): DifficultyState {
-  try {
-    const raw = localStorage.getItem(DIFFICULTY_KEY);
-    return raw ? JSON.parse(raw) : initialDifficulty;
-  } catch { return initialDifficulty; }
+export async function loadDifficulty(): Promise<DifficultyState> {
+  const studentId = await currentUserId();
+  const { data } = await supabase
+    .from('difficulty_state')
+    .select('state')
+    .eq('student_id', studentId)
+    .maybeSingle();
+  return data ? (data.state as DifficultyState) : initialDifficulty;
 }
 
-export function saveDifficulty(state: DifficultyState): void {
-  localStorage.setItem(DIFFICULTY_KEY, JSON.stringify(state));
+export async function saveDifficulty(state: DifficultyState): Promise<void> {
+  const studentId = await currentUserId();
+  await supabase.from('difficulty_state').update({ state }).eq('student_id', studentId);
 }
 
 const clampDiff = (n: number): Difficulty => Math.max(1, Math.min(3, n)) as Difficulty;
@@ -103,34 +140,57 @@ export function updateDifficultyAfterSession(
   return next;
 }
 
-// ── Journal (kid-private) ─────────────────────────────────────────────────────
+// ── Journal (kid-private — RLS scopes every row to the student themselves) ─────
 
-const JOURNAL_KEY = 'ashi_journal_v1';
-
-export function loadJournalEntries(): JournalEntry[] {
-  try { return JSON.parse(localStorage.getItem(JOURNAL_KEY) ?? '[]'); }
-  catch { return []; }
+export async function loadJournalEntries(): Promise<JournalEntry[]> {
+  const studentId = await currentUserId();
+  const { data } = await supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('date', { ascending: false })
+    .limit(365);
+  return (data ?? []).map(row => ({
+    id: row.id,
+    date: row.date,
+    mood: row.mood,
+    emoji: row.emoji ?? undefined,
+    content: row.content,
+  }));
 }
 
-export function saveJournalEntry(entry: JournalEntry): void {
-  const entries = loadJournalEntries().filter(e => e.id !== entry.id);
-  entries.unshift(entry);
-  localStorage.setItem(JOURNAL_KEY, JSON.stringify(entries.slice(0, 365)));
+export async function saveJournalEntry(entry: JournalEntry): Promise<void> {
+  const studentId = await currentUserId();
+  await supabase.from('journal_entries').upsert({
+    id: entry.id,
+    student_id: studentId,
+    date: entry.date,
+    mood: entry.mood,
+    emoji: entry.emoji ?? null,
+    content: entry.content,
+  });
 }
 
-export function todaysJournalEntry(): JournalEntry | null {
+export async function todaysJournalEntry(): Promise<JournalEntry | null> {
+  const entries = await loadJournalEntries();
   const today = new Date().toDateString();
-  return loadJournalEntries().find(e => new Date(e.date).toDateString() === today) ?? null;
+  return entries.find(e => new Date(e.date).toDateString() === today) ?? null;
 }
 
-// Safe for parent view — no content exposed
-export function journalWrittenToday(): boolean {
-  return todaysJournalEntry() !== null;
+// Safe for kid view — this is the student reading their own content.
+export async function journalWrittenToday(): Promise<boolean> {
+  return (await todaysJournalEntry()) !== null;
 }
 
-export function journalActiveDays(pastDays = 7): { date: string; hasEntry: boolean }[] {
-  const entries = loadJournalEntries();
-  const entryDates = new Set(entries.map(e => new Date(e.date).toDateString()));
+// ── Journal (parent view — dates only, via the privacy-preserving RPC; ────────
+// ── content is never readable by the parent, by RLS design)              ─────
+
+export async function parentJournalActivity(
+  studentId: string,
+  pastDays = 7,
+): Promise<{ date: string; hasEntry: boolean }[]> {
+  const { data } = await supabase.rpc('journal_activity_for_parent', { p_student_id: studentId });
+  const entryDates = new Set((data ?? []).map((row: { date: string }) => new Date(row.date).toDateString()));
   return Array.from({ length: pastDays }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - i);
@@ -138,57 +198,67 @@ export function journalActiveDays(pastDays = 7): { date: string; hasEntry: boole
   }).reverse();
 }
 
+export async function parentJournalWrittenToday(studentId: string): Promise<boolean> {
+  const [today] = await parentJournalActivity(studentId, 1);
+  return today?.hasEntry ?? false;
+}
+
 // ── Coins ─────────────────────────────────────────────────────────────────────
 
-const COINS_KEY = 'ashi_coins_v1';
 const defaultCoins: CoinsState = { balance: 0, totalEarned: 0, hintTokens: 0 };
 
-export function loadCoins(): CoinsState {
-  try {
-    const raw = localStorage.getItem(COINS_KEY);
-    return raw ? { ...defaultCoins, ...JSON.parse(raw) } : defaultCoins;
-  } catch { return defaultCoins; }
+export async function loadCoins(): Promise<CoinsState> {
+  const studentId = await currentUserId();
+  const { data } = await supabase
+    .from('coins_state')
+    .select('balance, total_earned, hint_tokens')
+    .eq('student_id', studentId)
+    .maybeSingle();
+  return data ? { balance: data.balance, totalEarned: data.total_earned, hintTokens: data.hint_tokens } : defaultCoins;
 }
 
-export function saveCoins(c: CoinsState): void {
-  localStorage.setItem(COINS_KEY, JSON.stringify(c));
+async function saveCoins(c: CoinsState): Promise<void> {
+  const studentId = await currentUserId();
+  await supabase.from('coins_state')
+    .update({ balance: c.balance, total_earned: c.totalEarned, hint_tokens: c.hintTokens })
+    .eq('student_id', studentId);
 }
 
-export function addCoins(amount: number): CoinsState {
-  const c = loadCoins();
+export async function addCoins(amount: number): Promise<CoinsState> {
+  const c = await loadCoins();
   const next: CoinsState = {
     balance: c.balance + amount,
     totalEarned: c.totalEarned + amount,
     hintTokens: c.hintTokens,
   };
-  saveCoins(next);
+  await saveCoins(next);
   return next;
 }
 
 // Returns null if insufficient balance
-export function spendCoins(amount: number): CoinsState | null {
-  const c = loadCoins();
+export async function spendCoins(amount: number): Promise<CoinsState | null> {
+  const c = await loadCoins();
   if (c.balance < amount) return null;
   const next = { ...c, balance: c.balance - amount };
-  saveCoins(next);
+  await saveCoins(next);
   return next;
 }
 
-export function addHintTokens(count: number): CoinsState {
-  const c = loadCoins();
+export async function addHintTokens(count: number): Promise<CoinsState> {
+  const c = await loadCoins();
   const next = { ...c, hintTokens: c.hintTokens + count };
-  saveCoins(next);
+  await saveCoins(next);
   return next;
 }
 
-export function useHintToken(): boolean {
-  const c = loadCoins();
+export async function useHintToken(): Promise<boolean> {
+  const c = await loadCoins();
   if (c.hintTokens <= 0) return false;
-  saveCoins({ ...c, hintTokens: c.hintTokens - 1 });
+  await saveCoins({ ...c, hintTokens: c.hintTokens - 1 });
   return true;
 }
 
-// ── Adaptive session count ────────────────────────────────────────────────────
+// ── Adaptive session count ─────────────────────────────────────────────────────
 
 export function pickSessionCount(sessions: SessionRecord[]): number {
   const recent = sessions
@@ -213,22 +283,71 @@ export function pickSessionCount(sessions: SessionRecord[]): number {
   return count;
 }
 
-// ── Parent config ─────────────────────────────────────────────────────────────
+// ── Parent config (daily goal + AI-partner gender; interests live on ─────────
+// ── student_profiles instead — see loadInterests/saveInterests below) ────────
 
-const CONFIG_KEY = 'ashi_config_v1';
-const defaultConfig: ParentConfig = {
-  dailyMinimum: 1,
-  interests: [],
-  customRewards: [],
-};
+const defaultConfig: ParentConfig = { dailyMinimum: 1 };
 
-export function loadConfig(): ParentConfig {
-  try {
-    const raw = localStorage.getItem(CONFIG_KEY);
-    return raw ? { ...defaultConfig, ...JSON.parse(raw) } : defaultConfig;
-  } catch { return defaultConfig; }
+export async function loadConfig(): Promise<ParentConfig> {
+  const studentId = await currentUserId();
+  const { data } = await supabase
+    .from('parent_config')
+    .select('daily_minimum, kid_gender')
+    .eq('student_id', studentId)
+    .maybeSingle();
+  return data ? { dailyMinimum: data.daily_minimum, kidGender: data.kid_gender ?? undefined } : defaultConfig;
 }
 
-export function saveConfig(c: ParentConfig): void {
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(c));
+// Parent-driven (daily goal).
+export async function saveConfig(c: ParentConfig): Promise<void> {
+  const studentId = await currentUserId();
+  await supabase.from('parent_config').update({ daily_minimum: c.dailyMinimum }).eq('student_id', studentId);
+}
+
+// Kid-driven (self-edited via ProfilePanel, same as the original app).
+export async function updateKidGender(gender: 'girl' | 'boy' | 'other'): Promise<void> {
+  const studentId = await currentUserId();
+  await supabase.from('parent_config').update({ kid_gender: gender }).eq('student_id', studentId);
+}
+
+// ── Interests (student_profiles — kid self-edits these directly) ─────────────
+
+export async function loadInterests(): Promise<string[]> {
+  const studentId = await currentUserId();
+  const { data } = await supabase
+    .from('student_profiles')
+    .select('interests')
+    .eq('student_id', studentId)
+    .eq('is_active', true)
+    .maybeSingle();
+  return data?.interests ?? [];
+}
+
+export async function saveInterests(interests: string[]): Promise<void> {
+  const studentId = await currentUserId();
+  await supabase.from('student_profiles')
+    .update({ interests })
+    .eq('student_id', studentId)
+    .eq('is_active', true);
+}
+
+// ── Custom rewards ────────────────────────────────────────────────────────────
+
+export async function loadCustomRewards(): Promise<CustomReward[]> {
+  const { data } = await supabase.from('custom_rewards').select('*');
+  return (data ?? []).map(row => ({ id: row.id, label: row.label, emoji: row.emoji, url: row.url, cost: row.cost }));
+}
+
+export async function addCustomReward(studentId: string, reward: Omit<CustomReward, 'id'>): Promise<CustomReward> {
+  const { data, error } = await supabase
+    .from('custom_rewards')
+    .insert({ student_id: studentId, label: reward.label, emoji: reward.emoji, url: reward.url, cost: reward.cost })
+    .select()
+    .single();
+  if (error || !data) throw error ?? new Error('Could not add reward');
+  return { id: data.id, label: data.label, emoji: data.emoji, url: data.url, cost: data.cost };
+}
+
+export async function deleteCustomReward(id: string): Promise<void> {
+  await supabase.from('custom_rewards').delete().eq('id', id);
 }

@@ -74,8 +74,6 @@ export interface CustomReward {
 
 export interface ParentConfig {
   dailyMinimum: number;        // sessions per day required before coins are earned
-  interests: string[];         // content interest tags
-  customRewards: CustomReward[];
   kidGender?: 'girl' | 'boy' | 'other';
 }
 
