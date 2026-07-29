@@ -19,9 +19,12 @@ alter default privileges in schema public grant all on sequences to service_role
 drop table if exists public.tailoring_profiles;
 drop table if exists public.ieps;
 
+-- storage.objects/storage.buckets block direct SQL DELETE (protect_delete
+-- trigger) — dropping the policy makes the bucket inert (no policies means
+-- no access at all), which is enough. If you want it gone entirely, delete
+-- it manually via Dashboard -> Storage -> iep-documents -> delete bucket;
+-- it's already empty, so this is just tidiness, not required.
 drop policy if exists "Parents manage their own IEP files" on storage.objects;
-delete from storage.objects where bucket_id = 'iep-documents';
-delete from storage.buckets where id = 'iep-documents';
 
 -- ── student_profiles: the new structured-intake schema ──────────────────
 
