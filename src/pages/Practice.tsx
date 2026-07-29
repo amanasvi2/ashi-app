@@ -39,9 +39,12 @@ function pickFallbackItems(mode: SessionMode, difficulty: DifficultyState, count
   return sortByDiff(pool, difficulty[mode]).slice(0, Math.min(count, pool.length));
 }
 
-function calcReadTime(scenario: string): number {
-  const words = scenario.trim().split(/\s+/).length;
-  return Math.min(18000, Math.max(5000, (words / 130) * 60 * 1000));
+// Matches the "Read to me" TTS voice's actual pace (useSpeech.ts uses
+// rate 0.88, roughly 150 words/minute) so the gate never blocks longer
+// than it would take to actually hear the scenario + question read aloud.
+function calcReadTime(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.min(12000, Math.max(3000, (words / 150) * 60 * 1000));
 }
 
 function shuffleChoices(choices: [string, string, string]) {
@@ -111,6 +114,7 @@ interface QuestionPanelProps {
   questionText: string;
   stem?: string;
   choices?: [string, string, string];
+  evidence?: string;
   level: SupportLevel;
   hintTokens: number;
   hintActive: boolean;
@@ -121,6 +125,7 @@ interface QuestionPanelProps {
   activeCharIndex: number | null;
   readingReady: boolean;
   readProgress: number;
+  evaluating: boolean;
   onSubmit: (answer: string) => void;
   feedback: { result: AnswerResult; text: string } | null;
   onNext: () => void;
@@ -128,9 +133,9 @@ interface QuestionPanelProps {
 
 function QuestionPanel(props: QuestionPanelProps) {
   const {
-    scenario, questionText, stem, choices, level, hintTokens, hintActive, onUseHint,
+    scenario, questionText, stem, choices, evidence, level, hintTokens, hintActive, onUseHint,
     speak, stop, speakingText, activeCharIndex,
-    readingReady, readProgress, onSubmit, feedback, onNext,
+    readingReady, readProgress, evaluating, onSubmit, feedback, onNext,
   } = props;
   const effectiveLevel = hintActive ? 2 : level;
 
@@ -169,7 +174,7 @@ function QuestionPanel(props: QuestionPanelProps) {
   };
 
   const hasAnswer = (effectiveLevel === 2 && selected !== null) || (effectiveLevel <= 1 && freeText.trim().length > 0);
-  const canSubmit = !feedback && readingReady && hasAnswer;
+  const canSubmit = !feedback && !evaluating && readingReady && hasAnswer;
 
   const resultBg =
     feedback?.result === 'correct'  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
@@ -186,7 +191,7 @@ function QuestionPanel(props: QuestionPanelProps) {
         <div className={`rounded-xl border px-4 py-3.5 text-sm leading-relaxed ${resultBg}`}>
           <span className="font-semibold">{resultLabel}</span>{feedback.text}
         </div>
-        <EvidenceHighlighter scenario={scenario} onConfirm={onNext} />
+        <EvidenceHighlighter scenario={scenario} expectedEvidence={evidence} onConfirm={onNext} />
       </div>
     );
   }
@@ -277,7 +282,7 @@ function QuestionPanel(props: QuestionPanelProps) {
             />
           )}
           <span className="relative">
-            {!readingReady ? 'Reading…' : 'Check my answer'}
+            {!readingReady ? 'Reading…' : evaluating ? 'Checking…' : 'Check my answer'}
           </span>
         </button>
       )}
@@ -360,6 +365,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
   const [hintActiveQ, setHintActiveQ] = useState<string | null>(null);
   const [readingReady, setReadingReady] = useState(false);
   const [readProgress, setReadProgress] = useState(0);
+  const [evaluating, setEvaluating] = useState(false);
 
   const endedByRef         = useRef<SessionRecord['endedBy']>('completed');
   const questionStartRef   = useRef(Date.now());
@@ -400,7 +406,10 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
     if (items.length === 0) return;
     setReadingReady(false);
     setReadProgress(0);
-    const minMs = calcReadTime(items[itemIdx]?.scenario ?? '');
+    const currentItem = items[itemIdx];
+    const question = currentItem?.questions[0];
+    const readText = [currentItem?.scenario, question?.stem, question?.text].filter(Boolean).join(' ');
+    const minMs = calcReadTime(readText);
     const start = Date.now();
     const id = setInterval(() => {
       const pct = Math.min((Date.now() - start) / minMs, 1);
@@ -484,7 +493,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
     if (ok) { setHintTokens(t => t - 1); setHintActiveQ(`${itemIdx}`); }
   };
 
-  const handleAnswer = (answer: string) => {
+  const handleAnswer = async (answer: string) => {
     const correctAnswer = currentQuestion.choices?.[0] ?? '';
     let result: AnswerResult;
     let feedbackText: string;
@@ -494,7 +503,9 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
       result = ok ? 'correct' : 'incorrect';
       feedbackText = ok ? 'That is right.' : `The best answer is: "${correctAnswer}"`;
     } else {
-      const ev = evaluateFreeText(answer, correctAnswer);
+      setEvaluating(true);
+      const ev = await evaluateFreeText(answer, correctAnswer, currentItem.scenario, currentQuestion.text);
+      setEvaluating(false);
       result = ev.result;
       feedbackText = ev.feedback;
     }
@@ -592,6 +603,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
             questionText={currentQuestion.text}
             stem={currentQuestion.stem}
             choices={currentQuestion.choices}
+            evidence={currentQuestion.evidence}
             level={currentLevel}
             hintTokens={hintTokens}
             hintActive={hintActive}
@@ -602,6 +614,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
             activeCharIndex={activeCharIndex}
             readingReady={readingReady}
             readProgress={readProgress}
+            evaluating={evaluating}
             onSubmit={handleAnswer}
             feedback={feedback}
             onNext={handleEvidenceConfirm}

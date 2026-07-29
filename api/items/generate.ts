@@ -58,10 +58,14 @@ Generate exactly ${requests.length} items as a JSON array. Each item shape:
     {
       "text": "<question text>",
       "stem": "<sentence stem without period>",
-      "choices": ["<correct answer>", "<wrong choice 1>", "<wrong choice 2>"]
+      "choices": ["<correct answer>", "<wrong choice 1>", "<wrong choice 2>"],
+      "evidence": "<the exact sentence, copied verbatim from the scenario text above, that shows why the correct answer is right>"
     }
   ]
 }
+
+evidence MUST be an exact substring of scenario (copy it verbatim, don't paraphrase) —
+it's used to check whether the student picks the right supporting sentence afterward.
 
 ${lines.join('\n\n')}
 
@@ -81,6 +85,7 @@ function isValidItem(raw: unknown): raw is Item {
     if (typeof qr.text !== 'string' || qr.text.trim().length === 0) return false;
     if (!Array.isArray(qr.choices) || qr.choices.length !== 3) return false;
     if (!qr.choices.every((c: unknown) => typeof c === 'string' && c.trim().length > 0)) return false;
+    if (typeof qr.evidence !== 'string' || qr.evidence.trim().length < 8) return false;
   }
   return true;
 }

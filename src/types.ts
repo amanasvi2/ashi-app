@@ -7,6 +7,7 @@ export interface Question {
   text: string;
   stem?: string;
   choices?: [string, string, string];
+  evidence?: string;   // the exact sentence from the scenario that supports the answer
 }
 
 export interface Item {

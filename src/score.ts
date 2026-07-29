@@ -1,11 +1,29 @@
 import type { AnswerResult } from './types';
+import { callApi } from './api';
 
-// Evaluates a free-text answer against the correct answer string.
-// This is intentionally simple — the spec calls for model-based evaluation later.
-// "Correct" = answer contains the meaningful content words from the correct answer.
-// "Partial"  = answer contains some of them.
-// "Incorrect" = none found.
-export function evaluateFreeText(
+// Judges the student's free-text answer for meaning via the model
+// (api/evaluate-answer.ts) — there are many valid ways to phrase a correct
+// answer, so this is not a string/keyword match. Falls back to a local
+// keyword-overlap heuristic only if the request itself fails (network,
+// rate limit, malformed model output), so a flaky connection never blocks
+// the practice flow.
+export async function evaluateFreeText(
+  answer: string,
+  correctAnswer: string,
+  scenario: string,
+  questionText: string,
+): Promise<{ result: AnswerResult; feedback: string }> {
+  try {
+    return await callApi<{ result: AnswerResult; feedback: string }>('/api/evaluate-answer', {
+      scenario, questionText, correctAnswer, userAnswer: answer,
+    });
+  } catch (err) {
+    console.error('Free-text evaluation failed, using local fallback:', err);
+    return evaluateFreeTextLocally(answer, correctAnswer);
+  }
+}
+
+function evaluateFreeTextLocally(
   answer: string,
   correctAnswer: string,
 ): { result: AnswerResult; feedback: string } {
