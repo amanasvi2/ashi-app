@@ -1,10 +1,12 @@
 import { supabase } from './supabase';
+import { callApi } from './api';
 import type {
-  SessionRecord, DifficultyState, Difficulty,
+  SessionRecord, DifficultyState,
   JournalEntry, ParentConfig, CoinsState, CustomReward,
+  ItemType, SupportLevel, AnswerResult,
 } from './types';
-import type { LevelSlice } from './levelReducer';
-import { initialLevelState } from './levelReducer';
+import type { LevelSlice, PersistedLevelState } from './adaptiveEngine';
+import { initialPersistedLevelState, resolveSessionStart } from './adaptiveEngine';
 
 async function currentUserId(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -89,20 +91,41 @@ export function calculateStreak(sessions: SessionRecord[]): number {
 
 // ── Support levels ────────────────────────────────────────────────────────────
 
+// Called at the start of every session: resolves any queued level change
+// or 14-day gap re-entry (see adaptiveEngine.ts's resolveSessionStart) and
+// persists the result — so a change earned last session applies exactly
+// once, here, and never mid-session.
 export async function loadLevelSlice(): Promise<LevelSlice> {
   const studentId = await currentUserId();
   const { data } = await supabase
     .from('level_state')
-    .select('levels, streaks')
+    .select('levels, streaks, pending, last_session_at')
     .eq('student_id', studentId)
     .maybeSingle();
-  return data ? { levels: data.levels, streaks: data.streaks } : initialLevelState;
+
+  const persisted: PersistedLevelState = data
+    ? { levels: data.levels, streaks: data.streaks, pending: data.pending, lastSessionAt: data.last_session_at }
+    : initialPersistedLevelState;
+
+  const resolved = resolveSessionStart(persisted, new Date());
+
+  await supabase.from('level_state').update({
+    levels: resolved.levels,
+    streaks: resolved.streaks,
+    pending: resolved.pending,
+    last_session_at: resolved.lastSessionAt,
+  }).eq('student_id', studentId);
+
+  return { levels: resolved.levels, streaks: resolved.streaks, pending: resolved.pending };
 }
 
+// Called after every answer during a session — levels never change here
+// (see adaptiveEngine.ts's nextLevelState), only streaks and the queued
+// pending change for next session.
 export async function saveLevelSlice(slice: LevelSlice): Promise<void> {
   const studentId = await currentUserId();
   await supabase.from('level_state')
-    .update({ levels: slice.levels, streaks: slice.streaks })
+    .update({ levels: slice.levels, streaks: slice.streaks, pending: slice.pending })
     .eq('student_id', studentId);
 }
 
@@ -120,24 +143,39 @@ export async function loadDifficulty(): Promise<DifficultyState> {
   return data ? (data.state as DifficultyState) : initialDifficulty;
 }
 
-export async function saveDifficulty(state: DifficultyState): Promise<void> {
-  const studentId = await currentUserId();
-  await supabase.from('difficulty_state').update({ state }).eq('student_id', studentId);
+// Difficulty/mastery/floor-alarm are decided server-side (they need the
+// cross-session rolling window in item_attempts) — see api/recompute-difficulty.ts.
+export async function recomputeDifficulty(types: ItemType[]): Promise<{
+  difficulty: DifficultyState;
+  mastery: Record<ItemType, boolean>;
+  floorAlarm: Record<ItemType, boolean>;
+}> {
+  return callApi('/api/recompute-difficulty', { types });
 }
 
-const clampDiff = (n: number): Difficulty => Math.max(1, Math.min(3, n)) as Difficulty;
+const DEFAULT_FLAGS = { social: false, nonverbal: false, inference: false };
 
-export function updateDifficultyAfterSession(
-  prev: DifficultyState,
-  pct: number,
-  types: Array<'social' | 'nonverbal' | 'inference'>,
-): DifficultyState {
-  const next = { ...prev };
-  for (const t of types) {
-    if (pct >= 0.8) next[t] = clampDiff(prev[t] + 1);
-    else if (pct < 0.5) next[t] = clampDiff(prev[t] - 1);
-  }
-  return next;
+// Takes an explicit studentId since this is read by the parent dashboard
+// about their child, not by the student about themselves (RLS's
+// "parent reads own students' difficulty_state" policy covers this read).
+export async function loadFloorAlarms(studentId: string): Promise<Record<ItemType, boolean>> {
+  const { data } = await supabase
+    .from('difficulty_state')
+    .select('floor_alarm')
+    .eq('student_id', studentId)
+    .maybeSingle();
+  return data?.floor_alarm ?? DEFAULT_FLAGS;
+}
+
+// One row per answered item — feeds the rolling-window calculations above.
+export async function recordAttempt(
+  itemType: ItemType,
+  supportLevel: SupportLevel,
+  difficulty: number,
+  optionCount: number | null,
+  result: AnswerResult,
+): Promise<void> {
+  await callApi('/api/record-attempt', { itemType, supportLevel, difficulty, optionCount, result });
 }
 
 // ── Journal (kid-private — RLS scopes every row to the student themselves) ─────

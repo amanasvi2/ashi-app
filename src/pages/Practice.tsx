@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { Item, SessionMode, AnswerResult, SupportLevel, DifficultyState } from '../types';
+import type { Item, SessionMode, AnswerResult, SupportLevel, DifficultyState, WordBankOption, ItemType } from '../types';
 import type { SessionRecord } from '../types';
-import type { LevelSlice } from '../levelReducer';
-import { levelReducer } from '../levelReducer';
+import type { LevelSlice } from '../adaptiveEngine';
+import { levelReducer } from '../adaptiveEngine';
 import { ITEMS } from '../items';
 import { useSpeech } from '../useSpeech';
 import { HighlightedText } from '../components/HighlightedText';
 import { EvidenceHighlighter } from '../components/EvidenceHighlighter';
 import { evaluateFreeText, scoreForResult } from '../score';
+import { FloorAlarmError } from '../api';
 import {
-  saveSession, saveLevelSlice, saveDifficulty, updateDifficultyAfterSession,
+  saveSession, saveLevelSlice, recordAttempt, recomputeDifficulty,
   loadCoins, addCoins, useHintToken as spendHintToken,
   sessionsTodayCount, loadSessions, loadConfig, journalWrittenToday,
   pickSessionCount, loadInterests,
@@ -115,6 +116,7 @@ interface QuestionPanelProps {
   stem?: string;
   choices?: [string, string, string];
   evidence?: string;
+  wordBank?: WordBankOption[];
   level: SupportLevel;
   hintTokens: number;
   hintActive: boolean;
@@ -133,25 +135,27 @@ interface QuestionPanelProps {
 
 function QuestionPanel(props: QuestionPanelProps) {
   const {
-    scenario, questionText, stem, choices, evidence, level, hintTokens, hintActive, onUseHint,
+    scenario, questionText, stem, choices, evidence, wordBank, level, hintTokens, hintActive, onUseHint,
     speak, stop, speakingText, activeCharIndex,
     readingReady, readProgress, evaluating, onSubmit, feedback, onNext,
   } = props;
-  const effectiveLevel = hintActive ? 2 : level;
+  const effectiveLevel = hintActive ? 3 : level;
 
   const [selected, setSelected]       = useState<number | null>(null);
   const [freeText, setFreeText]       = useState('');
   const [shuffled, setShuffled]       = useState<ReturnType<typeof shuffleChoices> | null>(null);
+  const [wordBankOrder, setWordBankOrder] = useState<string[] | null>(null);
   const [evidenceMode, setEvidenceMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (choices) setShuffled(shuffleChoices(choices));
+    if (wordBank) setWordBankOrder([...wordBank.map(w => w.text)].sort(() => Math.random() - 0.5));
     setSelected(null);
     setFreeText('');
     setEvidenceMode(false);
     if (level <= 1 && !hintActive) setTimeout(() => textareaRef.current?.focus(), 80);
-  }, [choices, questionText, level, hintActive]);
+  }, [choices, wordBank, questionText, level, hintActive]);
 
   // When feedback arrives, transition to evidence mode
   useEffect(() => {
@@ -161,7 +165,7 @@ function QuestionPanel(props: QuestionPanelProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Enter' || e.shiftKey || feedback || !readingReady) return;
-      if (effectiveLevel === 2 && selected !== null) { e.preventDefault(); doSubmit(); }
+      if (effectiveLevel >= 2 && selected !== null) { e.preventDefault(); doSubmit(); }
       if (effectiveLevel <= 1 && freeText.trim()) { e.preventDefault(); doSubmit(); }
     };
     window.addEventListener('keydown', handler);
@@ -169,11 +173,12 @@ function QuestionPanel(props: QuestionPanelProps) {
   });
 
   const doSubmit = () => {
-    if (effectiveLevel === 2 && selected !== null && shuffled) onSubmit(shuffled.texts[selected]);
+    if (effectiveLevel === 3 && selected !== null && shuffled) onSubmit(shuffled.texts[selected]);
+    else if (effectiveLevel === 2 && selected !== null && wordBankOrder) onSubmit(wordBankOrder[selected]);
     else if (effectiveLevel <= 1 && freeText.trim()) onSubmit(freeText.trim());
   };
 
-  const hasAnswer = (effectiveLevel === 2 && selected !== null) || (effectiveLevel <= 1 && freeText.trim().length > 0);
+  const hasAnswer = (effectiveLevel >= 2 && selected !== null) || (effectiveLevel <= 1 && freeText.trim().length > 0);
   const canSubmit = !feedback && !evaluating && readingReady && hasAnswer;
 
   const resultBg =
@@ -220,8 +225,8 @@ function QuestionPanel(props: QuestionPanelProps) {
         </div>
       )}
 
-      {/* Hint button */}
-      {level <= 1 && !hintActive && !feedback && hintTokens > 0 && (
+      {/* Hint button — jumps to full multiple choice */}
+      {level <= 2 && !hintActive && !feedback && hintTokens > 0 && (
         <button
           onClick={onUseHint}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
@@ -232,7 +237,7 @@ function QuestionPanel(props: QuestionPanelProps) {
       )}
 
       {/* Multiple choice */}
-      {effectiveLevel === 2 && shuffled && !feedback && (
+      {effectiveLevel === 3 && shuffled && !feedback && (
         <div className="space-y-2">
           {shuffled.texts.map((choice, idx) => (
             <button
@@ -248,6 +253,25 @@ function QuestionPanel(props: QuestionPanelProps) {
                 {['A', 'B', 'C'][idx]}
               </span>
               {choice}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Word bank — bridges recognition (multiple choice) to production (free text) */}
+      {effectiveLevel === 2 && wordBankOrder && !feedback && (
+        <div className="flex flex-wrap gap-2">
+          {wordBankOrder.map((word, idx) => (
+            <button
+              key={idx}
+              onClick={() => setSelected(idx)}
+              className={`px-3.5 py-2 rounded-full border text-sm font-medium transition-all
+                ${selected === idx
+                  ? 'border-blue-400 bg-blue-100 text-blue-900 shadow-sm shadow-blue-100'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50/30'
+                }`}
+            >
+              {word}
             </button>
           ))}
         </div>
@@ -292,9 +316,9 @@ function QuestionPanel(props: QuestionPanelProps) {
 
 // ── Finished screen ───────────────────────────────────────────────────────────
 
-function FinishedScreen({ score, maxScore, mode, coinsEarned, journalDone, onGoHome }: {
+function FinishedScreen({ score, maxScore, mode, coinsEarned, journalDone, floorAlarmNotice, onGoHome }: {
   score: number; maxScore: number; mode: SessionMode;
-  coinsEarned: number; journalDone: boolean; onGoHome: () => void;
+  coinsEarned: number; journalDone: boolean; floorAlarmNotice: ItemType | null; onGoHome: () => void;
 }) {
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
   const message =
@@ -329,6 +353,11 @@ function FinishedScreen({ score, maxScore, mode, coinsEarned, journalDone, onGoH
             Remember to write in your journal today.
           </p>
         )}
+        {floorAlarmNotice && (
+          <p className="text-xs text-blue-600 bg-blue-50 rounded-xl px-4 py-2.5 border border-blue-100">
+            Your parent will see a note about this practice type.
+          </p>
+        )}
         <button onClick={onGoHome}
           className="w-full py-3.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
           Back to home
@@ -354,7 +383,8 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
   const [loading, setLoading]   = useState(true);
   const [itemIdx, setItemIdx]   = useState(0);
   const [levelSlice, dispatchLevel] = useReducer(levelReducer, initialLevelSlice);
-  const [difficulty, setDifficulty] = useState(initialDifficulty);
+  const [blockedType, setBlockedType] = useState<ItemType | null>(null);
+  const [floorAlarmNotice, setFloorAlarmNotice] = useState<ItemType | null>(null);
   const [score, setScore]       = useState(0);
   const [maxScore, setMaxScore] = useState(0);
   const [feedback, setFeedback] = useState<{ result: AnswerResult; text: string } | null>(null);
@@ -386,9 +416,15 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
       const count = pickSessionCount(sessions);
       setHintTokens(coins.hintTokens);
       try {
-        setItems(await generateItems(mode, initialDifficulty, count, interests));
-      } catch {
-        setItems(pickFallbackItems(mode, initialDifficulty, count));
+        setItems(await generateItems(mode, initialDifficulty, initialLevelSlice.levels, count, interests));
+      } catch (err) {
+        // A floor-alarmed type is stopped entirely — falling back to
+        // hardcoded items would defeat that, so show a paused notice instead.
+        if (err instanceof FloorAlarmError) {
+          setBlockedType(err.blockedType as ItemType);
+        } else {
+          setItems(pickFallbackItems(mode, initialDifficulty, count));
+        }
       } finally {
         setLoading(false);
       }
@@ -432,10 +468,20 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
   }, [mode]);
 
   const finishSession = useCallback(async () => {
-    const pct = maxScore > 0 ? score / maxScore : 0;
-    const newDiff = updateDifficultyAfterSession(difficulty, pct, [...affectedTypes]);
-    await saveDifficulty(newDiff);
-    setDifficulty(newDiff);
+    // Difficulty/mastery/floor-alarm are decided server-side from the
+    // cross-session rolling window (see api/recompute-difficulty.ts) — not
+    // from this session's own raw score.
+    let newDifficulty = initialDifficulty;
+    let newlyAlarmedType: ItemType | null = null;
+    try {
+      const result = await recomputeDifficulty([...affectedTypes]);
+      newDifficulty = result.difficulty;
+      const newlyAlarmed = affectedTypes.filter(t => result.floorAlarm[t]);
+      if (newlyAlarmed.length > 0) newlyAlarmedType = newlyAlarmed[0];
+    } catch (err) {
+      console.error('recomputeDifficulty failed:', err);
+    }
+    setFloorAlarmNotice(newlyAlarmedType);
 
     const [config, sessions] = await Promise.all([loadConfig(), loadSessions()]);
     const countBefore = sessionsTodayCount(sessions);
@@ -455,11 +501,11 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
       itemCount: itemIdx + 1,
       endedBy: endedByRef.current,
       levelSnapshot: levelSlice.levels,
-      difficultySnapshot: newDiff,
+      difficultySnapshot: newDifficulty,
       avgResponseMs,
     });
     setDone(true);
-  }, [mode, score, maxScore, itemIdx, levelSlice, difficulty, affectedTypes]);
+  }, [mode, score, maxScore, itemIdx, levelSlice, affectedTypes, initialDifficulty]);
 
   // ── Early returns (after all hooks) ──────────────────────────────────────
 
@@ -469,8 +515,24 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
         score={score} maxScore={maxScore} mode={mode}
         coinsEarned={coinsEarned}
         journalDone={journalDone}
+        floorAlarmNotice={floorAlarmNotice}
         onGoHome={onComplete}
       />
+    );
+  }
+
+  if (blockedType) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 max-w-sm w-full text-center space-y-4">
+          <p className="text-base font-semibold text-slate-800">This practice is paused for now.</p>
+          <p className="text-sm text-slate-500">Your parent can see more about this on their dashboard.</p>
+          <button onClick={onExit}
+            className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+            Back to home
+          </button>
+        </div>
+      </div>
     );
   }
 
@@ -484,7 +546,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
   const currentLevel    = levelSlice.levels[currentItem.type];
   const currentQuestion = currentItem.questions[0]; // always use first question; evidence replaces follow-up
   const hintActive      = hintActiveQ === `${itemIdx}`;
-  const effectiveLevel  = hintActive ? 2 : currentLevel;
+  const effectiveLevel  = hintActive ? 3 : currentLevel;
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -497,17 +559,25 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
     const correctAnswer = currentQuestion.choices?.[0] ?? '';
     let result: AnswerResult;
     let feedbackText: string;
+    let optionCount: number | null;
 
-    if (effectiveLevel === 2) {
+    if (effectiveLevel === 3) {
       const ok = answer === correctAnswer;
       result = ok ? 'correct' : 'incorrect';
       feedbackText = ok ? 'That is right.' : `The best answer is: "${correctAnswer}"`;
+      optionCount = 3;
+    } else if (effectiveLevel === 2) {
+      const ok = currentQuestion.wordBank?.find(w => w.text === answer)?.correct ?? false;
+      result = ok ? 'correct' : 'incorrect';
+      feedbackText = ok ? 'That is right.' : `The best answer is: "${correctAnswer}"`;
+      optionCount = currentQuestion.wordBank?.length ?? null;
     } else {
       setEvaluating(true);
       const ev = await evaluateFreeText(answer, correctAnswer, currentItem.scenario, currentQuestion.text);
       setEvaluating(false);
       result = ev.result;
       feedbackText = ev.feedback;
+      optionCount = null;
     }
 
     totalResponseMsRef.current += Date.now() - questionStartRef.current;
@@ -517,6 +587,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
     setMaxScore(s => s + 1);
     setFeedback({ result, text: feedbackText });
     dispatchLevel({ type: 'RECORD', itemType: currentItem.type, result });
+    void recordAttempt(currentItem.type, effectiveLevel, currentItem.difficulty, optionCount, result);
   };
 
   // Called by EvidenceHighlighter when the student picks a sentence
@@ -537,7 +608,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
 
   const TYPE_LABELS    = { social: 'Social Skills', nonverbal: 'Body Language', inference: 'Reading Clues' };
   const DIFF_LABELS    = { 1: 'Straightforward', 2: 'Read carefully', 3: 'Look for clues' };
-  const SUPPORT_LABELS: Record<SupportLevel, string> = { 2: 'Most help', 1: 'Some help', 0: 'Open question' };
+  const SUPPORT_LABELS: Record<SupportLevel, string> = { 3: 'Most help', 2: 'Word bank', 1: 'Some help', 0: 'Open question' };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -604,6 +675,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
             stem={currentQuestion.stem}
             choices={currentQuestion.choices}
             evidence={currentQuestion.evidence}
+            wordBank={currentQuestion.wordBank}
             level={currentLevel}
             hintTokens={hintTokens}
             hintActive={hintActive}

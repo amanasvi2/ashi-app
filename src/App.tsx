@@ -22,7 +22,7 @@ import { ProfilePanel } from './pages/ProfilePanel';
 import { JournalFAB } from './components/JournalFAB';
 import { BottomNav } from './components/BottomNav';
 import type { MainTab } from './components/BottomNav';
-import type { LevelSlice } from './levelReducer';
+import type { LevelSlice } from './adaptiveEngine';
 import type { DifficultyState } from './types';
 
 type Page =

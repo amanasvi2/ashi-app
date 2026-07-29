@@ -1,13 +1,19 @@
 export type ItemType = 'social' | 'nonverbal' | 'inference';
 export type SessionMode = 'mixed' | 'social' | 'nonverbal' | 'inference';
-export type SupportLevel = 0 | 1 | 2;
+export type SupportLevel = 0 | 1 | 2 | 3;
 export type Difficulty = 1 | 2 | 3;
+
+export interface WordBankOption {
+  text: string;
+  correct: boolean;
+}
 
 export interface Question {
   text: string;
   stem?: string;
   choices?: [string, string, string];
-  evidence?: string;   // the exact sentence from the scenario that supports the answer
+  evidence?: string;         // the exact sentence from the scenario that supports the answer
+  wordBank?: WordBankOption[]; // level-2 support: stem + 5-6 candidates, 1-2 correct
 }
 
 export interface Item {

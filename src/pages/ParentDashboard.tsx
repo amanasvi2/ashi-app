@@ -6,16 +6,22 @@ import {
   parentJournalWrittenToday, parentJournalActivity,
   loadConfig, saveConfig, loadCoins,
   loadCustomRewards, addCustomReward, deleteCustomReward,
-  initialDifficulty,
+  loadFloorAlarms, initialDifficulty,
 } from '../storage';
+import type { ItemType } from '../types';
+
+const TYPE_LABELS: Record<ItemType, string> = {
+  social: 'Social Problems', nonverbal: 'Nonverbal Cues', inference: 'Text Inference',
+};
 import type { StudentSummary } from '../students';
 import { LoadingScreen } from '../components/LoadingScreen';
-import type { LevelSlice } from '../levelReducer';
-import { initialLevelState } from '../levelReducer';
+import type { LevelSlice } from '../adaptiveEngine';
+import { initialLevelState } from '../adaptiveEngine';
 
-const LEVEL_LABELS: Record<SupportLevel, string> = { 2: 'Most help', 1: 'Some help', 0: 'No hints' };
+const LEVEL_LABELS: Record<SupportLevel, string> = { 3: 'Most help', 2: 'Word bank', 1: 'Some help', 0: 'No hints' };
 const LEVEL_COLORS: Record<SupportLevel, string> = {
-  2: 'text-slate-500 bg-slate-100',
+  3: 'text-slate-500 bg-slate-100',
+  2: 'text-sky-700 bg-sky-50',
   1: 'text-amber-700 bg-amber-50',
   0: 'text-emerald-700 bg-emerald-50',
 };
@@ -54,6 +60,7 @@ export function ParentDashboard({ onLogout, student }: Props) {
   const [customRewards, setCustomRewards] = useState<CustomReward[]>([]);
   const [journalToday, setJournalToday]   = useState(false);
   const [activityDays, setActivityDays]   = useState<{ date: string; hasEntry: boolean }[]>([]);
+  const [floorAlarms, setFloorAlarms]     = useState<Record<ItemType, boolean>>({ social: false, nonverbal: false, inference: false });
 
   const [showAddReward, setShowAddReward] = useState(false);
   const [newLabel, setNewLabel] = useState('');
@@ -63,12 +70,13 @@ export function ParentDashboard({ onLogout, student }: Props) {
 
   useEffect(() => {
     (async () => {
-      const [s, l, d, c, cfg, rewards, jToday, days] = await Promise.all([
+      const [s, l, d, c, cfg, rewards, jToday, days, alarms] = await Promise.all([
         loadSessions(), loadLevelSlice(), loadDifficulty(), loadCoins(), loadConfig(),
         loadCustomRewards(), parentJournalWrittenToday(student.id), parentJournalActivity(student.id, 7),
+        loadFloorAlarms(student.id),
       ]);
       setSessions(s); setLevelSlice(l); setDifficulty(d); setCoins(c); setConfig(cfg);
-      setCustomRewards(rewards); setJournalToday(jToday); setActivityDays(days);
+      setCustomRewards(rewards); setJournalToday(jToday); setActivityDays(days); setFloorAlarms(alarms);
       setLoading(false);
     })();
   }, [student.id]);
@@ -132,6 +140,21 @@ export function ParentDashboard({ onLogout, student }: Props) {
             Log out
           </button>
         </div>
+
+        {/* Floor alarm — the adaptive engine has nothing left to offer for */}
+        {/* this type (max support, easiest content) and has stopped serving it */}
+        {(Object.keys(floorAlarms) as ItemType[]).some(t => floorAlarms[t]) && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 space-y-1.5">
+            <p className="text-sm font-semibold text-rose-800">Worth a look</p>
+            {(Object.keys(floorAlarms) as ItemType[]).filter(t => floorAlarms[t]).map(t => (
+              <p key={t} className="text-sm text-rose-700">
+                {kidName} is stuck on <span className="font-medium">{TYPE_LABELS[t]}</span> even with full support
+                and the easiest content — practice for it has paused. Consider updating her profile or checking in
+                with her teacher.
+              </p>
+            ))}
+          </div>
+        )}
 
         {/* Quick stats */}
         <div className="grid grid-cols-2 gap-3">

@@ -16,8 +16,10 @@ const SKILL_ITEM_TYPE_WEIGHTS: Record<ActionableFocusSkillId, Partial<Record<Ite
 };
 
 // Difficulty is not derived from the profile at all — it's left entirely
-// to the in-session adaptive engine (levelReducer.ts/updateDifficultyAfterSession),
-// starting from the app's original hardcoded default for every new student.
+// to the adaptive engine (src/adaptiveEngine.ts), starting from the app's
+// original hardcoded default for every new student. Mastery-decay and
+// floor-alarm adjustments to these base weights are applied by the caller
+// (api/items/generate.ts), not here.
 export function deriveItemTypeWeights(focus: string[]): Record<ItemType, number> {
   const totals: Record<ItemType, number> = { social: 0, nonverbal: 0, inference: 0 };
 

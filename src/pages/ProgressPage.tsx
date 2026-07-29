@@ -6,12 +6,13 @@ import {
   initialDifficulty,
 } from '../storage';
 import { LoadingScreen } from '../components/LoadingScreen';
-import type { LevelSlice } from '../levelReducer';
-import { initialLevelState } from '../levelReducer';
+import type { LevelSlice } from '../adaptiveEngine';
+import { initialLevelState } from '../adaptiveEngine';
 
-const LEVEL_LABELS: Record<SupportLevel, string> = { 2: 'Most help', 1: 'Some help', 0: 'No hints' };
+const LEVEL_LABELS: Record<SupportLevel, string> = { 3: 'Most help', 2: 'Word bank', 1: 'Some help', 0: 'No hints' };
 const LEVEL_COLORS: Record<SupportLevel, string> = {
-  2: 'text-slate-600 bg-slate-100',
+  3: 'text-slate-600 bg-slate-100',
+  2: 'text-sky-700 bg-sky-50',
   1: 'text-amber-700 bg-amber-50',
   0: 'text-emerald-700 bg-emerald-50',
 };
