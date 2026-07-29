@@ -3,7 +3,6 @@ import { verifyUser } from '../../server/verifyUser';
 import { groqChat } from '../../server/groq';
 import { supabaseAsUser } from '../../server/asUser';
 import { deriveItemTypeWeights } from '../../server/skillMapping';
-import type { Target } from '../../server/skillMapping';
 import type { Item, SessionMode, DifficultyState, Difficulty, ItemType } from '../../src/types';
 
 function difficultyLabel(d: Difficulty): string {
@@ -156,11 +155,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const token = String(req.headers.authorization).replace(/^Bearer\s+/i, '');
       const { data: profileRow } = await supabaseAsUser(token)
         .from('student_profiles')
-        .select('targets')
+        .select('focus')
         .eq('student_id', user.id)
         .eq('is_active', true)
         .maybeSingle();
-      if (profileRow) itemTypeWeights = deriveItemTypeWeights(profileRow.targets as Target[]);
+      if (profileRow) itemTypeWeights = deriveItemTypeWeights(profileRow.focus as string[]);
     }
 
     const requests = buildRequests(mode, difficulty, count, itemTypeWeights);

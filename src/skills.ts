@@ -59,11 +59,11 @@ export const DOMAIN_LABELS: Record<SkillDomain, string> = {
 };
 
 // Only these skills currently map to something this app's practice-item
-// generator can produce (social/nonverbal/inference items). Keeping the
-// target picker scoped to this subset means every selected target actually
-// shows up in a practice session — see server/skillMapping.ts for the
-// weight each one contributes.
-export const ACTIONABLE_TARGET_SKILL_IDS = [
+// generator can produce (social/nonverbal/inference items). A `focus` skill
+// outside this set is still stored, but flagged on the confirm screen as
+// not yet used in practice sessions rather than silently accepted or
+// dropped — see server/skillMapping.ts for the weight each one contributes.
+export const ACTIONABLE_FOCUS_SKILL_IDS = [
   "identify_problem_and_solutions",
   "perspective_taking",
   "nonverbal_cues",
@@ -72,12 +72,38 @@ export const ACTIONABLE_TARGET_SKILL_IDS = [
   "nonliteral_language",
 ] as const satisfies readonly SkillId[];
 
-export type ActionableTargetSkillId = (typeof ACTIONABLE_TARGET_SKILL_IDS)[number];
+export type ActionableFocusSkillId = (typeof ACTIONABLE_FOCUS_SKILL_IDS)[number];
 
-export function isActionableTargetSkill(id: string): id is ActionableTargetSkillId {
-  return (ACTIONABLE_TARGET_SKILL_IDS as readonly string[]).includes(id);
+export function isActionableFocusSkill(id: string): id is ActionableFocusSkillId {
+  return (ACTIONABLE_FOCUS_SKILL_IDS as readonly string[]).includes(id);
 }
 
 export function skillById(id: string) {
   return SKILLS.find(s => s.id === id);
+}
+
+export function isValidSkillId(id: string): id is SkillId {
+  return SKILLS.some(s => s.id === id);
+}
+
+// --- supports ---------------------------------------------------------
+
+export const SUPPORTS = [
+  { id: "one_step_at_a_time",             label: "One step at a time" },
+  { id: "short_directions",               label: "Short, simple directions" },
+  { id: "repeat_directions",              label: "Repeat directions when needed" },
+  { id: "read_aloud",                     label: "Read things aloud" },
+  { id: "extended_response_time",         label: "Extra time to respond" },
+  { id: "immediate_feedback",             label: "Feedback right away" },
+  { id: "graphic_organizers_for_writing", label: "Graphic organizers for writing" },
+] as const;
+
+export type SupportId = (typeof SUPPORTS)[number]["id"];
+
+export function isValidSupportId(id: string): id is SupportId {
+  return SUPPORTS.some(s => s.id === id);
+}
+
+export function supportById(id: string) {
+  return SUPPORTS.find(s => s.id === id);
 }

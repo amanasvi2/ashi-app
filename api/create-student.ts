@@ -1,9 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyUser } from '../server/verifyUser';
 import { supabaseAdmin } from '../server/supabaseAdmin';
-import { deriveInitialDifficulty } from '../server/skillMapping';
-import { validateStudentProfile } from '../src/profileValidation';
-import type { StudentProfileInput } from '../src/profileTypes';
 
 const DEFAULT_LEVELS = { social: 2, nonverbal: 2, inference: 2 };
 const DEFAULT_STREAKS = {
@@ -11,11 +8,15 @@ const DEFAULT_STREAKS = {
   nonverbal: { correct: 0, incorrect: 0 },
   inference: { correct: 0, incorrect: 0 },
 };
+// Difficulty is never derived from the profile — every new student starts
+// here and the in-session adaptive engine takes it from there.
+const DEFAULT_DIFFICULTY = { social: 1, nonverbal: 1, inference: 1 };
 
 // Creates a kid's Supabase Auth user (synthetic email under the hood — see
-// src/auth.ts) plus their students row, structured profile, and default
-// state rows. Only ever called by an authenticated parent, and the one
-// place that uses the service-role key to admin-create an Auth user.
+// src/auth.ts) and links it to an existing, already-saved student_profiles
+// row (profile creation and login creation are decoupled — see
+// api/profile/save.ts). Only ever called by an authenticated parent, and
+// the one place that uses the service-role key to admin-create an Auth user.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -24,26 +25,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!parent) return res.status(401).json({ error: 'Unauthorized' });
 
     const {
+      profileId,
       username,
       password,
-      displayName,
       gender,
-      profile,
     }: {
+      profileId?: string;
       username?: string;
       password?: string;
-      displayName?: string;
       gender?: 'girl' | 'boy' | 'other';
-      profile?: StudentProfileInput;
     } = req.body ?? {};
 
-    if (!username?.trim() || !password || password.length < 4 || !displayName?.trim()) {
+    if (!profileId || !username?.trim() || !password || password.length < 4) {
       return res.status(400).json({ error: 'Missing or invalid fields' });
     }
-    if (!profile) return res.status(400).json({ error: 'Missing profile' });
 
-    const { valid, errors } = validateStudentProfile(profile);
-    if (!valid) return res.status(400).json({ error: errors[0] });
+    // Confirm the caller owns this profile and it isn't already linked.
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('student_profiles')
+      .select('id, parent_id, student_id, display_name, interests')
+      .eq('id', profileId)
+      .maybeSingle();
+
+    if (profileError || !profile) return res.status(404).json({ error: 'Profile not found' });
+    if (profile.parent_id !== parent.id) return res.status(403).json({ error: 'Not your profile' });
+    if (profile.student_id) return res.status(409).json({ error: 'This profile already has a login' });
 
     const normalizedUsername = username.trim().toLowerCase();
 
@@ -71,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       id: studentId,
       parent_id: parent.id,
       username: normalizedUsername,
-      display_name: displayName.trim(),
+      display_name: profile.display_name,
       gender: gender ?? 'other',
     });
     if (insertError) {
@@ -79,11 +85,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Could not create student profile' });
     }
 
-    const difficulty = deriveInitialDifficulty(profile.targets);
+    const { error: linkError } = await supabaseAdmin
+      .from('student_profiles')
+      .update({ student_id: studentId })
+      .eq('id', profileId);
+    if (linkError) {
+      await supabaseAdmin.auth.admin.deleteUser(studentId);
+      await supabaseAdmin.from('students').delete().eq('id', studentId);
+      return res.status(500).json({ error: 'Could not link profile to login' });
+    }
 
     await Promise.all([
       supabaseAdmin.from('parent_config').insert({
-        student_id: studentId, daily_minimum: 1, interests: profile.interests, kid_gender: gender ?? 'other',
+        student_id: studentId, daily_minimum: 1, interests: profile.interests ?? [], kid_gender: gender ?? 'other',
       }),
       supabaseAdmin.from('coins_state').insert({
         student_id: studentId, balance: 0, total_earned: 0, hint_tokens: 0,
@@ -91,23 +105,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       supabaseAdmin.from('level_state').insert({
         student_id: studentId, levels: DEFAULT_LEVELS, streaks: DEFAULT_STREAKS,
       }),
-      supabaseAdmin.from('difficulty_state').insert({ student_id: studentId, state: difficulty }),
-      supabaseAdmin.from('student_profiles').insert({
-        student_id: studentId,
-        grade: profile.grade,
-        instructional_reading_level: profile.instructional_reading_level,
-        english_learner: profile.english_learner,
-        strengths: profile.strengths,
-        targets: profile.targets,
-        format_constraints: profile.format_constraints,
-        session_length_target_min: profile.session_length_target_min,
-        motivation: profile.motivation,
-        interests: profile.interests,
-        is_active: true,
-      }),
+      supabaseAdmin.from('difficulty_state').insert({ student_id: studentId, state: DEFAULT_DIFFICULTY }),
     ]);
 
-    res.status(200).json({ studentId, username: normalizedUsername, displayName: displayName.trim() });
+    res.status(200).json({ studentId, username: normalizedUsername, displayName: profile.display_name });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err instanceof Error ? err.message : 'Could not create student' });

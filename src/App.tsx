@@ -4,9 +4,12 @@ import { getSession, signOut } from './auth';
 import type { Session } from './auth';
 import { getMyStudent } from './students';
 import type { StudentSummary } from './students';
+import { getMyProfile } from './profiles';
+import type { ProfileSummary } from './profiles';
 import { loadLevelSlice, loadDifficulty } from './storage';
 import { Login } from './pages/Login';
-import { OnboardingWizard } from './pages/onboarding/OnboardingWizard';
+import { IntakeFlow } from './pages/onboarding/IntakeFlow';
+import { CreateLoginScreen } from './pages/onboarding/CreateLoginScreen';
 import { Home } from './pages/Home';
 import { Practice } from './pages/Practice';
 import { Conversation } from './pages/Conversation';
@@ -44,8 +47,9 @@ function LoadingScreen() {
 export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [session, setSessionState] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<ProfileSummary | null>(null);
   const [student, setStudent] = useState<StudentSummary | null>(null);
-  const [studentLoading, setStudentLoading] = useState(false);
+  const [parentDataLoading, setParentDataLoading] = useState(false);
   const [page, setPage]       = useState<Page>({ tag: 'home' });
   const [mainTab, setMainTab] = useState<MainTab>('home');
   const [showProfile, setShowProfile] = useState(false);
@@ -55,9 +59,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (session?.role !== 'parent') { setStudent(null); return; }
-    setStudentLoading(true);
-    getMyStudent(session.userId).then(s => { setStudent(s); setStudentLoading(false); });
+    if (session?.role !== 'parent') { setProfile(null); setStudent(null); return; }
+    setParentDataLoading(true);
+    (async () => {
+      const p = await getMyProfile(session.userId);
+      setProfile(p);
+      setStudent(p?.studentId ? await getMyStudent(session.userId) : null);
+      setParentDataLoading(false);
+    })();
   }, [session]);
 
   const handleLogin = (s: Session) => {
@@ -69,6 +78,7 @@ export default function App() {
   const handleLogout = async () => {
     await signOut();
     setSessionState(null);
+    setProfile(null);
     setStudent(null);
     setPage({ tag: 'home' });
     setMainTab('home');
@@ -81,8 +91,16 @@ export default function App() {
 
   // ── Parent view ───────────────────────────────────────────────────────────
   if (session.role === 'parent') {
-    if (studentLoading) return <LoadingScreen />;
-    if (!student) return <OnboardingWizard onDone={setStudent} />;
+    if (parentDataLoading) return <LoadingScreen />;
+    if (!profile) return <IntakeFlow onDone={setProfile} />;
+    if (!student) {
+      return (
+        <CreateLoginScreen
+          profile={profile}
+          onDone={s => { setStudent(s); setProfile(p => (p ? { ...p, studentId: s.id } : p)); }}
+        />
+      );
+    }
     return <ParentDashboard onLogout={handleLogout} student={student} />;
   }
 

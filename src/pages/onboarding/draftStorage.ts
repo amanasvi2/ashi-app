@@ -1,28 +1,16 @@
-import type { StudentProfileInput } from '../../students';
+// Only the raw description text is persisted — an accidental reload
+// shouldn't lose a parent's paragraph, but there's little value in
+// persisting the confirm screen's edits too (it's a quick single pass).
+const DRAFT_KEY = 'ashi_intake_description_v1';
 
-const DRAFT_KEY = 'ashi_intake_draft_v1';
-
-// Everything except password — a secret shouldn't sit in localStorage even
-// temporarily, so a resumed draft always requires re-entering it.
-export interface IntakeDraft extends StudentProfileInput {
-  step: number;
-  displayName: string;
-  username: string;
+export function saveDescriptionDraft(text: string): void {
+  try { localStorage.setItem(DRAFT_KEY, text); } catch { /* storage unavailable */ }
 }
 
-export function saveDraft(draft: IntakeDraft): void {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch { /* storage unavailable */ }
+export function loadDescriptionDraft(): string {
+  try { return localStorage.getItem(DRAFT_KEY) ?? ''; } catch { return ''; }
 }
 
-export function loadDraft(): IntakeDraft | null {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function clearDraft(): void {
+export function clearDescriptionDraft(): void {
   try { localStorage.removeItem(DRAFT_KEY); } catch { /* storage unavailable */ }
 }

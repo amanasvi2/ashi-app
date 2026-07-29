@@ -1,55 +1,29 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { saveDraft, loadDraft, clearDraft } from './draftStorage';
-import type { IntakeDraft } from './draftStorage';
-import { defaultProfile } from '../../profileValidation';
-
-function sampleDraft(overrides: Partial<IntakeDraft> = {}): IntakeDraft {
-  return {
-    ...defaultProfile(),
-    step: 3,
-    displayName: 'Ashi',
-    username: 'ashi123',
-    grade: 7,
-    targets: [{ skill: 'inference_from_text', current: null, goal: null, level: null }],
-    ...overrides,
-  };
-}
+import { saveDescriptionDraft, loadDescriptionDraft, clearDescriptionDraft } from './draftStorage';
 
 beforeEach(() => {
   localStorage.clear();
 });
 
 describe('draftStorage', () => {
-  it('returns null when nothing has been saved', () => {
-    expect(loadDraft()).toBeNull();
+  it('returns an empty string when nothing has been saved', () => {
+    expect(loadDescriptionDraft()).toBe('');
   });
 
-  it('round-trips a saved draft, resuming exactly what was saved', () => {
-    const draft = sampleDraft();
-    saveDraft(draft);
-    expect(loadDraft()).toEqual(draft);
+  it('round-trips saved description text', () => {
+    saveDescriptionDraft('She loves Minecraft and struggles with group projects.');
+    expect(loadDescriptionDraft()).toBe('She loves Minecraft and struggles with group projects.');
   });
 
-  it('persists the current step so a reload resumes at the same place', () => {
-    saveDraft(sampleDraft({ step: 7 }));
-    expect(loadDraft()?.step).toBe(7);
+  it('clearDescriptionDraft removes the saved draft', () => {
+    saveDescriptionDraft('some text');
+    clearDescriptionDraft();
+    expect(loadDescriptionDraft()).toBe('');
   });
 
-  it('never persists a password field', () => {
-    saveDraft(sampleDraft());
-    const raw = localStorage.getItem('ashi_intake_draft_v1');
-    expect(raw).not.toBeNull();
-    expect(raw).not.toMatch(/password/i);
-  });
-
-  it('clearDraft removes the saved draft', () => {
-    saveDraft(sampleDraft());
-    clearDraft();
-    expect(loadDraft()).toBeNull();
-  });
-
-  it('loadDraft returns null instead of throwing on corrupted JSON', () => {
-    localStorage.setItem('ashi_intake_draft_v1', '{not valid json');
-    expect(loadDraft()).toBeNull();
+  it('overwrites a previous draft with the latest save', () => {
+    saveDescriptionDraft('first draft');
+    saveDescriptionDraft('second draft');
+    expect(loadDescriptionDraft()).toBe('second draft');
   });
 });

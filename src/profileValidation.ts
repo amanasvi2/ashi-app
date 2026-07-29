@@ -1,60 +1,63 @@
-import type { StudentProfileInput, FormatConstraints } from './profileTypes';
-import { isActionableTargetSkill } from './skills';
+import type { StudentProfileInput } from './profileTypes';
+import { isValidSkillId, isValidSupportId } from './skills';
 
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
 }
 
-export const DEFAULT_FORMAT_CONSTRAINTS: FormatConstraints = {
-  one_step_at_a_time: false,
-  short_directions: false,
-  read_aloud: false,
-  extended_response_time: false,
-  immediate_feedback: true,
-  graphic_organizers_for_writing: false,
-};
+export const MAX_FOCUS_SKILLS = 3;
+export const DEFAULT_SESSION_LENGTH_MIN = 20;
 
-// Only grade and at least one target are required — everything else has a
-// sane default so a parent can finish in under two minutes.
 export function defaultProfile(): StudentProfileInput {
   return {
+    display_name: '',
     grade: NaN,
-    instructional_reading_level: null,
-    english_learner: false,
+    reading_level: NaN,
     strengths: [],
-    targets: [],
-    format_constraints: { ...DEFAULT_FORMAT_CONSTRAINTS },
-    session_length_target_min: 12,
-    motivation: null,
+    focus: [],
+    supports: [],
+    session_length_min: DEFAULT_SESSION_LENGTH_MIN,
     interests: [],
   };
 }
 
+// display_name, grade, and at least one interest are required. Everything
+// else has a sane default so a parent can finish in under two minutes.
 export function validateStudentProfile(input: StudentProfileInput): ValidationResult {
   const errors: string[] = [];
+
+  if (!input.display_name?.trim()) {
+    errors.push('A name is required.');
+  }
 
   if (!Number.isFinite(input.grade) || input.grade < 0 || input.grade > 12) {
     errors.push('Grade is required (0-12).');
   }
 
-  if (!input.targets || input.targets.length === 0) {
-    errors.push('Pick at least one target skill.');
-  } else {
-    for (const t of input.targets) {
-      if (!isActionableTargetSkill(t.skill)) {
-        errors.push(`"${t.skill}" is not a supported target skill.`);
-      }
-      for (const field of ['current', 'goal'] as const) {
-        const v = t[field];
-        if (v !== null && (v < 0 || v > 1)) {
-          errors.push(`Target "${t.skill}" ${field} must be between 0 and 1.`);
-        }
-      }
-    }
+  if (!Number.isFinite(input.reading_level) || input.reading_level < 0 || input.reading_level > 13) {
+    errors.push('Reading level must be a number between 0 and 13.');
   }
 
-  if (input.session_length_target_min <= 0) {
+  if (!input.interests || input.interests.length === 0) {
+    errors.push('Pick at least one interest.');
+  }
+
+  if (input.focus.length > MAX_FOCUS_SKILLS) {
+    errors.push(`Pick at most ${MAX_FOCUS_SKILLS} focus skills.`);
+  }
+
+  for (const id of input.strengths) {
+    if (!isValidSkillId(id)) errors.push(`"${id}" is not a recognized skill.`);
+  }
+  for (const id of input.focus) {
+    if (!isValidSkillId(id)) errors.push(`"${id}" is not a recognized skill.`);
+  }
+  for (const id of input.supports) {
+    if (!isValidSupportId(id)) errors.push(`"${id}" is not a recognized support.`);
+  }
+
+  if (!Number.isFinite(input.session_length_min) || input.session_length_min <= 0) {
     errors.push('Session length must be a positive number of minutes.');
   }
 

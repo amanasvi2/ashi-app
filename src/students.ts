@@ -1,8 +1,5 @@
 import { supabase } from './supabase';
 import { callApi } from './api';
-import type { StudentProfileInput } from './profileTypes';
-
-export type { ProfileTarget, FormatConstraints, StudentProfileInput } from './profileTypes';
 
 export interface StudentSummary {
   id: string;
@@ -22,11 +19,10 @@ export async function getMyStudent(parentId: string): Promise<StudentSummary | n
 }
 
 export interface CreateStudentInput {
+  profileId: string;
   username: string;
   password: string;
-  displayName: string;
   gender: 'girl' | 'boy' | 'other';
-  profile: StudentProfileInput;
 }
 
 export async function createStudent(input: CreateStudentInput): Promise<StudentSummary> {
