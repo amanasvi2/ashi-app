@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SessionMode } from './types';
-import { getSession, setSession, clearSession } from './auth';
+import { getSession, signOut } from './auth';
 import type { Session } from './auth';
+import { getMyStudent } from './students';
+import type { StudentSummary } from './students';
 import { loadLevelSlice, loadDifficulty } from './storage';
 import { Login } from './pages/Login';
+import { OnboardingWizard } from './pages/onboarding/OnboardingWizard';
 import { Home } from './pages/Home';
 import { Practice } from './pages/Practice';
 import { Conversation } from './pages/Conversation';
@@ -30,31 +33,58 @@ const TAB_LABELS: { key: MainTab; label: string }[] = [
   { key: 'rewards',  label: 'Rewards'  },
 ];
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <p className="text-sm text-slate-400">Loading…</p>
+    </div>
+  );
+}
+
 export default function App() {
-  const [session, setSessionState] = useState<Session | null>(() => getSession());
+  const [authLoading, setAuthLoading] = useState(true);
+  const [session, setSessionState] = useState<Session | null>(null);
+  const [student, setStudent] = useState<StudentSummary | null>(null);
+  const [studentLoading, setStudentLoading] = useState(false);
   const [page, setPage]       = useState<Page>({ tag: 'home' });
   const [mainTab, setMainTab] = useState<MainTab>('home');
   const [showProfile, setShowProfile] = useState(false);
 
+  useEffect(() => {
+    getSession().then(s => { setSessionState(s); setAuthLoading(false); });
+  }, []);
+
+  useEffect(() => {
+    if (session?.role !== 'parent') { setStudent(null); return; }
+    setStudentLoading(true);
+    getMyStudent(session.userId).then(s => { setStudent(s); setStudentLoading(false); });
+  }, [session]);
+
   const handleLogin = (s: Session) => {
-    setSession(s);
     setSessionState(s);
     setPage({ tag: 'home' });
     setMainTab('home');
   };
 
-  const handleLogout = () => {
-    clearSession();
+  const handleLogout = async () => {
+    await signOut();
     setSessionState(null);
+    setStudent(null);
     setPage({ tag: 'home' });
     setMainTab('home');
   };
+
+  if (authLoading) return <LoadingScreen />;
 
   // ── Not logged in ─────────────────────────────────────────────────────────
   if (!session) return <Login onLogin={handleLogin} />;
 
   // ── Parent view ───────────────────────────────────────────────────────────
-  if (session.role === 'parent') return <ParentDashboard onLogout={handleLogout} />;
+  if (session.role === 'parent') {
+    if (studentLoading) return <LoadingScreen />;
+    if (!student) return <OnboardingWizard parentId={session.userId} onDone={setStudent} />;
+    return <ParentDashboard onLogout={handleLogout} student={student} />;
+  }
 
   // ── Kid: full-screen pages (no nav) ───────────────────────────────────────
   if (page.tag === 'practice') {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { groq, CONVERSATION_MODEL } from '../api';
+import { streamConversation } from '../api';
 import { loadConfig } from '../storage';
 import type { ConversationMessage } from '../types';
 
@@ -265,21 +265,14 @@ export function Conversation({ onBack }: Props) {
 
     const systemPrompt = buildSystemPrompt(t.prompt, kidGender);
     try {
-      const stream = await groq.chat.completions.create({
-        model: CONVERSATION_MODEL,
-        max_tokens: 300,
-        stream: true,
-        messages: [
+      const text = await streamConversation(
+        [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'hey' },
         ],
-      });
-
-      let text = '';
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta?.content ?? '';
-        if (delta) { text += delta; setStreamText(text); }
-      }
+        setStreamText,
+        300,
+      );
 
       const assistantMsg = { role: 'assistant' as const, content: text };
       setStreamText('');
@@ -307,24 +300,14 @@ export function Conversation({ onBack }: Props) {
     setStreamText('');
 
     try {
-      const stream = await groq.chat.completions.create({
-        model: CONVERSATION_MODEL,
-        max_tokens: 400,
-        stream: true,
-        messages: [
+      const response = await streamConversation(
+        [
           { role: 'system', content: buildSystemPrompt(topic!.prompt, kidGender) },
           ...newHistory,
         ],
-      });
-
-      let response = '';
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta?.content ?? '';
-        if (delta) {
-          response += delta;
-          setStreamText(response.split(FEEDBACK_MARKER.trim())[0]);
-        }
-      }
+        full => setStreamText(full.split(FEEDBACK_MARKER.trim())[0]),
+        400,
+      );
 
       setStreamText('');
 

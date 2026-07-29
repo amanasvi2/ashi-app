@@ -1,77 +1,68 @@
-const CREDS_KEY = 'ashi_creds_v1';
-const SESSION_KEY = 'ashi_sess_v1';
+import { supabase } from './supabase';
 
 export type Role = 'kid' | 'parent';
 
-interface StoredCreds {
-  kid:    { username: string; hash: string };
-  parent: { username: string; hash: string };
-}
-
 export interface Session {
   role: Role;
-  username: string;
+  userId: string;
+  username: string; // parent: email; kid: their chosen username
 }
 
-// djb2-variant hash — not cryptographic, but enough to obscure plaintext in localStorage
-function hash(password: string): string {
-  const salted = `ashi:${password}:2024`;
-  let h = 5381;
-  for (let i = 0; i < salted.length; i++) {
-    h = (Math.imul(31, h) + salted.charCodeAt(i)) | 0;
-  }
-  return (h >>> 0).toString(36);
+interface AuthResult {
+  error?: string;
+  session?: Session;
 }
 
-// ── Credentials ───────────────────────────────────────────────────────────────
+// ── Parent auth (ordinary Supabase email/password) ──────────────────────────
 
-export function hasCredentials(): boolean {
-  return localStorage.getItem(CREDS_KEY) !== null;
+export async function signUpParent(email: string, password: string): Promise<AuthResult> {
+  const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password });
+  if (error) return { error: error.message };
+  if (!data.user) return { error: 'Something went wrong creating your account.' };
+  // If email confirmation is enabled on the Supabase project, no session is
+  // issued yet — the parent has to confirm their email, then sign in.
+  if (!data.session) return { error: 'Check your email to confirm your account, then sign in.' };
+  return { session: { role: 'parent', userId: data.user.id, username: data.user.email ?? '' } };
 }
 
-export function loadCreds(): StoredCreds | null {
-  try {
-    return JSON.parse(localStorage.getItem(CREDS_KEY) ?? 'null');
-  } catch { return null; }
+export async function signInParent(email: string, password: string): Promise<AuthResult> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+  if (error || !data.user) return { error: 'That email or password is not right.' };
+  return { session: { role: 'parent', userId: data.user.id, username: data.user.email ?? '' } };
 }
 
-export function setupCredentials(
-  kidUsername: string, kidPassword: string,
-  parentUsername: string, parentPassword: string,
-): void {
-  const creds: StoredCreds = {
-    kid:    { username: kidUsername.trim().toLowerCase(),    hash: hash(kidPassword) },
-    parent: { username: parentUsername.trim().toLowerCase(), hash: hash(parentPassword) },
-  };
-  localStorage.setItem(CREDS_KEY, JSON.stringify(creds));
+// ── Kid auth (username + password, proxied through api/kid-login.ts since ──
+// ── Supabase Auth itself only knows the kid by a synthetic email) ──────────
+
+export async function signInKid(username: string, password: string): Promise<AuthResult> {
+  const res = await fetch('/api/kid-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: username.trim().toLowerCase(), password }),
+  });
+  if (!res.ok) return { error: 'That username or password is not right.' };
+
+  const { access_token, refresh_token } = await res.json();
+  const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
+  if (error || !data.user) return { error: 'That username or password is not right.' };
+  return { session: { role: 'kid', userId: data.user.id, username: username.trim().toLowerCase() } };
 }
 
-// Returns the role if credentials match, null otherwise
-export function validateLogin(username: string, password: string): Role | null {
-  const creds = loadCreds();
-  if (!creds) return null;
-  const u = username.trim().toLowerCase();
-  if (u === creds.kid.username    && hash(password) === creds.kid.hash)    return 'kid';
-  if (u === creds.parent.username && hash(password) === creds.parent.hash) return 'parent';
-  return null;
+// ── Session ───────────────────────────────────────────────────────────────
+
+// Role isn't stored on the JWT — a kid's auth user id IS the students.id, so
+// checking for a matching students row (readable under RLS by the student
+// themselves) is the authoritative way to tell kid from parent.
+export async function getSession(): Promise<Session | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) return null;
+
+  const { data: student } = await supabase.from('students').select('username').eq('id', user.id).maybeSingle();
+  if (student) return { role: 'kid', userId: user.id, username: student.username };
+  return { role: 'parent', userId: user.id, username: user.email ?? '' };
 }
 
-export function getKidUsername(): string {
-  return loadCreds()?.kid.username ?? 'student';
-}
-
-// ── Session ───────────────────────────────────────────────────────────────────
-
-export function getSession(): Session | null {
-  try {
-    return JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null');
-  } catch { return null; }
-}
-
-export function setSession(session: Session): void {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-export function clearSession(): void {
-  sessionStorage.removeItem(SESSION_KEY);
+export async function signOut(): Promise<void> {
+  await supabase.auth.signOut();
 }

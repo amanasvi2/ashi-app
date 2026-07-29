@@ -6,7 +6,7 @@ import {
   journalWrittenToday, journalActiveDays,
   loadConfig, saveConfig, loadCoins,
 } from '../storage';
-import { clearSession, getKidUsername } from '../auth';
+import type { StudentSummary } from '../students';
 
 const LEVEL_LABELS: Record<SupportLevel, string> = { 2: 'Most help', 1: 'Some help', 0: 'No hints' };
 const LEVEL_COLORS: Record<SupportLevel, string> = {
@@ -34,14 +34,15 @@ function LevelPips({ level }: { level: SupportLevel }) {
 
 interface Props {
   onLogout: () => void;
+  student: StudentSummary;
 }
 
-export function ParentDashboard({ onLogout }: Props) {
+export function ParentDashboard({ onLogout, student }: Props) {
   const sessions   = useMemo(() => loadSessions(), []);
   const levelSlice = useMemo(() => loadLevelSlice(), []);
   const difficulty = useMemo(() => loadDifficulty(), []);
   const coins      = useMemo(() => loadCoins(), []);
-  const kidName    = getKidUsername();
+  const kidName    = student.displayName;
   const totalScore = getTotalScore(sessions);
   const doneToday  = practicedToday(sessions);
   const journalToday = journalWrittenToday();
@@ -105,7 +106,7 @@ export function ParentDashboard({ onLogout }: Props) {
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight capitalize">{kidName}'s Progress</h1>
           </div>
           <button
-            onClick={() => { clearSession(); onLogout(); }}
+            onClick={onLogout}
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors mt-1"
           >
             Log out
