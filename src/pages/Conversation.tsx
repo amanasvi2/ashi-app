@@ -1,26 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { streamConversation } from '../api';
+import { sendConversationTurn } from '../api';
 import { loadConfig } from '../storage';
 import type { ConversationMessage } from '../types';
+import { CONVERSATION_TOPICS, type ConversationTopic } from '../conversationTopics';
 
-// ── Topics ────────────────────────────────────────────────────────────────────
-
-interface Topic {
-  id: string;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-  prompt: string;
-}
+// ── Icons ─────────────────────────────────────────────────────────────────────
 
 function IconTv() {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>;
 }
 function IconBasketball() {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93c4.08 4.08 6.48 9.65 6.48 15.07"/><path d="M19.07 4.93c-4.08 4.08-6.48 9.65-6.48 15.07"/><line x1="2" y1="12" x2="22" y2="12"/></svg>;
-}
-function IconCalendar() {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
 }
 function IconMusic() {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>;
@@ -31,99 +21,17 @@ function IconGamepad() {
 function IconPizza() {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 2 22h20L12 2z"/><line x1="12" y1="2" x2="12" y2="22"/><path d="M2 22h20"/></svg>;
 }
-function IconStar() {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
-}
 function IconSchool() {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
 }
-
-const TOPICS: Topic[] = [
-  {
-    id: 'shows',
-    label: 'Shows & Movies',
-    description: 'What are you watching?',
-    icon: <IconTv />,
-    prompt: 'a show or movie you both might have seen or want to watch',
-  },
-  {
-    id: 'sports',
-    label: 'Sports',
-    description: 'Teams, players, games',
-    icon: <IconBasketball />,
-    prompt: 'sports — teams, playing, watching games, PE class',
-  },
-  {
-    id: 'weekend',
-    label: 'Weekend Plans',
-    description: "What are you up to?",
-    icon: <IconCalendar />,
-    prompt: 'weekend plans and what you do for fun',
-  },
-  {
-    id: 'music',
-    label: 'Music',
-    description: 'Songs, artists, playlists',
-    icon: <IconMusic />,
-    prompt: 'music — favorite songs, artists, concerts, playlists',
-  },
-  {
-    id: 'games',
-    label: 'Games',
-    description: 'Video games, board games',
-    icon: <IconGamepad />,
-    prompt: 'video games or board games you play',
-  },
-  {
-    id: 'food',
-    label: 'Food',
-    description: 'Favorites, restaurants',
-    icon: <IconPizza />,
-    prompt: 'food — favorite foods, restaurants, cooking, school lunch',
-  },
-  {
-    id: 'funny',
-    label: 'Something Funny',
-    description: 'A weird or funny story',
-    icon: <IconStar />,
-    prompt: 'something funny, random, or weird that happened recently',
-  },
-  {
-    id: 'school',
-    label: 'School',
-    description: 'Classes, teachers, stuff',
-    icon: <IconSchool />,
-    prompt: 'school — interesting classes, teachers, projects, lunch',
-  },
-];
-
-// ── System prompt ─────────────────────────────────────────────────────────────
-
-const FEEDBACK_MARKER = '\n---FEEDBACK---\n';
-
-function buildSystemPrompt(topicPrompt: string, kidGender?: 'girl' | 'boy' | 'other'): string {
-  const alexDesc = kidGender === 'girl'
-    ? 'friendly 13-year-old girl'
-    : kidGender === 'boy'
-    ? 'friendly 13-year-old boy'
-    : 'friendly 13-year-old student';
-  return `You are Alex, a ${alexDesc} texting casually with a classmate. This is a real conversation — not a lesson, not a test.
-
-How to write:
-- Short messages only: 1–3 sentences max per turn
-- Casual and genuine, like you're texting a friend
-- React to what they said first, then share your own thought or ask one question
-- Be warm but not fake or over-the-top — just normal
-- No emojis in every message, keep it natural
-
-The conversation topic to start with: ${topicPrompt}
-
-Start with a friendly opener about this topic. Keep the conversation going naturally for about 7 exchanges from them.
-
-When to end: After the user has sent about 7 messages, wrap up the conversation naturally — like class is starting or you have to go somewhere. Then on a NEW LINE write exactly:
-${FEEDBACK_MARKER.trim()}
-And below that, write 3 short bullet points of honest, kind feedback about how the conversation went. Note one thing they did well (like sharing details, asking questions, responding to what you said), one gentle suggestion for next time, and one encouraging closer. Keep it brief and specific — refer to what actually happened in the chat.`;
+function IconPaw() {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="9" r="2"/><circle cx="11" cy="6" r="2"/><circle cx="16" cy="6" r="2"/><circle cx="20" cy="10" r="2"/><path d="M8 17c-1.5-3 1-6 5-6s6.5 3 5 6c-1 2-3 3-5 3s-4-1-5-3z"/></svg>;
 }
+
+const TOPIC_ICONS: Record<string, React.ReactNode> = {
+  shows: <IconTv />, sports: <IconBasketball />, music: <IconMusic />, games: <IconGamepad />,
+  school: <IconSchool />, pets: <IconPaw />, food: <IconPizza />,
+};
 
 // ── Chat bubble ───────────────────────────────────────────────────────────────
 
@@ -169,14 +77,28 @@ function TypingIndicator() {
 
 // ── Topic picker ──────────────────────────────────────────────────────────────
 
-function TopicPicker({ onPick }: { onPick: (topic: Topic) => void }) {
+function TopicPicker({ onPick }: { onPick: (topic: ConversationTopic) => void }) {
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6">
       <div className="max-w-lg mx-auto">
         <h2 className="text-base font-semibold text-slate-800 mb-1">What do you want to talk about?</h2>
-        <p className="text-sm text-slate-400 mb-5">Pick a topic and have a real conversation with Alex.</p>
+        <p className="text-sm text-slate-400 mb-4">Pick a topic and have a conversation with Alex.</p>
+
+        {/* Permanent, plain-language framing — not a one-time popup, so it */}
+        {/* can't be seen once and forgotten. */}
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-5 space-y-1.5">
+          <p className="text-sm text-slate-700">
+            <span className="font-semibold">Alex is not a real person.</span> Alex is a computer program made to
+            sound like a kid your age, so you can practice talking. If you ask Alex if they are real, Alex will
+            tell you the truth.
+          </p>
+          <p className="text-sm text-slate-700">
+            Your grown-up can read what you and Alex talk about. Your journal is different — that always stays private.
+          </p>
+        </div>
+
         <div className="grid grid-cols-2 gap-2.5">
-          {TOPICS.map(topic => (
+          {CONVERSATION_TOPICS.map(topic => (
             <button
               key={topic.id}
               onClick={() => onPick(topic)}
@@ -185,7 +107,7 @@ function TopicPicker({ onPick }: { onPick: (topic: Topic) => void }) {
                          transition-all text-left group"
             >
               <span className="text-blue-400 group-hover:text-blue-600 transition-colors mt-0.5 flex-shrink-0">
-                {topic.icon}
+                {TOPIC_ICONS[topic.id]}
               </span>
               <div>
                 <p className="text-sm font-medium text-slate-800">{topic.label}</p>
@@ -235,6 +157,28 @@ function FeedbackCard({ text, onDone }: { text: string; onDone: () => void }) {
   );
 }
 
+// ── Escalation-ended card ─────────────────────────────────────────────────────
+
+function EscalationCard({ onDone }: { onDone: () => void }) {
+  return (
+    <div className="mx-4 mb-4 bg-amber-50 rounded-2xl border border-amber-200 shadow-sm p-5 space-y-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-amber-600 mb-1">Chat ended</p>
+        <p className="text-sm text-slate-700 leading-relaxed">
+          I let your grown-up know about this chat, so a real person can help. Talking to a real person about
+          something hard is a good idea.
+        </p>
+      </div>
+      <button
+        onClick={onDone}
+        className="w-full py-3 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+      >
+        Done
+      </button>
+    </div>
+  );
+}
+
 // ── Main conversation ─────────────────────────────────────────────────────────
 
 interface Props {
@@ -243,14 +187,15 @@ interface Props {
 
 export function Conversation({ onBack }: Props) {
   const [kidGender, setKidGender] = useState<'girl' | 'boy' | 'other' | undefined>(undefined);
-  const [topic, setTopic] = useState<Topic | null>(null);
+  const [topic, setTopic] = useState<ConversationTopic | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
-  const [history, setHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [streamText, setStreamText] = useState('');
+  const [turnsRemaining, setTurnsRemaining] = useState<number | null>(null);
   const [feedbackText, setFeedbackText] = useState<string | null>(null);
   const [conversationEnded, setConversationEnded] = useState(false);
+  const [endedReason, setEndedReason] = useState<'turn_cap' | 'time_cap' | 'escalation' | undefined>(undefined);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -260,31 +205,22 @@ export function Conversation({ onBack }: Props) {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamText, isLoading]);
+  }, [messages, isLoading]);
 
-  const startConversation = async (t: Topic) => {
+  const startConversation = async (t: ConversationTopic) => {
     setTopic(t);
     setIsLoading(true);
-    setStreamText('');
+    setMessages([]);
+    setSessionId(null);
 
-    const systemPrompt = buildSystemPrompt(t.prompt, kidGender);
     try {
-      const text = await streamConversation(
-        [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: 'hey' },
-        ],
-        setStreamText,
-        300,
-      );
-
-      const assistantMsg = { role: 'assistant' as const, content: text };
-      setStreamText('');
-      setMessages([assistantMsg]);
-      setHistory([{ role: 'user', content: 'hey' }, assistantMsg]);
+      const result = await sendConversationTurn({ topicId: t.id });
+      setSessionId(result.sessionId ?? null);
+      setMessages([{ role: 'assistant', content: result.reply }]);
+      setTurnsRemaining(result.turnsRemaining);
     } catch (err) {
       console.error(err);
-      setMessages([{ role: 'assistant', content: "Hey! Sorry, I'm having trouble connecting right now." }]);
+      setMessages([{ role: 'assistant', content: "Sorry, I'm having trouble connecting right now." }]);
     } finally {
       setIsLoading(false);
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -293,43 +229,24 @@ export function Conversation({ onBack }: Props) {
 
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || isLoading || conversationEnded) return;
+    if (!text || isLoading || conversationEnded || !sessionId) return;
 
     setInput('');
-    const userMsg: ConversationMessage = { role: 'user', content: text };
-    setMessages(prev => [...prev, userMsg]);
-    const newHistory = [...history, { role: 'user' as const, content: text }];
-    setHistory(newHistory);
+    setMessages(prev => [...prev, { role: 'user', content: text }]);
     setIsLoading(true);
-    setStreamText('');
 
     try {
-      const response = await streamConversation(
-        [
-          { role: 'system', content: buildSystemPrompt(topic!.prompt, kidGender) },
-          ...newHistory,
-        ],
-        full => setStreamText(full.split(FEEDBACK_MARKER.trim())[0]),
-        400,
-      );
-
-      setStreamText('');
-
-      if (response.includes(FEEDBACK_MARKER.trim())) {
-        const [chatPart, fbPart] = response.split(FEEDBACK_MARKER.trim());
-        const assistantMsg: ConversationMessage = { role: 'assistant', content: chatPart.trim() };
-        setMessages(prev => [...prev, assistantMsg]);
-        setHistory(prev => [...prev, { role: 'assistant', content: chatPart.trim() }]);
-        setFeedbackText(fbPart.trim());
+      const result = await sendConversationTurn({ sessionId, message: text });
+      if (result.reply) setMessages(prev => [...prev, { role: 'assistant', content: result.reply }]);
+      setTurnsRemaining(result.turnsRemaining);
+      if (result.ended) {
         setConversationEnded(true);
-      } else {
-        const assistantMsg: ConversationMessage = { role: 'assistant', content: response };
-        setMessages(prev => [...prev, assistantMsg]);
-        setHistory(prev => [...prev, { role: 'assistant', content: response }]);
+        setEndedReason(result.endedReason);
+        if (result.feedback) setFeedbackText(result.feedback);
       }
     } catch (err) {
       console.error(err);
-      setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, something went wrong." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong.' }]);
     } finally {
       setIsLoading(false);
       if (!conversationEnded) setTimeout(() => inputRef.current?.focus(), 50);
@@ -345,12 +262,13 @@ export function Conversation({ onBack }: Props) {
 
   const handleDone = () => {
     setTopic(null);
+    setSessionId(null);
     setMessages([]);
-    setHistory([]);
     setInput('');
     setFeedbackText(null);
     setConversationEnded(false);
-    setStreamText('');
+    setEndedReason(undefined);
+    setTurnsRemaining(null);
   };
 
   return (
@@ -372,12 +290,16 @@ export function Conversation({ onBack }: Props) {
           </p>
           {topic && !conversationEnded && (
             <p className="text-xs text-slate-400">
-              with Alex · 13
+              with Alex (a computer)
               {kidGender === 'girl' ? ' · she/her' : kidGender === 'boy' ? ' · he/him' : ''}
+              {turnsRemaining !== null ? ` · ${turnsRemaining} left` : ''}
             </p>
           )}
-          {conversationEnded && (
+          {conversationEnded && endedReason !== 'escalation' && (
             <p className="text-xs text-emerald-600 font-medium">Conversation complete</p>
+          )}
+          {conversationEnded && endedReason === 'escalation' && (
+            <p className="text-xs text-amber-600 font-medium">Chat ended early</p>
           )}
         </div>
       </div>
@@ -391,10 +313,21 @@ export function Conversation({ onBack }: Props) {
             {messages.map((msg, i) => (
               <Bubble key={i} role={msg.role} content={msg.content} />
             ))}
-            {isLoading && !streamText && <TypingIndicator />}
-            {streamText && <Bubble role="assistant" content={streamText} />}
-            {conversationEnded && feedbackText && (
+            {isLoading && <TypingIndicator />}
+            {conversationEnded && endedReason === 'escalation' && <EscalationCard onDone={handleDone} />}
+            {conversationEnded && endedReason !== 'escalation' && feedbackText && (
               <FeedbackCard text={feedbackText} onDone={handleDone} />
+            )}
+            {conversationEnded && endedReason !== 'escalation' && !feedbackText && (
+              <div className="mx-0 mb-4 bg-white rounded-2xl border border-blue-100 shadow-sm p-5 space-y-4">
+                <p className="text-sm text-slate-700">Nice job practicing! That's it for this chat.</p>
+                <button
+                  onClick={handleDone}
+                  className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
             )}
             <div ref={bottomRef} />
           </div>
@@ -412,7 +345,7 @@ export function Conversation({ onBack }: Props) {
               onKeyDown={handleKeyDown}
               rows={1}
               placeholder="Type a message…"
-              disabled={isLoading}
+              disabled={isLoading || !sessionId}
               className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800
                          placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300
                          resize-none disabled:opacity-50"
@@ -425,7 +358,7 @@ export function Conversation({ onBack }: Props) {
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || !sessionId}
               className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center
                          hover:bg-blue-700 disabled:opacity-35 disabled:cursor-not-allowed transition-colors flex-shrink-0"
             >

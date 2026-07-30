@@ -2,9 +2,15 @@
 // directly over fetch so the same helper works from both Node and Edge
 // Vercel functions without depending on the groq-sdk's runtime assumptions.
 
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+export const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 export const CONVERSATION_MODEL = 'llama-3.3-70b-versatile';
+
+// Groq-hosted policy-following safety classifier. Replaces the now-
+// deprecated meta-llama/llama-guard-4-12b (deprecated 2026-02-10) — see
+// server/conversationSafety.ts for how the moderation policy is built and
+// the response parsed.
+export const MODERATION_MODEL = 'openai/gpt-oss-safeguard-20b';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -44,25 +50,4 @@ export async function groqChat(
 
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   return json.choices?.[0]?.message?.content ?? '';
-}
-
-// Returns the raw fetch Response so callers can forward the SSE stream body
-// straight through to the browser (see api/conversation.ts).
-export function groqChatStream(
-  messages: ChatMessage[],
-  opts: { maxTokens?: number } = {},
-): Promise<Response> {
-  return fetch(GROQ_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: CONVERSATION_MODEL,
-      messages,
-      max_tokens: opts.maxTokens ?? 400,
-      stream: true,
-    }),
-  });
 }

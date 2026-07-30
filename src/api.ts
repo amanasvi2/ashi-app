@@ -35,49 +35,24 @@ export async function callApi<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
-export interface ConversationChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+export interface ConversationTurnResult {
+  sessionId?: string;
+  reply: string;
+  ended: boolean;
+  endedReason?: 'turn_cap' | 'time_cap' | 'escalation';
+  feedback?: string;
+  turnsRemaining: number;
 }
 
-// Streams /api/conversation and calls onDelta with each new chunk of text.
-// Returns the full accumulated text once the stream ends.
-export async function streamConversation(
-  messages: ConversationChatMessage[],
-  onDelta: (fullTextSoFar: string) => void,
-  maxTokens?: number,
-): Promise<string> {
-  const res = await fetch('/api/conversation', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-    body: JSON.stringify({ messages, maxTokens }),
-  });
-  if (!res.ok || !res.body) throw new Error(`Conversation request failed: ${res.status}`);
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let text = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data:')) continue;
-      const data = trimmed.slice('data:'.length).trim();
-      if (data === '[DONE]') continue;
-      try {
-        const parsed = JSON.parse(data);
-        const delta = parsed.choices?.[0]?.delta?.content ?? '';
-        if (delta) { text += delta; onDelta(text); }
-      } catch { /* ignore partial/non-JSON keepalive lines */ }
-    }
-  }
-
-  return text;
+// The server builds the entire prompt, runs both sides through moderation,
+// and decides everything (topic lock, caps, persona honesty, escalation) —
+// see server/conversationSafety.ts. The client only ever sends a topicId
+// (to start) or a sessionId + message (to continue), and never sees
+// anything before it's been moderated. Omit sessionId to start a new
+// conversation on the given topicId; include it with a message to
+// continue one.
+export async function sendConversationTurn(
+  args: { topicId: string } | { sessionId: string; message: string },
+): Promise<ConversationTurnResult> {
+  return callApi<ConversationTurnResult>('/api/conversation', args);
 }

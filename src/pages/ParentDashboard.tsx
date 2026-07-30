@@ -7,11 +7,17 @@ import {
   loadConfig, saveConfig, loadCoins,
   loadCustomRewards, addCustomReward, deleteCustomReward,
   loadFloorAlarms, loadStudentProfile, initialDifficulty,
+  loadConversationSessions, loadConversationEscalation, type ConversationSessionSummary,
 } from '../storage';
 import type { ItemType } from '../types';
 import type { StudentProfileInput } from '../profileTypes';
 import { skillById, supportById, isActionableFocusSkill, type ActionableFocusSkillId } from '../skills';
 import { TYPE_LABELS, LEVEL_LABELS, LEVEL_COLORS, LevelPips } from '../components/LevelDisplay';
+import { conversationTopicById } from '../conversationTopics';
+
+const CONVO_ENDED_REASON_LABELS: Record<string, string> = {
+  turn_cap: 'reached the chat limit', time_cap: 'reached the time limit', escalation: 'ended early — see below',
+};
 
 // Display-only mirror of server/skillMapping.ts's weight table — which
 // item types a focus skill feeds, in plain words for the parent
@@ -67,6 +73,9 @@ export function ParentDashboard({
   const [activityDays, setActivityDays]   = useState<{ date: string; hasEntry: boolean }[]>([]);
   const [floorAlarms, setFloorAlarms]     = useState<Record<ItemType, boolean>>({ social: false, nonverbal: false, inference: false });
   const [profile, setProfile]             = useState<StudentProfileInput | null>(null);
+  const [conversations, setConversations] = useState<ConversationSessionSummary[]>([]);
+  const [conversationEscalation, setConversationEscalation] = useState(false);
+  const [expandedConvoId, setExpandedConvoId] = useState<string | null>(null);
 
   const [showAddReward, setShowAddReward] = useState(false);
   const [newLabel, setNewLabel] = useState('');
@@ -76,15 +85,18 @@ export function ParentDashboard({
 
   useEffect(() => {
     (async () => {
-      const [s, l, d, c, cfg, rewards, jToday, days, alarms, prof] = await Promise.all([
+      const [s, l, d, c, cfg, rewards, jToday, days, alarms, prof, convos, convoEscalation] = await Promise.all([
         loadSessions(student.id), loadLevelSlice(student.id), loadDifficulty(student.id),
         loadCoins(student.id), loadConfig(student.id),
         loadCustomRewards(student.id), parentJournalWrittenToday(student.id), parentJournalActivity(student.id, 7),
         loadFloorAlarms(student.id), loadStudentProfile(student.id),
+        loadConversationSessions(student.id), loadConversationEscalation(student.id),
       ]);
       setSessions(s); setLevelSlice(l); setDifficulty(d); setCoins(c); setConfig(cfg);
       setCustomRewards(rewards); setJournalToday(jToday); setActivityDays(days); setFloorAlarms(alarms);
       setProfile(prof);
+      setConversations(convos); setConversationEscalation(convoEscalation);
+      setExpandedConvoId(null);
       setLoading(false);
     })();
   }, [student.id]);
@@ -204,6 +216,19 @@ export function ParentDashboard({
             >
               Finish setup
             </button>
+          </div>
+        )}
+
+        {/* Conversation-practice escalation — the AI partner ended a chat */}
+        {/* early because the student disclosed something serious. This is */}
+        {/* the one time a conversation transcript matters more than usual. */}
+        {conversationEscalation && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 space-y-1.5">
+            <p className="text-sm font-semibold text-rose-800">Worth a look</p>
+            <p className="text-sm text-rose-700">
+              {kidName} had a conversation-practice chat where she seemed to be going through something hard.
+              The chat ended early. Check the conversation history below, and it may be worth checking in with her.
+            </p>
           </div>
         )}
 
@@ -478,6 +503,53 @@ export function ParentDashboard({
 
         {sessions.length === 0 && (
           <p className="text-center text-sm text-slate-400 py-4">No practice sessions yet.</p>
+        )}
+
+        {/* Conversation history — deliberately owner-visible, the opposite */}
+        {/* of the journal below. Ashi is told this plainly before she starts. */}
+        {conversations.length > 0 && (
+          <section>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Conversation history</h2>
+            <p className="text-xs text-slate-400 mb-3">
+              {kidName} is told you can read these — that's different from her journal, which always stays private.
+            </p>
+            <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50">
+              {conversations.map(c => {
+                const isOpen = expandedConvoId === c.id;
+                const topicLabel = conversationTopicById(c.topic)?.label ?? c.topic;
+                return (
+                  <div key={c.id}>
+                    <button
+                      onClick={() => setExpandedConvoId(isOpen ? null : c.id)}
+                      className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-slate-50/60 transition-colors"
+                    >
+                      <div>
+                        <p className="text-sm text-slate-700 font-medium">{formatDate(c.startedAt)} · {topicLabel}</p>
+                        <p className="text-xs text-slate-400">
+                          {c.turnCount} {c.turnCount === 1 ? 'exchange' : 'exchanges'}
+                          {c.endedReason ? ` · ${CONVO_ENDED_REASON_LABELS[c.endedReason] ?? c.endedReason}` : ''}
+                        </p>
+                      </div>
+                      <span className={`text-slate-300 transition-transform shrink-0 ${isOpen ? 'rotate-90' : ''}`}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className="px-5 pb-4 space-y-2">
+                        {c.transcript.map((m, i) => (
+                          <p key={i} className={`text-sm leading-snug ${m.role === 'user' ? 'text-slate-800' : 'text-slate-500'}`}>
+                            <span className="font-semibold capitalize">{m.role === 'user' ? kidName : 'Alex'}:</span> {m.content}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {/* App settings */}

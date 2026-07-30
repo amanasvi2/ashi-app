@@ -36,6 +36,8 @@ vi.mock('../storage', () => ({
   deleteCustomReward: async () => {},
   loadFloorAlarms: async () => ({ social: false, nonverbal: false, inference: false }),
   loadStudentProfile: async () => null,
+  loadConversationSessions: async () => [],
+  loadConversationEscalation: async () => false,
   initialDifficulty: { social: 1, nonverbal: 1, inference: 1 },
 }));
 

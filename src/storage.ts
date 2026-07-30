@@ -286,6 +286,57 @@ export async function parentJournalWrittenToday(studentId: string): Promise<bool
   return today?.hasEntry ?? false;
 }
 
+// ── Conversation Practice (owner-visible on purpose — the student is told ───
+// ── this plainly, unlike the journal above, which stays private) ────────────
+
+export interface ConversationTranscriptEntry {
+  role: 'user' | 'assistant';
+  content: string;
+  at: string;
+}
+
+export interface ConversationSessionSummary {
+  id: string;
+  topic: string;
+  startedAt: string;
+  endedAt: string | null;
+  turnCount: number;
+  endedReason: string | null;
+  escalation: boolean;
+  transcript: ConversationTranscriptEntry[];
+}
+
+export async function loadConversationSessions(studentId?: string): Promise<ConversationSessionSummary[]> {
+  const id = studentId ?? await currentUserId();
+  const { data } = await supabase
+    .from('conversation_sessions')
+    .select('id, topic, started_at, ended_at, turn_count, ended_reason, escalation, transcript')
+    .eq('student_id', id)
+    .order('started_at', { ascending: false })
+    .limit(50);
+  return (data ?? []).map(row => ({
+    id: row.id,
+    topic: row.topic,
+    startedAt: row.started_at,
+    endedAt: row.ended_at,
+    turnCount: row.turn_count,
+    endedReason: row.ended_reason,
+    escalation: row.escalation,
+    transcript: row.transcript ?? [],
+  }));
+}
+
+export async function loadConversationEscalation(studentId?: string): Promise<boolean> {
+  const id = studentId ?? await currentUserId();
+  const { data } = await supabase
+    .from('conversation_sessions')
+    .select('id')
+    .eq('student_id', id)
+    .eq('escalation', true)
+    .limit(1);
+  return (data ?? []).length > 0;
+}
+
 // ── Coins ─────────────────────────────────────────────────────────────────────
 
 const defaultCoins: CoinsState = { balance: 0, totalEarned: 0, hintTokens: 0 };
