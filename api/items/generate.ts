@@ -12,7 +12,7 @@ function difficultyLabel(d: Difficulty): string {
   return '3 (hard — answer is implied but not obvious, needs careful reading)';
 }
 
-function buildPrompt(
+export function buildPrompt(
   requests: { type: ItemType; difficulty: Difficulty }[],
   levels: LevelState,
   interests: string[],
@@ -87,7 +87,7 @@ ${lines.join('\n\n')}
 Return ONLY the raw JSON array. No markdown fences, no explanation.`;
 }
 
-function isValidWordBank(raw: unknown): boolean {
+export function isValidWordBank(raw: unknown): boolean {
   if (!Array.isArray(raw) || raw.length < 5 || raw.length > 6) return false;
   let correctCount = 0;
   for (const entry of raw) {
@@ -100,7 +100,7 @@ function isValidWordBank(raw: unknown): boolean {
   return correctCount >= 1 && correctCount <= 2;
 }
 
-function isValidItem(raw: unknown, levels: LevelState): raw is Item {
+export function isValidItem(raw: unknown, levels: LevelState): raw is Item {
   if (!raw || typeof raw !== 'object') return false;
   const r = raw as Record<string, unknown>;
   if (!['social', 'nonverbal', 'inference'].includes(r.type as string)) return false;

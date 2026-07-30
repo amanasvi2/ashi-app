@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Item-review harness — ephemeral, regenerated at will (the golden set in
+# review/golden/ is committed on purpose, this is not)
+review/batches/
+review/results.jsonl
+review/fewshot-export.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

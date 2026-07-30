@@ -1,0 +1,886 @@
+[
+  {
+    "id": "golden_social_01",
+    "type": "social",
+    "difficulty": 1,
+    "scenario": "Maya, Jordan, and Priya are working on a poster for their science project. Maya and Priya have been cutting out pictures and writing labels for twenty minutes. Jordan is sitting at the same table but has been drawing on a separate piece of paper the whole time. The poster is due in ten minutes and only half finished.",
+    "questions": [
+      {
+        "text": "What is the problem?",
+        "stem": "The problem is that",
+        "choices": [
+          "Jordan is not helping with the poster",
+          "the poster is too colorful",
+          "Maya and Priya do not like science"
+        ],
+        "evidence": "Jordan is sitting at the same table but has been drawing on a separate piece of paper the whole time"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "Jordan isn't doing any of the work on the poster even though it's due soon",
+        "expected": "correct"
+      },
+      {
+        "text": "the poster is not finished",
+        "expected": "partial"
+      },
+      {
+        "text": "the poster has too many pictures on it",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_social_02",
+    "type": "social",
+    "difficulty": 1,
+    "scenario": "Devon just moved to a new school. At lunch, he stands near the cafeteria doors holding his tray, looking around at the tables. Every table already has a full group of kids talking and laughing. Devon walks to an empty table in the corner and sits down by himself.",
+    "questions": [
+      {
+        "text": "What is the problem?",
+        "stem": "The problem is that",
+        "choices": [
+          "Devon does not have anyone to sit with at lunch",
+          "the cafeteria is too loud",
+          "Devon forgot his lunch"
+        ],
+        "evidence": "Devon walks to an empty table in the corner and sits down by himself"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he's new and doesn't have friends to sit with yet so he's eating alone",
+        "expected": "correct"
+      },
+      {
+        "text": "nobody is sitting with him",
+        "expected": "partial"
+      },
+      {
+        "text": "the tables in the cafeteria are the wrong shape",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_social_03",
+    "type": "social",
+    "difficulty": 2,
+    "scenario": "A group chat is making plans to go to the movies on Saturday. Six kids are in the chat, including Aaliyah. Everyone is picking a time and talking about which movie to see. Aaliyah sends a message asking what time they are meeting. No one answers her question, but the chat keeps planning around her.",
+    "questions": [
+      {
+        "text": "What is the problem?",
+        "stem": "The problem is that",
+        "choices": [
+          "Aaliyah's question is being ignored by the group",
+          "the movie theater is closed on Saturday",
+          "Aaliyah does not want to see a movie"
+        ],
+        "evidence": "Aaliyah sends a message asking what time they are meeting. No one answers her question, but the chat keeps planning around her"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "nobody is responding when she asks what time to meet, they're just planning without her",
+        "expected": "correct"
+      },
+      {
+        "text": "no one answered her question",
+        "expected": "partial"
+      },
+      {
+        "text": "she does not like going to the movies with this group",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_social_04",
+    "type": "social",
+    "difficulty": 2,
+    "scenario": "In the hallway between classes, Tyler drops his binder and papers spread across the floor. Several students walk by, step around the papers, and keep talking to their friends. No one stops to help him pick anything up. Tyler kneels down and starts gathering the papers alone while more students pass by.",
+    "questions": [
+      {
+        "text": "What is the problem?",
+        "stem": "The problem is that",
+        "choices": [
+          "Tyler is picking up his dropped papers by himself with no help",
+          "the hallway floor is too slippery",
+          "Tyler's binder is broken"
+        ],
+        "evidence": "No one stops to help him pick anything up"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he dropped all his papers and everyone just walked past instead of helping",
+        "expected": "correct"
+      },
+      {
+        "text": "papers are all over the floor",
+        "expected": "partial"
+      },
+      {
+        "text": "the hallway is too crowded to walk through",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_social_05",
+    "type": "social",
+    "difficulty": 2,
+    "scenario": "Sisters Ella and Rosa share a room. Every night when Rosa tries to talk about her day, Ella interrupts within a few seconds and starts talking about her own day instead. This has happened every night for a week. Tonight, Rosa stops talking in the middle of her sentence and just looks at the wall instead of finishing.",
+    "questions": [
+      {
+        "text": "What is the problem?",
+        "stem": "The problem is that",
+        "choices": [
+          "Ella keeps interrupting Rosa before she can finish talking",
+          "the sisters do not share a room anymore",
+          "Rosa does not have anything to talk about"
+        ],
+        "evidence": "Every night when Rosa tries to talk about her day, Ella interrupts within a few seconds and starts talking about her own day instead"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "Ella keeps cutting Rosa off and talking about herself before Rosa can share anything",
+        "expected": "correct"
+      },
+      {
+        "text": "they keep talking about their day",
+        "expected": "partial"
+      },
+      {
+        "text": "Rosa is tired and wants to go to sleep",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_social_06",
+    "type": "social",
+    "difficulty": 2,
+    "scenario": "During basketball practice, Marcus never passes the ball to his teammate Sam, even when Sam is wide open near the basket. Marcus takes every shot himself, and the team has missed several easy points because of it. After practice, Sam sits alone on the bench instead of joining the team huddle.",
+    "questions": [
+      {
+        "text": "What is the problem?",
+        "stem": "The problem is that",
+        "choices": [
+          "Marcus will not pass the ball to Sam even when he is open",
+          "the basketball hoop is too high",
+          "Sam does not know how to play basketball"
+        ],
+        "evidence": "Marcus never passes the ball to his teammate Sam, even when Sam is wide open near the basket"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "Marcus keeps the ball to himself and won't pass to Sam even when Sam has a clear shot",
+        "expected": "correct"
+      },
+      {
+        "text": "the team is not doing well",
+        "expected": "partial"
+      },
+      {
+        "text": "the team lost the game",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_social_07",
+    "type": "social",
+    "difficulty": 3,
+    "scenario": "Four students are picking a topic for their history project. Two of them want to research ancient Egypt, and two want to research World War II. They have been going back and forth for fifteen minutes without agreeing. The teacher announces that groups need to submit a topic in five minutes or she will pick one for them.",
+    "questions": [
+      {
+        "text": "What is the problem?",
+        "stem": "The problem is that",
+        "choices": [
+          "the group cannot agree on a topic before time runs out",
+          "the teacher does not like either topic",
+          "the group does not want to do a history project"
+        ],
+        "evidence": "They have been going back and forth for fifteen minutes without agreeing"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "they can't decide between the two topics and are running out of time before the teacher picks for them",
+        "expected": "correct"
+      },
+      {
+        "text": "they cannot decide on a topic",
+        "expected": "partial"
+      },
+      {
+        "text": "ancient Egypt is more interesting than World War II",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_social_08",
+    "type": "social",
+    "difficulty": 2,
+    "scenario": "At lunch, Ben opens his lunch box and pulls out a container of rice and vegetables his grandmother made. Two boys at the table wrinkle their noses and say his food looks weird and smells strange. Ben quietly closes the container and puts it back in his lunch box without eating.",
+    "questions": [
+      {
+        "text": "What is the problem?",
+        "stem": "The problem is that",
+        "choices": [
+          "the boys made fun of Ben's food so he stopped eating it",
+          "Ben forgot to bring a fork",
+          "the cafeteria ran out of lunch trays"
+        ],
+        "evidence": "Ben quietly closes the container and puts it back in his lunch box without eating"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "the other boys said his lunch was weird and now he's too embarrassed to eat it",
+        "expected": "correct"
+      },
+      {
+        "text": "Ben did not eat his lunch",
+        "expected": "partial"
+      },
+      {
+        "text": "Ben was not hungry at lunchtime",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_social_09",
+    "type": "social",
+    "difficulty": 3,
+    "scenario": "Three classmates are assigned to build a model volcano together. Every time it is time to type up the report, Nadia takes the laptop and does all the typing herself, saying it will be faster if she just does it. The other two members sit and watch without saying anything, and their names are barely mentioned in the report.",
+    "questions": [
+      {
+        "text": "What is the problem?",
+        "stem": "The problem is that",
+        "choices": [
+          "Nadia is doing all the report work herself instead of sharing it",
+          "the volcano model will not work correctly",
+          "the group does not have enough supplies"
+        ],
+        "evidence": "Nadia takes the laptop and does all the typing herself, saying it will be faster if she just does it"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "Nadia takes over the typing every time instead of letting the other two contribute",
+        "expected": "correct"
+      },
+      {
+        "text": "Nadia is typing the report",
+        "expected": "partial"
+      },
+      {
+        "text": "volcanoes are hard to build",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_social_10",
+    "type": "social",
+    "difficulty": 3,
+    "scenario": "Someone in a class group chat sends a message making fun of Simone's haircut, and several kids reply with laughing emojis. Simone is also in the chat and sees the message. A few minutes later, she leaves the group chat without saying anything.",
+    "questions": [
+      {
+        "text": "What is the problem?",
+        "stem": "The problem is that",
+        "choices": [
+          "kids made fun of Simone in the group chat and she saw it",
+          "the group chat has too many people in it",
+          "Simone does not like using her phone"
+        ],
+        "evidence": "Someone in a class group chat sends a message making fun of Simone's haircut, and several kids reply with laughing emojis"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "someone insulted her haircut in the chat and other people laughed about it while she could see everything",
+        "expected": "correct"
+      },
+      {
+        "text": "Simone left the group chat",
+        "expected": "partial"
+      },
+      {
+        "text": "Simone got a new phone",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_nonverbal_01",
+    "type": "nonverbal",
+    "difficulty": 1,
+    "scenario": "When his mom asks Liam how the math test went, he crosses his arms, looks at the floor, and says \"fine\" in a flat voice without looking up.",
+    "questions": [
+      {
+        "text": "What does that mean?",
+        "stem": "Liam is probably",
+        "choices": [
+          "upset about how the test went",
+          "excited to talk about the test",
+          "not interested in math at all"
+        ],
+        "evidence": "he crosses his arms, looks at the floor, and says \"fine\" in a flat voice without looking up"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he's probably upset or disappointed about the test but doesn't want to talk about it",
+        "expected": "correct"
+      },
+      {
+        "text": "he thinks math tests are fun",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_nonverbal_02",
+    "type": "nonverbal",
+    "difficulty": 1,
+    "scenario": "Grace got a lower grade than she wanted on her art project. When her friend asks if she is okay, Grace keeps her eyes down, gives short one-word answers, and does not smile like she usually does.",
+    "questions": [
+      {
+        "text": "What does that mean?",
+        "stem": "Grace is probably",
+        "choices": [
+          "feeling sad or embarrassed about her grade",
+          "happy with how her project turned out",
+          "too busy to talk right now"
+        ],
+        "evidence": "Grace keeps her eyes down, gives short one-word answers, and does not smile like she usually does"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "she is sad or embarrassed because of the grade she got",
+        "expected": "correct"
+      },
+      {
+        "text": "she is proud of her art project",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_nonverbal_03",
+    "type": "nonverbal",
+    "difficulty": 2,
+    "scenario": "During group work, Kevin asks the same question for the third time. His partner rolls her eyes, lets out a long sigh, and answers in a sharp, short tone before turning back to her own paper.",
+    "questions": [
+      {
+        "text": "What does that mean?",
+        "stem": "Kevin's partner is probably",
+        "choices": [
+          "annoyed at having to repeat herself again",
+          "confused about the assignment",
+          "excited to keep working together"
+        ],
+        "evidence": "His partner rolls her eyes, lets out a long sigh, and answers in a sharp, short tone"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "she's getting frustrated because he keeps asking the same thing over and over",
+        "expected": "correct"
+      },
+      {
+        "text": "she wants to keep explaining things to him",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_nonverbal_04",
+    "type": "nonverbal",
+    "difficulty": 1,
+    "scenario": "When the teacher announces a surprise pizza party for the class, Jasmine's eyes go wide, she starts smiling, and she bounces up and down in her seat.",
+    "questions": [
+      {
+        "text": "What does that mean?",
+        "stem": "Jasmine is probably",
+        "choices": [
+          "excited about the pizza party",
+          "worried about something",
+          "bored with the class"
+        ],
+        "evidence": "Jasmine's eyes go wide, she starts smiling, and she bounces up and down in her seat"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "she's really happy and excited about the surprise",
+        "expected": "correct"
+      },
+      {
+        "text": "she is nervous about the party",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_nonverbal_05",
+    "type": "nonverbal",
+    "difficulty": 2,
+    "scenario": "Before giving his book report in front of the class, Omar avoids looking at anyone, keeps shifting his weight from foot to foot, and taps his notecards against his leg over and over.",
+    "questions": [
+      {
+        "text": "What does that mean?",
+        "stem": "Omar is probably",
+        "choices": [
+          "nervous about presenting in front of the class",
+          "confident about his book report",
+          "annoyed at his classmates"
+        ],
+        "evidence": "Omar avoids looking at anyone, keeps shifting his weight from foot to foot, and taps his notecards against his leg over and over"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he seems really nervous or anxious about having to present",
+        "expected": "correct"
+      },
+      {
+        "text": "he can't wait to give his report",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_nonverbal_06",
+    "type": "nonverbal",
+    "difficulty": 2,
+    "scenario": "After finding out he was not picked for the soccer team, Diego slams his locker shut and walks quickly down the hallway, not stopping to answer when a friend calls his name.",
+    "questions": [
+      {
+        "text": "What does that mean?",
+        "stem": "Diego is probably",
+        "choices": [
+          "angry or upset about not making the team",
+          "in a hurry to get to soccer practice",
+          "excited to tell his friend the news"
+        ],
+        "evidence": "Diego slams his locker shut and walks quickly down the hallway, not stopping to answer when a friend calls his name"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he's angry and upset about not making the soccer team",
+        "expected": "correct"
+      },
+      {
+        "text": "he is running late for class",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_nonverbal_07",
+    "type": "nonverbal",
+    "difficulty": 1,
+    "scenario": "During the family movie, Ray is slouched on the couch, staring at his phone, and does not laugh or react to anything happening on the screen.",
+    "questions": [
+      {
+        "text": "What does that mean?",
+        "stem": "Ray is probably",
+        "choices": [
+          "not interested in the movie",
+          "really enjoying the movie",
+          "scared by the movie"
+        ],
+        "evidence": "Ray is slouched on the couch, staring at his phone, and does not laugh or react to anything happening on the screen"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he seems bored and not paying attention to the movie at all",
+        "expected": "correct"
+      },
+      {
+        "text": "he is having a great time watching",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_nonverbal_08",
+    "type": "nonverbal",
+    "difficulty": 2,
+    "scenario": "When the fire alarm suddenly goes off during the quiet test, Ana's eyes go wide, she jumps in her seat, and she claps a hand over her mouth.",
+    "questions": [
+      {
+        "text": "What does that mean?",
+        "stem": "Ana is probably",
+        "choices": [
+          "surprised and startled by the alarm",
+          "expecting the alarm to go off",
+          "annoyed that the test was interrupted"
+        ],
+        "evidence": "Ana's eyes go wide, she jumps in her seat, and she claps a hand over her mouth"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "she got startled and surprised because the alarm was so sudden",
+        "expected": "correct"
+      },
+      {
+        "text": "she knew the alarm was going to happen",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_nonverbal_09",
+    "type": "nonverbal",
+    "difficulty": 3,
+    "scenario": "A new dog approaches Mia at the park. She takes a step back, crosses her arms tightly against her chest, and keeps her body turned slightly away from the dog.",
+    "questions": [
+      {
+        "text": "What does that mean?",
+        "stem": "Mia is probably",
+        "choices": [
+          "uncomfortable or scared of the dog",
+          "excited to play with the dog",
+          "not paying attention to the dog"
+        ],
+        "evidence": "She takes a step back, crosses her arms tightly against her chest, and keeps her body turned slightly away from the dog"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "she looks scared or nervous around the dog and is trying to keep distance from it",
+        "expected": "correct"
+      },
+      {
+        "text": "she wants to pet the dog",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_nonverbal_10",
+    "type": "nonverbal",
+    "difficulty": 3,
+    "scenario": "When asked if she is okay after her team lost the championship game, Priya gives a tight smile and a quick nod, then turns to grab her water bottle without saying a word.",
+    "questions": [
+      {
+        "text": "What does that mean?",
+        "stem": "Priya is probably",
+        "choices": [
+          "not actually okay, even though she nodded yes",
+          "completely fine about losing the game",
+          "confused about the question"
+        ],
+        "evidence": "Priya gives a tight smile and a quick nod, then turns to grab her water bottle without saying a word"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "she's probably not really okay, she's just saying that so she doesn't have to talk about the loss",
+        "expected": "correct"
+      },
+      {
+        "text": "she is happy her team lost",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_inference_01",
+    "type": "inference",
+    "difficulty": 1,
+    "scenario": "The morning sky was clear and blue with no clouds in sight. Before Carlos left for school, he grabbed his umbrella from the closet and put it in his backpack. His mom looked outside and asked why he needed it. Carlos said the weather app on his phone showed something later in the day.",
+    "questions": [
+      {
+        "text": "What did Carlos most likely see on the weather app?",
+        "stem": "Carlos probably saw that",
+        "choices": [
+          "it was going to rain later",
+          "school was going to be canceled",
+          "the temperature would stay the same all day"
+        ],
+        "evidence": "Carlos said the weather app on his phone showed something later in the day"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "the app must have shown rain coming later even though it looked sunny that morning",
+        "expected": "correct"
+      },
+      {
+        "text": "it was going to rain",
+        "expected": "correct"
+      },
+      {
+        "text": "his phone battery was low",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_inference_02",
+    "type": "inference",
+    "difficulty": 2,
+    "scenario": "Sophie sent a text message to her friend an hour ago and has not gotten a reply yet. She keeps opening the messaging app every few minutes to check, even though there is no new notification. She reads her old message over again each time before closing the app.",
+    "questions": [
+      {
+        "text": "How does Sophie most likely feel about not getting a reply?",
+        "stem": "Sophie is probably feeling",
+        "choices": [
+          "nervous or anxious about the lack of response",
+          "completely unbothered by it",
+          "annoyed that her phone is too slow"
+        ],
+        "evidence": "She keeps opening the messaging app every few minutes to check, even though there is no new notification"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "she seems anxious or worried since she keeps checking over and over for a reply that hasn't come",
+        "expected": "correct"
+      },
+      {
+        "text": "she does not care if her friend replies",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_inference_03",
+    "type": "inference",
+    "difficulty": 2,
+    "scenario": "When Marcus got home from school, he went straight to his room and put his report card in the bottom drawer of his desk instead of on the kitchen counter where he usually leaves it. When his dad asked how school was, Marcus said \"fine\" and quickly changed the subject.",
+    "questions": [
+      {
+        "text": "What can be inferred about Marcus's report card?",
+        "stem": "Marcus probably",
+        "choices": [
+          "got a grade he did not want his dad to see",
+          "got the best grades of his life",
+          "lost his report card on the way home"
+        ],
+        "evidence": "he went straight to his room and put his report card in the bottom drawer of his desk instead of on the kitchen counter where he usually leaves it"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he probably got bad grades and is trying to hide the report card from his dad",
+        "expected": "correct"
+      },
+      {
+        "text": "he was proud of his report card",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_inference_04",
+    "type": "inference",
+    "difficulty": 1,
+    "scenario": "Every day, Layla packs one sandwich for lunch. Today she packed two sandwiches without telling anyone why. At lunch, her friend Noor sat down and said she had forgotten to make her own lunch that morning. Layla handed her the extra sandwich right away.",
+    "questions": [
+      {
+        "text": "Why did Layla most likely pack an extra sandwich?",
+        "stem": "Layla probably",
+        "choices": [
+          "guessed that Noor might need lunch that day",
+          "wanted to eat two lunches herself",
+          "made a mistake while packing her bag"
+        ],
+        "evidence": "Layla handed her the extra sandwich right away"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "she must have known or guessed Noor would need an extra lunch that day",
+        "expected": "correct"
+      },
+      {
+        "text": "she was extra hungry that day",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_inference_05",
+    "type": "inference",
+    "difficulty": 2,
+    "scenario": "During math class, Ethan keeps glancing down at his phone in his lap every few minutes, even though phones are not allowed out during class. Each time he checks it, he looks a little more worried and taps his pencil faster against his desk.",
+    "questions": [
+      {
+        "text": "What can be inferred about why Ethan keeps checking his phone?",
+        "stem": "Ethan is probably",
+        "choices": [
+          "waiting for a message that is important to him",
+          "trying to find the time",
+          "bored with the math lesson"
+        ],
+        "evidence": "Each time he checks it, he looks a little more worried and taps his pencil faster against his desk"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he seems to be anxiously waiting for some kind of important message or news",
+        "expected": "correct"
+      },
+      {
+        "text": "he does not like math class",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_inference_06",
+    "type": "inference",
+    "difficulty": 3,
+    "scenario": "Every day at lunch, Ava used to sit at the same table near the cafeteria entrance. This week, she has been eating lunch in the library instead. When a teacher asked if everything was okay, Ava said the cafeteria was \"too loud\" but would not look up from her book.",
+    "questions": [
+      {
+        "text": "What can be inferred about why Ava is avoiding the cafeteria?",
+        "stem": "Ava is probably",
+        "choices": [
+          "avoiding something or someone at her old lunch table",
+          "trying to read more books during the day",
+          "allergic to the food served in the cafeteria"
+        ],
+        "evidence": "would not look up from her book"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "something probably happened at her old table and she's avoiding whoever or whatever it was",
+        "expected": "correct"
+      },
+      {
+        "text": "she really loves reading books during lunch",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_inference_07",
+    "type": "inference",
+    "difficulty": 2,
+    "scenario": "Before giving his presentation, Jamal stood in the bathroom and practiced his speech out loud in front of the mirror three times. His hands were shaking slightly as he flipped through his notecards one more time before walking back to class.",
+    "questions": [
+      {
+        "text": "What can be inferred about how Jamal feels about his presentation?",
+        "stem": "Jamal is probably feeling",
+        "choices": [
+          "nervous about presenting in front of the class",
+          "completely confident and relaxed",
+          "excited to skip the presentation"
+        ],
+        "evidence": "His hands were shaking slightly as he flipped through his notecards one more time"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he's nervous about the presentation, that's why he practiced so much and his hands are shaking",
+        "expected": "correct"
+      },
+      {
+        "text": "he doesn't care about the presentation at all",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_inference_08",
+    "type": "inference",
+    "difficulty": 2,
+    "scenario": "Zoe saved a seat next to her at the assembly for her friend Ruby, placing her backpack on it and telling other students the seat was taken. Ten minutes later, the assembly started and the seat was still empty. Zoe kept turning around to look at the doors every few seconds.",
+    "questions": [
+      {
+        "text": "What can be inferred from Zoe's behavior?",
+        "stem": "Zoe is probably",
+        "choices": [
+          "wondering where Ruby is and if she is coming",
+          "trying to save the seat for herself",
+          "not interested in the assembly at all"
+        ],
+        "evidence": "Zoe kept turning around to look at the doors every few seconds"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "she's worried or wondering why Ruby hasn't shown up yet since she keeps checking the door",
+        "expected": "correct"
+      },
+      {
+        "text": "she wanted extra room to spread out",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_inference_09",
+    "type": "inference",
+    "difficulty": 3,
+    "scenario": "It was a warm day inside the classroom, and most students had taken off their jackets. Noah kept his jacket zipped all the way up the entire class, even though he looked uncomfortable and kept wiping sweat off his forehead. When a classmate offered to open a window instead, Noah quickly said he was fine.",
+    "questions": [
+      {
+        "text": "What can be inferred about why Noah kept his jacket on?",
+        "stem": "Noah is probably",
+        "choices": [
+          "hiding something underneath the jacket",
+          "actually feeling cold in the classroom",
+          "planning to leave school early"
+        ],
+        "evidence": "Noah kept his jacket zipped all the way up the entire class, even though he looked uncomfortable"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he's probably hiding something under the jacket since he's clearly uncomfortable but won't take it off",
+        "expected": "correct"
+      },
+      {
+        "text": "he was cold even though it was warm out",
+        "expected": "incorrect"
+      }
+    ]
+  },
+  {
+    "id": "golden_inference_10",
+    "type": "inference",
+    "difficulty": 3,
+    "scenario": "At the end of class, the teacher asked if anyone could stay a few minutes to help clean up the room. Usually no one volunteers, but today Ethan raised his hand right away. As soon as the bell rang, he stayed behind and watched most of his classmates head out the door and down the hallway toward the buses.",
+    "questions": [
+      {
+        "text": "What can be inferred about why Ethan volunteered to stay after class?",
+        "stem": "Ethan probably",
+        "choices": [
+          "wanted to avoid something happening outside of class, like the bus or a person",
+          "really enjoys cleaning classrooms",
+          "forgot that the bell had rung"
+        ],
+        "evidence": "he stayed behind and watched most of his classmates head out the door and down the hallway toward the buses"
+      }
+    ],
+    "sampleAnswers": [
+      {
+        "text": "he probably wanted to avoid running into someone or something out by the buses, so he stayed back on purpose",
+        "expected": "correct"
+      },
+      {
+        "text": "he really likes helping clean the classroom",
+        "expected": "incorrect"
+      }
+    ]
+  }
+]

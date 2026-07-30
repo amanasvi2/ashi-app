@@ -9,7 +9,12 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:rls": "set -a && . ./.env.local && set +a && node scripts/rls-test.js"
+    "test:rls": "set -a && . ./.env.local && set +a && node scripts/rls-test.js",
+    "items:generate": "set -a && . ./.env.local && set +a && npx tsx scripts/items-generate.ts",
+    "items:review": "node review/server.js",
+    "items:report": "node scripts/items-report.js",
+    "items:export-fewshot": "npx tsx scripts/items-export-fewshot.ts",
+    "items:golden-test": "set -a && . ./.env.local && set +a && npx tsx scripts/items-golden-test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
@@ -27,6 +32,7 @@
     "jsdom": "^25.0.1",
     "oxlint": "^1.71.0",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.1",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "vitest": "^3.2.4"

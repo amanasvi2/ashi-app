@@ -2,12 +2,12 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyUser } from '../server/verifyUser.js';
 import { groqChat } from '../server/groq.js';
 
-interface EvaluationResult {
+export interface EvaluationResult {
   result: 'correct' | 'partial' | 'incorrect';
   feedback: string;
 }
 
-function buildPrompt(scenario: string, questionText: string, correctAnswer: string, userAnswer: string): string {
+export function buildPrompt(scenario: string, questionText: string, correctAnswer: string, userAnswer: string): string {
   return `You are evaluating a student's typed answer to a reading comprehension / social
 reasoning question, for a 13-year-old with autism and a language processing disorder.
 There are many valid ways to correctly answer — judge for MEANING, not exact wording.
@@ -31,7 +31,7 @@ Return ONLY a raw JSON object, no markdown fences, no explanation:
 {"result": "correct" | "partial" | "incorrect", "feedback": "<one short sentence, plain literal language, no idioms or sarcasm, encouraging tone>"}`;
 }
 
-function isValidResult(raw: unknown): raw is EvaluationResult {
+export function isValidResult(raw: unknown): raw is EvaluationResult {
   if (!raw || typeof raw !== 'object') return false;
   const r = raw as Record<string, unknown>;
   if (!['correct', 'partial', 'incorrect'].includes(r.result as string)) return false;
