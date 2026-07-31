@@ -1,0 +1,61 @@
+/*
+ * Design tokens — the single source of truth for color, type, radius, and
+ * elevation. Nothing in this app should hardcode a hex outside this file;
+ * grep for `#` in src/ to audit that over time.
+ *
+ * NOT YET IMPORTED into index.css. This is Phase 1 of the design-system
+ * rollout (token file + specimen for review) — wiring this in via
+ * `@import "./tokens.css";` happens at the start of Phase 2, since the
+ * radius collapse below is a global change (every existing rounded-2xl
+ * etc. in the app would shrink to 4px the moment this loads) and Phase 1
+ * is meant to have zero visible effect on the live app until approved.
+ *
+ * Palette semantics — the discipline is the point:
+ *   evidence — the clue highlight. Never a "correct" color anywhere else.
+ *   alert    — floor-alarm / conversation-escalation banners only. Never
+ *              ordinary form errors, never a wrong-answer color.
+ *   accent   — interactive only: buttons, links, focus, selection. Not a
+ *              decorative or "brand" color used for emphasis elsewhere.
+ * Coins, correct-answer affirmation, trend arrows, and support-level
+ * badges deliberately get no dedicated hue — ink/muted plus a line icon
+ * or weight, not a 9th color invented to avoid reusing these two.
+ */
+
+@theme {
+  --color-ink:      #1E2430;
+  --color-paper:    #F2F4F1;
+  --color-surface:  #FFFFFF;
+  /* Spec value #6B7280 measures 4.37:1 on paper — fails WCAG AA for
+     normal text (needs 4.5:1), passes only at large-text/UI size. This
+     is darkened just enough to clear AA at normal size on both paper
+     and surface (5.22:1 / 5.77:1) while staying the same cool gray. */
+  --color-muted:    #5F6674;
+  --color-rule:     #DCE0DA;
+  --color-accent:       #4E5FC7;
+  /* Hover/active shade for accent-filled controls — one fixed darkening,
+     not re-derived per component. */
+  --color-accent-hover: #4150AB;
+  --color-evidence: #E4EDA6;
+  --color-alert:    #B4532A;
+
+  /* Passages and questions read like a book; chrome does not. */
+  --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-sans:  'Inter Tight', ui-sans-serif, system-ui, sans-serif;
+
+  /* Radius stays small and consistent everywhere — collapsing Tailwind's
+     whole scale means existing rounded-xl/2xl/3xl classNames don't need
+     touching by hand during rollout, same trick as the old blue/slate swap. */
+  --radius-sm:  4px;
+  --radius-md:  4px;
+  --radius-lg:  4px;
+  --radius-xl:  4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 4px;
+
+  /* One elevation level, no gradients. */
+  --shadow-raised: 0 1px 2px rgba(30, 36, 48, 0.06), 0 2px 8px -4px rgba(30, 36, 48, 0.10);
+
+  /* The signature interaction's timing, named so it's reused exactly
+     (not re-typed with drift) wherever the evidence sweep is triggered. */
+  --duration-sweep: 400ms;
+}

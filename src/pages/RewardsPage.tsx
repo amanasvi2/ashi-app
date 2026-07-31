@@ -6,15 +6,37 @@ import { LoadingScreen } from '../components/LoadingScreen';
 const HINT_COST = 25;
 const HINT_AMOUNT = 10;
 
+function IconCoin({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  );
+}
+function IconHint() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.75V17h8v-2.25A7 7 0 0 0 12 2z"/>
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  );
+}
+
 function CoinDisplay({ balance }: { balance: number }) {
   return (
-    <div className="bg-gradient-to-r from-amber-400 to-yellow-400 rounded-2xl p-5 text-white">
-      <p className="text-xs font-semibold uppercase tracking-widest text-amber-100">Your coins</p>
+    <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted">Your coins</p>
       <div className="flex items-end gap-2 mt-1">
-        <span className="text-5xl font-bold">{balance}</span>
-        <span className="text-xl mb-1">⭐</span>
+        <span className="text-5xl font-bold text-ink">{balance}</span>
+        <span className="text-accent mb-1.5"><IconCoin size={22} /></span>
       </div>
-      <p className="text-xs text-amber-100 mt-1">
+      <p className="text-xs text-muted mt-1">
         Earn coins by doing extra practice sessions beyond your daily goal.
       </p>
     </div>
@@ -37,25 +59,25 @@ function HintCard({ hintTokens, coinBalance, onBuy }: HintCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5">
+    <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-2xl flex-shrink-0">
-          🔮
+        <div className="w-12 h-12 rounded-[4px] bg-accent/10 text-accent flex items-center justify-center flex-shrink-0">
+          <IconHint />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-800">Hint Tokens</p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm font-semibold text-ink">Hint Tokens</p>
+          <p className="text-xs text-muted mt-0.5">
             Use during practice to see the answer choices.
           </p>
           {hintTokens > 0 && (
-            <p className="text-xs text-blue-600 font-medium mt-1">
+            <p className="text-xs text-ink font-medium mt-1">
               You have {hintTokens} token{hintTokens !== 1 ? 's' : ''} ready
             </p>
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-xs font-bold text-amber-600">⭐ {HINT_COST}</p>
-          <p className="text-[10px] text-slate-400">for {HINT_AMOUNT} hints</p>
+          <p className="flex items-center justify-end gap-1 text-xs font-bold text-ink"><IconCoin />{HINT_COST}</p>
+          <p className="text-[10px] text-muted">for {HINT_AMOUNT} hints</p>
         </div>
       </div>
 
@@ -63,30 +85,30 @@ function HintCard({ hintTokens, coinBalance, onBuy }: HintCardProps) {
         <button
           onClick={() => setConfirming(true)}
           disabled={!canAfford}
-          className={`mt-4 w-full py-2.5 rounded-xl text-sm font-semibold transition-colors
+          className={`mt-4 w-full py-2.5 rounded-[4px] text-sm font-semibold transition-colors
             ${canAfford
-              ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+              ? 'bg-accent text-white hover:bg-accent-hover'
+              : 'bg-rule/40 text-muted cursor-not-allowed'}`}
         >
           {canAfford ? `Buy ${HINT_AMOUNT} hints` : `Need ${HINT_COST - coinBalance} more coins`}
         </button>
       ) : (
         <div className="mt-4 space-y-2">
-          <p className="text-xs text-center text-slate-600">
-            Spend ⭐ {HINT_COST} for {HINT_AMOUNT} hint tokens?
+          <p className="flex items-center justify-center gap-1 text-xs text-muted">
+            Spend <IconCoin /> {HINT_COST} for {HINT_AMOUNT} hint tokens?
           </p>
           <div className="flex gap-2">
             <button
               onClick={() => setConfirming(false)}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50"
+              className="flex-1 py-2.5 rounded-[4px] text-sm font-semibold border border-rule text-ink hover:bg-paper"
             >
               Not now
             </button>
             <button
               onClick={handleConfirm}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700"
+              className="flex-1 py-2.5 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover"
             >
-              Yes, buy!
+              Yes, buy
             </button>
           </div>
         </div>
@@ -113,26 +135,26 @@ function RewardCard({ reward, coinBalance, onRedeem }: RewardCardProps) {
   };
 
   return (
-    <div className={`bg-white rounded-2xl border p-5 transition-all ${unlocked ? 'border-emerald-200' : 'border-slate-100'}`}>
+    <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl flex-shrink-0">
+        <div className="w-12 h-12 rounded-[4px] bg-rule/40 flex items-center justify-center text-2xl flex-shrink-0">
           {reward.emoji}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-800 truncate">{reward.label}</p>
+          <p className="text-sm font-semibold text-ink truncate">{reward.label}</p>
           {unlocked ? (
-            <p className="text-xs text-emerald-600 font-medium mt-0.5">Unlocked!</p>
+            <p className="text-xs text-ink font-medium mt-0.5">Unlocked</p>
           ) : (
-            <p className="text-xs text-slate-500 mt-0.5">YouTube video</p>
+            <p className="text-xs text-muted mt-0.5">YouTube video</p>
           )}
         </div>
         <div className="text-right flex-shrink-0">
           {unlocked ? (
-            <span className="text-xl">✓</span>
+            <span className="text-ink"><IconCheck /></span>
           ) : (
             <>
-              <p className="text-xs font-bold text-amber-600">⭐ {reward.cost}</p>
-              <p className="text-[10px] text-slate-400">coins</p>
+              <p className="flex items-center justify-end gap-1 text-xs font-bold text-ink"><IconCoin />{reward.cost}</p>
+              <p className="text-[10px] text-muted">coins</p>
             </>
           )}
         </div>
@@ -143,8 +165,8 @@ function RewardCard({ reward, coinBalance, onRedeem }: RewardCardProps) {
           href={reward.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 w-full py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 text-white
-                     hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+          className="mt-4 w-full py-2.5 rounded-[4px] text-sm font-semibold bg-accent text-white
+                     hover:bg-accent-hover transition-colors flex items-center justify-center gap-2"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="5 3 19 12 5 21 5 3"/>
@@ -155,30 +177,30 @@ function RewardCard({ reward, coinBalance, onRedeem }: RewardCardProps) {
         <button
           onClick={() => setConfirming(true)}
           disabled={!canAfford}
-          className={`mt-4 w-full py-2.5 rounded-xl text-sm font-semibold transition-colors
+          className={`mt-4 w-full py-2.5 rounded-[4px] text-sm font-semibold transition-colors
             ${canAfford
-              ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+              ? 'bg-accent text-white hover:bg-accent-hover'
+              : 'bg-rule/40 text-muted cursor-not-allowed'}`}
         >
           {canAfford ? 'Unlock' : `Need ${reward.cost - coinBalance} more coins`}
         </button>
       ) : (
         <div className="mt-4 space-y-2">
-          <p className="text-xs text-center text-slate-600">
-            Spend ⭐ {reward.cost} to unlock "{reward.label}"?
+          <p className="flex items-center justify-center gap-1 text-xs text-muted">
+            Spend <IconCoin /> {reward.cost} to unlock "{reward.label}"?
           </p>
           <div className="flex gap-2">
             <button
               onClick={() => setConfirming(false)}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50"
+              className="flex-1 py-2.5 rounded-[4px] text-sm font-semibold border border-rule text-ink hover:bg-paper"
             >
               Not now
             </button>
             <button
               onClick={handleConfirm}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700"
+              className="flex-1 py-2.5 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover"
             >
-              Yes, unlock!
+              Yes, unlock
             </button>
           </div>
         </div>
@@ -216,18 +238,18 @@ export function RewardsPage() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 lg:pb-8">
+    <div className="min-h-screen bg-paper pb-24 lg:pb-8">
       <div className="max-w-lg md:max-w-xl lg:max-w-2xl mx-auto px-4 md:px-6 py-6 space-y-5">
 
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Rewards</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Spend your coins on something fun</p>
+          <h1 className="text-xl font-bold text-ink">Rewards</h1>
+          <p className="text-xs text-muted mt-0.5">Spend your coins on something fun</p>
         </div>
 
         <CoinDisplay balance={coins.balance} />
 
         <section className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Hint tokens</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">Hint tokens</h2>
           <HintCard
             hintTokens={coins.hintTokens}
             coinBalance={coins.balance}
@@ -237,7 +259,7 @@ export function RewardsPage() {
 
         {customRewards.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Video rewards</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">Video rewards</h2>
             {customRewards.map(reward => (
               <RewardCard
                 key={reward.id}
@@ -250,17 +272,17 @@ export function RewardsPage() {
         )}
 
         {customRewards.length === 0 && (
-          <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-            <p className="text-slate-400 text-sm">No video rewards yet.</p>
-            <p className="text-slate-400 text-xs mt-1">Ask your parent to add some!</p>
+          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-8 text-center">
+            <p className="text-muted text-sm">No video rewards yet.</p>
+            <p className="text-muted text-xs mt-1">Ask your parent to add some!</p>
           </div>
         )}
 
-        <div className="bg-blue-50 rounded-2xl border border-blue-100 p-4 text-xs text-blue-700 space-y-1">
+        <div className="bg-surface rounded-[4px] border border-rule p-4 text-xs text-ink space-y-1.5">
           <p className="font-semibold">How to earn coins:</p>
-          <ul className="space-y-0.5 text-blue-600">
-            <li>• Extra sessions beyond your daily goal → ⭐ 10 coins</li>
-            <li>• Perfect score on a session → ⭐ 5 bonus coins</li>
+          <ul className="space-y-1 text-muted">
+            <li className="flex items-center gap-1.5">Extra sessions beyond your daily goal <IconCoin size={11} /> 10 coins</li>
+            <li className="flex items-center gap-1.5">Perfect score on a session <IconCoin size={11} /> 5 bonus coins</li>
           </ul>
         </div>
       </div>

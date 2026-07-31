@@ -9,13 +9,13 @@ function Field({ label, id, type = 'text', value, onChange, autoComplete }: {
 }) {
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-xs font-medium text-slate-600">{label}</label>
+      <label htmlFor={id} className="block text-xs font-medium text-muted">{label}</label>
       <input
         id={id} type={type} value={value}
         onChange={e => onChange(e.target.value)}
         autoComplete={autoComplete}
-        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800
-                   placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors"
+        className="w-full rounded-[4px] border border-rule bg-surface px-4 py-2.5 text-sm text-ink
+                   placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40 transition-colors"
       />
     </div>
   );
@@ -45,15 +45,15 @@ function ParentAuth({ onLogin }: { onLogin: (s: Session) => void }) {
         autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} />
       {mode === 'signup' && (
         <div className="space-y-1.5">
-          <p className="text-xs font-medium text-slate-600">I am a...</p>
+          <p className="text-xs font-medium text-muted">I am a</p>
           <div className="flex gap-2">
-            {([{ v: 'parent', l: 'Parent' }, { v: 'clinician', l: 'Clinician / SLP' }] as const).map(o => (
+            {([{ v: 'parent', l: 'Parent' }, { v: 'clinician', l: 'Clinician or SLP' }] as const).map(o => (
               <button
                 key={o.v}
                 type="button"
                 onClick={() => setOwnerType(o.v)}
-                className={`flex-1 py-2 rounded-xl text-sm border transition-all
-                  ${ownerType === o.v ? 'bg-blue-600 text-white border-blue-600 font-semibold' : 'border-slate-200 text-slate-600'}`}
+                className={`flex-1 py-2 rounded-[4px] text-sm border transition-colors
+                  ${ownerType === o.v ? 'bg-accent text-white border-accent font-semibold' : 'border-rule text-ink hover:border-muted'}`}
               >
                 {o.l}
               </button>
@@ -61,19 +61,26 @@ function ParentAuth({ onLogin }: { onLogin: (s: Session) => void }) {
           </div>
         </div>
       )}
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && (
+        <p className="flex items-start gap-2 text-sm text-ink">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0">
+            <circle cx="12" cy="12" r="2" fill="currentColor" />
+          </svg>
+          {error}
+        </p>
+      )}
       <button
         onClick={handleSubmit}
         onKeyDown={e => e.key === 'Enter' && handleSubmit()}
         disabled={loading || !email.trim() || !password}
-        className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700
+        className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover
                    disabled:opacity-40 transition-colors"
       >
-        {loading ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
+        {loading ? 'Please wait' : mode === 'signin' ? 'Sign in' : 'Create account'}
       </button>
       <button
         onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}
-        className="w-full text-center text-xs text-slate-400 hover:text-slate-600 transition-colors"
+        className="w-full text-center text-xs text-muted hover:text-ink transition-colors"
       >
         {mode === 'signin' ? 'New here? Create an account' : 'Already have an account? Sign in'}
       </button>
@@ -101,15 +108,22 @@ function KidAuth({ onLogin }: { onLogin: (s: Session) => void }) {
       <Field label="Username" id="kid-username" value={username} onChange={setUsername} autoComplete="username" />
       <Field label="Password" id="kid-password" type="password" value={password} onChange={setPassword}
         autoComplete="current-password" />
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && (
+        <p className="flex items-start gap-2 text-sm text-ink">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0">
+            <circle cx="12" cy="12" r="2" fill="currentColor" />
+          </svg>
+          {error}
+        </p>
+      )}
       <button
         onClick={handleSubmit}
         onKeyDown={e => e.key === 'Enter' && handleSubmit()}
         disabled={loading || !username.trim() || !password}
-        className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700
+        className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover
                    disabled:opacity-40 transition-colors"
       >
-        {loading ? 'Please wait…' : 'Sign in'}
+        {loading ? 'Please wait' : 'Sign in'}
       </button>
     </div>
   );
@@ -119,31 +133,30 @@ export function Login({ onLogin }: { onLogin: (session: Session) => void }) {
   const [tab, setTab] = useState<'parent' | 'kid'>('kid');
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4
-                     bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,var(--color-blue-100),transparent),var(--color-slate-50)]">
-      <div className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_12px_32px_-16px_rgba(23,50,58,0.18)] p-8 w-full max-w-sm space-y-6">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-paper">
+      <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-8 w-full max-w-sm space-y-6">
         <div className="space-y-1.5">
-          <p className="flex items-center gap-2 text-2xl font-extrabold text-slate-900 tracking-tight">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+          <p className="flex items-center gap-2 text-2xl font-extrabold text-ink tracking-tight">
+            <span className="w-2.5 h-2.5 rounded-[2px] bg-accent" />
             Ashi
           </p>
-          <p className="text-xs text-slate-400">Daily social skills practice</p>
+          <p className="text-xs text-muted">Daily practice understanding stories and people</p>
         </div>
 
-        <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+        <div className="flex gap-2 p-1 bg-paper rounded-[4px] border border-rule">
           <button
             onClick={() => setTab('kid')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors
-              ${tab === 'kid' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}
+            className={`flex-1 py-2 rounded-[4px] text-sm font-medium transition-colors
+              ${tab === 'kid' ? 'bg-surface text-ink shadow-[var(--shadow-raised)]' : 'text-muted'}`}
           >
             Student
           </button>
           <button
             onClick={() => setTab('parent')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors
-              ${tab === 'parent' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}
+            className={`flex-1 py-2 rounded-[4px] text-sm font-medium transition-colors
+              ${tab === 'parent' ? 'bg-surface text-ink shadow-[var(--shadow-raised)]' : 'text-muted'}`}
           >
-            Parent / Clinician
+            Parent or clinician
           </button>
         </div>
 

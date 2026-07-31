@@ -58,13 +58,13 @@ function shuffleChoices(choices: [string, string, string]) {
 
 function LoadingScreen({ onCancel }: { onCancel: () => void }) {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-6">
+    <div className="min-h-screen bg-paper flex flex-col items-center justify-center gap-6">
       <div className="text-center space-y-3">
-        <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
-        <p className="text-slate-700 text-sm font-semibold">Creating your session...</p>
-        <p className="text-slate-400 text-xs">About 10 seconds</p>
+        <div className="w-8 h-8 border-2 border-rule border-t-accent rounded-full animate-spin mx-auto" />
+        <p className="text-ink text-sm font-medium">Making your practice session</p>
+        <p className="text-muted text-xs">About 10 seconds</p>
       </div>
-      <button onClick={onCancel} className="text-xs text-slate-400 hover:text-slate-600 underline underline-offset-2">
+      <button onClick={onCancel} className="text-xs text-muted hover:text-ink underline underline-offset-2">
         Cancel
       </button>
     </div>
@@ -81,14 +81,14 @@ function SpeakButton({ text, speak, stop, speakingText }: {
     <button
       onClick={() => isPlaying ? stop() : speak(text)}
       aria-label={isPlaying ? 'Stop reading' : 'Read aloud'}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors
-        ${isPlaying ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-500'}`}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-sm font-medium transition-colors
+        ${isPlaying ? 'bg-accent/10 text-accent border border-accent/30' : 'border border-rule text-muted hover:text-ink hover:border-muted'}`}
     >
       {isPlaying ? (
         <>
           <span className="flex gap-0.5 items-end h-3.5">
             {[60, 100, 40].map((h, i) => (
-              <span key={i} className="w-0.5 bg-blue-500 rounded-full"
+              <span key={i} className="w-0.5 bg-accent rounded-full"
                 style={{ height: `${h}%`, animation: 'soundbar 0.6s ease-in-out infinite', animationDelay: `${i * 0.15}s` }} />
             ))}
           </span>
@@ -100,15 +100,36 @@ function SpeakButton({ text, speak, stop, speakingText }: {
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
             <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
           </svg>
-          Read to me
+          Read aloud
         </>
       )}
     </button>
   );
 }
 
+// ── Feedback ──────────────────────────────────────────────────────────────────
+// Never red for a wrong answer — the score never drops, so the visual
+// language never suggests it did. Correct/partial both get a check (partial
+// just says so in words); incorrect gets a plain mark plus the correction.
+
+function FeedbackIcon({ result }: { result: AnswerResult }) {
+  if (result === 'incorrect') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-muted mt-0.5 shrink-0">
+        <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"
+      className={`${result === 'correct' ? 'text-ink' : 'text-muted'} mt-0.5 shrink-0`}>
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  );
+}
+
 // ── Question panel ────────────────────────────────────────────────────────────
-// Handles question → answer → evidence all in one card.
+// Handles question → answer → evidence all in one flow.
 
 interface QuestionPanelProps {
   scenario: string;
@@ -181,20 +202,16 @@ function QuestionPanel(props: QuestionPanelProps) {
   const hasAnswer = (effectiveLevel >= 2 && selected !== null) || (effectiveLevel <= 1 && freeText.trim().length > 0);
   const canSubmit = !feedback && !evaluating && readingReady && hasAnswer;
 
-  const resultBg =
-    feedback?.result === 'correct'  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
-    feedback?.result === 'partial'  ? 'bg-amber-50 border-amber-200 text-amber-800' :
-                                      'bg-red-50 border-red-200 text-red-800';
-  const resultLabel =
-    feedback?.result === 'correct'  ? 'Correct! ' :
-    feedback?.result === 'partial'  ? 'Partly right. ' : 'Not quite. ';
-
   // Evidence mode: show feedback + sentence highlighter
   if (evidenceMode && feedback) {
     return (
       <div className="space-y-5">
-        <div className={`rounded-xl border px-4 py-3.5 text-sm leading-relaxed ${resultBg}`}>
-          <span className="font-semibold">{resultLabel}</span>{feedback.text}
+        <div className="flex items-start gap-3 px-1">
+          <FeedbackIcon result={feedback.result} />
+          <p className="text-[15px] leading-relaxed text-ink">
+            {feedback.result === 'partial' && <span className="text-muted">Partly right. </span>}
+            {feedback.text}
+          </p>
         </div>
         <EvidenceHighlighter scenario={scenario} expectedEvidence={evidence} onConfirm={onNext} />
       </div>
@@ -203,14 +220,20 @@ function QuestionPanel(props: QuestionPanelProps) {
 
   // Question mode
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
 
-      {/* Question — if there's a stem, show it big as a sentence starter */}
+      {/* Question — a stem reads as the sentence the student is completing;
+          it stays part of the reading flow rather than a boxed label. */}
       {stem ? (
-        <div className="space-y-1">
-          <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">{questionText}</p>
-          <p className="text-xl font-bold text-slate-800 leading-snug">
-            {stem}<span className="text-slate-300"> ...</span>
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">{questionText}</p>
+          <p className="font-serif text-xl leading-snug text-ink">
+            {stem}
+            {effectiveLevel === 2 && wordBankOrder && selected !== null ? (
+              <span className="text-accent font-semibold"> {wordBankOrder[selected]}</span>
+            ) : (
+              <span className="text-muted">{' '}_____</span>
+            )}
           </p>
         </div>
       ) : (
@@ -219,7 +242,7 @@ function QuestionPanel(props: QuestionPanelProps) {
             text={questionText}
             speakingText={speakingText}
             activeCharIndex={activeCharIndex}
-            className="text-base font-semibold text-slate-800 leading-snug"
+            className="font-serif text-xl font-semibold leading-snug text-ink"
           />
           <SpeakButton text={questionText} speak={speak} stop={stop} speakingText={speakingText} />
         </div>
@@ -229,8 +252,8 @@ function QuestionPanel(props: QuestionPanelProps) {
       {level <= 2 && !hintActive && !feedback && hintTokens > 0 && (
         <button
           onClick={onUseHint}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
-                     bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-xs font-medium
+                     border border-accent/30 text-accent hover:bg-accent/5 transition-colors"
         >
           Use a hint ({hintTokens} left)
         </button>
@@ -243,13 +266,13 @@ function QuestionPanel(props: QuestionPanelProps) {
             <button
               key={idx}
               onClick={() => setSelected(idx)}
-              className={`w-full text-left px-4 py-3.5 rounded-xl border text-sm leading-snug transition-all
+              className={`w-full text-left px-4 py-3.5 rounded-[4px] border font-serif text-[17px] leading-snug transition-colors
                 ${selected === idx
-                  ? 'border-blue-400 bg-blue-50 text-blue-900 font-medium shadow-sm shadow-blue-100'
-                  : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50/30'
+                  ? 'border-accent bg-accent/5 text-ink'
+                  : 'border-rule bg-surface text-ink hover:border-muted'
                 }`}
             >
-              <span className={`mr-2.5 text-xs font-bold ${selected === idx ? 'text-blue-500' : 'text-slate-300'}`}>
+              <span className={`mr-2.5 text-xs font-sans font-bold ${selected === idx ? 'text-accent' : 'text-muted'}`}>
                 {['A', 'B', 'C'][idx]}
               </span>
               {choice}
@@ -258,17 +281,19 @@ function QuestionPanel(props: QuestionPanelProps) {
         </div>
       )}
 
-      {/* Word bank — bridges recognition (multiple choice) to production (free text) */}
+      {/* Word bank — bridges recognition (multiple choice) to production
+          (free text). Picking a word fills the blank in the stem above,
+          so the option reads as completing the sentence, not a floating pill. */}
       {effectiveLevel === 2 && wordBankOrder && !feedback && (
         <div className="flex flex-wrap gap-2">
           {wordBankOrder.map((word, idx) => (
             <button
               key={idx}
               onClick={() => setSelected(idx)}
-              className={`px-3.5 py-2 rounded-full border text-sm font-medium transition-all
+              className={`px-3.5 py-2 rounded-[4px] border font-serif text-base transition-colors
                 ${selected === idx
-                  ? 'border-blue-400 bg-blue-100 text-blue-900 shadow-sm shadow-blue-100'
-                  : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50/30'
+                  ? 'border-accent bg-accent/5 text-ink'
+                  : 'border-rule bg-surface text-ink hover:border-muted'
                 }`}
             >
               {word}
@@ -277,18 +302,15 @@ function QuestionPanel(props: QuestionPanelProps) {
         </div>
       )}
 
-      {/* Free text */}
-      {effectiveLevel === 1 && !feedback && (
+      {/* Free text — the stem (if any) already appears above as part of the
+          reading flow; the input itself stays minimal-chrome, an
+          underline rather than a boxed widget, so it reads as where you
+          keep writing rather than a separate form field. */}
+      {effectiveLevel <= 1 && !feedback && (
         <textarea ref={textareaRef} value={freeText} onChange={e => setFreeText(e.target.value)}
           rows={3} placeholder="Type your answer here"
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-300
-                     focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none" />
-      )}
-      {effectiveLevel === 0 && !feedback && (
-        <textarea ref={textareaRef} value={freeText} onChange={e => setFreeText(e.target.value)}
-          rows={3} placeholder="Type your answer here"
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-300
-                     focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none" />
+          className="w-full font-serif text-lg leading-relaxed text-ink placeholder:text-muted/70 bg-transparent
+                     border-0 border-b border-rule focus:border-accent focus:outline-none resize-none pb-2" />
       )}
 
       {/* Submit button with reading gate */}
@@ -296,12 +318,12 @@ function QuestionPanel(props: QuestionPanelProps) {
         <button
           onClick={doSubmit}
           disabled={!canSubmit}
-          className="relative w-full py-3.5 rounded-xl text-sm font-semibold transition-colors
-                     bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed overflow-hidden"
+          className="relative w-full py-3.5 rounded-[4px] text-sm font-semibold transition-colors
+                     bg-accent text-white hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden"
         >
           {!readingReady && (
             <span
-              className="absolute inset-y-0 right-0 bg-blue-800/40 pointer-events-none"
+              className="absolute inset-y-0 right-0 bg-black/15 pointer-events-none"
               style={{ width: `${(1 - readProgress) * 100}%` }}
             />
           )}
@@ -322,44 +344,44 @@ function FinishedScreen({ score, maxScore, mode, coinsEarned, journalDone, floor
 }) {
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
   const message =
-    pct >= 90 ? 'Excellent work!' : pct >= 70 ? 'Great effort!' :
+    pct >= 90 ? 'Excellent work.' : pct >= 70 ? 'Great effort.' :
     pct >= 50 ? 'Good work. Keep going.' : 'Nice try. Every session counts.';
   const modeLabel = { mixed: 'Mixed', social: 'Social Skills', nonverbal: 'Body Language', inference: 'Reading Clues' }[mode];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 max-w-sm w-full text-center space-y-5">
+    <div className="min-h-screen bg-paper flex items-center justify-center px-4">
+      <div className="bg-surface rounded-[4px] shadow-[var(--shadow-raised)] p-8 max-w-sm w-full text-center space-y-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">Session complete</p>
-          <p className="text-sm text-slate-400">{modeLabel}</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Session complete</p>
+          <p className="text-sm text-muted">{modeLabel}</p>
         </div>
         <div>
-          <div className="text-6xl font-bold text-slate-900 tabular-nums">
-            {score}<span className="text-3xl text-slate-300 font-normal"> / {maxScore}</span>
+          <div className="text-6xl font-bold text-ink tabular-nums">
+            {score}<span className="text-3xl text-muted font-normal"> / {maxScore}</span>
           </div>
-          <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500 rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
+          <div className="mt-3 h-1.5 bg-rule rounded-[4px] overflow-hidden">
+            <div className="h-full bg-accent rounded-[4px] transition-all duration-1000" style={{ width: `${pct}%` }} />
           </div>
-          <p className="text-xs text-slate-400 mt-1.5">{pct}%</p>
+          <p className="text-xs text-muted mt-1.5">{pct}%</p>
         </div>
         {coinsEarned > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-            <p className="text-amber-700 font-semibold text-sm">+{coinsEarned} coins earned!</p>
+          <div className="border border-rule rounded-[4px] px-4 py-3">
+            <p className="text-ink font-semibold text-sm">+{coinsEarned} coins earned</p>
           </div>
         )}
-        <p className="text-slate-600 text-base font-medium">{message}</p>
+        <p className="text-ink text-base font-medium">{message}</p>
         {!journalDone && (
-          <p className="text-xs text-slate-500 bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-100">
+          <p className="text-xs text-muted bg-paper rounded-[4px] px-4 py-2.5 border border-rule">
             Remember to write in your journal today.
           </p>
         )}
         {floorAlarmNotice && (
-          <p className="text-xs text-blue-600 bg-blue-50 rounded-xl px-4 py-2.5 border border-blue-100">
+          <p className="text-xs text-alert bg-alert/5 rounded-[4px] px-4 py-2.5 border border-alert/25">
             Your parent will see a note about this practice type.
           </p>
         )}
         <button onClick={onGoHome}
-          className="w-full py-3.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+          className="w-full py-3.5 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors">
           Back to home
         </button>
       </div>
@@ -523,12 +545,12 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
 
   if (blockedType) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 max-w-sm w-full text-center space-y-4">
-          <p className="text-base font-semibold text-slate-800">This practice is paused for now.</p>
-          <p className="text-sm text-slate-500">Your parent can see more about this on their dashboard.</p>
+      <div className="min-h-screen bg-paper flex items-center justify-center px-4">
+        <div className="bg-surface rounded-[4px] shadow-[var(--shadow-raised)] p-8 max-w-sm w-full text-center space-y-4">
+          <p className="text-base font-semibold text-ink">This practice is paused for now.</p>
+          <p className="text-sm text-muted">Your parent can see more about this on their dashboard.</p>
           <button onClick={onExit}
-            className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+            className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors">
             Back to home
           </button>
         </div>
@@ -611,63 +633,61 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
   const SUPPORT_LABELS: Record<SupportLevel, string> = { 3: 'Most help', 2: 'Word bank', 1: 'Some help', 0: 'Open question' };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-paper flex flex-col">
 
-      {/* Top bar */}
-      <div className="sticky top-0 z-10 bg-white border-b border-slate-100">
-        <div className="max-w-lg md:max-w-xl lg:max-w-2xl mx-auto px-4 md:px-6 py-3 flex items-center gap-4">
+      {/* Top bar — quiet on purpose, the passage below is the hero */}
+      <div className="sticky top-0 z-10 bg-paper/95 backdrop-blur-sm border-b border-rule">
+        <div className="max-w-[70ch] mx-auto px-4 md:px-6 py-3 flex items-center gap-4">
           <button onClick={() => { stop(); onExit(); }}
-            className="text-slate-400 hover:text-slate-600 transition-colors p-1 -ml-1">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            className="text-muted hover:text-ink transition-colors p-1 -ml-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
           <div className="flex gap-1.5 flex-1">
             {items.map((_, i) => (
-              <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500
-                ${i < itemIdx ? 'bg-blue-500' : i === itemIdx ? 'bg-blue-300' : 'bg-slate-200'}`} />
+              <div key={i} className={`h-1 flex-1 rounded-[4px] transition-all duration-500
+                ${i < itemIdx ? 'bg-accent' : i === itemIdx ? 'bg-accent/40' : 'bg-rule'}`} />
             ))}
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-400">{itemIdx + 1} / {items.length}</span>
-            <span className="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-bold tabular-nums">
-              {score} pts
-            </span>
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-muted">{itemIdx + 1} / {items.length}</span>
+            <span className="text-ink font-semibold tabular-nums">{score} pts</span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 max-w-lg md:max-w-xl lg:max-w-2xl mx-auto w-full px-4 md:px-6 py-5 space-y-3.5">
-
-        {/* Meta row */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-widest text-blue-500">
-            {TYPE_LABELS[currentItem.type]}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">{DIFF_LABELS[currentItem.difficulty]}</span>
-            <span className="text-slate-300">·</span>
-            <span className="text-xs text-slate-400">{SUPPORT_LABELS[currentLevel]}</span>
-          </div>
+      {/* Meta row */}
+      <div className="max-w-[70ch] mx-auto w-full px-4 md:px-6 pt-6 flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-widest text-muted">
+          {TYPE_LABELS[currentItem.type]}
+        </span>
+        <div className="flex items-center gap-2 text-xs text-muted">
+          <span>{DIFF_LABELS[currentItem.difficulty]}</span>
+          <span>·</span>
+          <span>{SUPPORT_LABELS[currentLevel]}</span>
         </div>
+      </div>
 
-        {/* Scenario card */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <div className="px-6 pt-7 pb-5">
-            <HighlightedText
-              text={currentItem.scenario}
-              speakingText={speakingText}
-              activeCharIndex={activeCharIndex}
-              className="text-[1.08rem] leading-[1.75] text-slate-800 font-[440] tracking-[0.01em]"
-            />
-          </div>
-          <div className="px-6 pb-5">
-            <SpeakButton text={currentItem.scenario} speak={speak} stop={stop} speakingText={speakingText} />
-          </div>
+      {/* The passage — the hero. A book page, not an app card: no border,
+          generous margin, a real measure. */}
+      <div className="max-w-[70ch] mx-auto w-full px-4 md:px-6 pt-6 pb-8">
+        <HighlightedText
+          text={currentItem.scenario}
+          speakingText={speakingText}
+          activeCharIndex={activeCharIndex}
+          className="font-serif text-[19px] leading-[1.75] text-ink"
+        />
+        <div className="mt-4">
+          <SpeakButton text={currentItem.scenario} speak={speak} stop={stop} speakingText={speakingText} />
         </div>
+      </div>
 
-        {/* Question / evidence card */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-5">
+      {/* Question / evidence — the workspace beneath the page, given just
+          enough separation (one shadow, no heavy border) to read as
+          distinct from the passage above it. */}
+      <div className="flex-1 max-w-[70ch] mx-auto w-full px-4 md:px-6 pb-8">
+        <div className="bg-surface rounded-[4px] shadow-[var(--shadow-raised)] px-6 py-6">
           <QuestionPanel
             key={`item-${itemIdx}`}
             scenario={currentItem.scenario}
@@ -692,8 +712,8 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
             onNext={handleEvidenceConfirm}
           />
         </div>
-
       </div>
+
     </div>
   );
 }

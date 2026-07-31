@@ -68,17 +68,16 @@ function ModeCard({ mode, label, description, icon, onStart }: {
   return (
     <button
       onClick={() => onStart(mode)}
-      className="flex items-center gap-3.5 px-4 py-4 bg-white rounded-2xl border border-slate-200/70 text-left w-full
-                 shadow-[0_1px_2px_rgba(0,0,0,0.03)]
-                 hover:border-blue-300 hover:bg-blue-50/30 hover:shadow-[0_4px_16px_-8px_rgba(23,50,58,0.25)]
+      className="flex items-center gap-3.5 px-4 py-4 bg-surface rounded-[4px] border border-rule text-left w-full
+                 shadow-[var(--shadow-raised)] hover:border-accent/40
                  active:scale-[0.98] transition-all duration-150"
     >
-      <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">{icon}</span>
+      <span className="w-10 h-10 rounded-[4px] bg-accent/10 text-accent flex items-center justify-center shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800">{label}</p>
-        <p className="text-xs text-slate-400 mt-0.5">{description}</p>
+        <p className="text-sm font-semibold text-ink">{label}</p>
+        <p className="text-xs text-muted mt-0.5">{description}</p>
       </div>
-      <span className="text-slate-300 shrink-0"><IconChevron /></span>
+      <span className="text-muted shrink-0"><IconChevron /></span>
     </button>
   );
 }
@@ -117,30 +116,31 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
   const initial = username[0]?.toUpperCase() ?? '?';
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 lg:pb-8">
+    <div className="min-h-screen bg-paper pb-24 lg:pb-8">
       <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto px-4 md:px-6 lg:px-8 py-6 space-y-6">
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight capitalize">{username}</h1>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h1 className="text-xl font-extrabold text-ink tracking-tight capitalize">{username}</h1>
+            <p className="text-xs text-muted mt-0.5">
               {goalMet ? 'Goal done for today' : `${todayCount} of ${config.dailyMinimum} sessions done`}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {coins.balance > 0 && (
-              <span className="flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-full">
-                ⭐ {coins.balance}
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-ink bg-rule/40 px-2.5 py-1.5 rounded-[4px]">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                {coins.balance}
               </span>
             )}
             {streak > 0 && (
-              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1.5 rounded-full">{streak}d streak</span>
+              <span className="text-xs font-semibold text-muted bg-rule/40 px-2.5 py-1.5 rounded-[4px]">{streak}d streak</span>
             )}
             <button
               onClick={onOpenProfile}
-              className="lg:hidden w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold text-sm
-                         flex items-center justify-center hover:bg-blue-200 transition-colors"
+              className="lg:hidden w-9 h-9 rounded-[4px] bg-accent/10 text-accent font-bold text-sm
+                         flex items-center justify-center hover:bg-accent/20 transition-colors"
             >
               {initial}
             </button>
@@ -148,32 +148,31 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
         </div>
 
         {/* Daily goal bar */}
-        <div className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] px-5 py-4">
+        <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] px-5 py-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-slate-700">Today's goal</p>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full
-              ${goalMet ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+            <p className="text-sm font-semibold text-ink">Today's goal</p>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-[4px] bg-rule/40 text-ink">
               {todayCount} / {config.dailyMinimum} done
             </span>
           </div>
           <div className="flex gap-2">
             {Array.from({ length: config.dailyMinimum }).map((_, i) => (
-              <div key={i} className={`h-2 flex-1 rounded-full transition-all ${i < todayCount ? 'bg-blue-500' : 'bg-slate-100'}`} />
+              <div key={i} className={`h-1.5 flex-1 rounded-[4px] transition-all ${i < todayCount ? 'bg-accent' : 'bg-rule'}`} />
             ))}
           </div>
           {todayCount > config.dailyMinimum && (
-            <p className="text-xs text-amber-600 font-medium mt-2">
-              {todayCount - config.dailyMinimum} extra — coins earned!
+            <p className="text-xs text-muted font-medium mt-2">
+              {todayCount - config.dailyMinimum} extra {todayCount - config.dailyMinimum === 1 ? 'session' : 'sessions'} today. Coins earned.
             </p>
           )}
           {journalDone && (
-            <p className="text-xs text-emerald-600 font-medium mt-2">Journal written today</p>
+            <p className="text-xs text-muted font-medium mt-2">Journal written today.</p>
           )}
         </div>
 
         {/* Practice sessions */}
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Start a session</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Start a session</h2>
           <div className="space-y-2">
             {MODE_CONFIG.map(cfg => (
               <ModeCard key={cfg.mode} {...cfg} onStart={onStart} />
@@ -182,22 +181,22 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
         </section>
 
         {/* Talk with Alex */}
-        <section className="bg-white rounded-2xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-5">
+        <section className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
           <div className="flex items-start gap-4 mb-4">
-            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-base shrink-0">
+            <div className="w-10 h-10 rounded-[4px] bg-accent text-white flex items-center justify-center font-bold text-base shrink-0">
               A
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-800">Talk with Alex</p>
-              <p className="text-xs text-slate-500 mt-0.5 leading-snug">
-                Practice a real back-and-forth conversation. Get feedback when you're done.
+              <p className="text-sm font-semibold text-ink">Talk with Alex</p>
+              <p className="text-xs text-muted mt-0.5 leading-snug">
+                Practice a conversation with a computer partner. Get feedback when you finish.
               </p>
             </div>
           </div>
           <button
             onClick={onConversation}
-            className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white
-                       hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white
+                       hover:bg-accent-hover transition-colors flex items-center justify-center gap-2"
           >
             <IconChat />
             Start a conversation

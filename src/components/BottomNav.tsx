@@ -43,18 +43,17 @@ const TABS: { key: MainTab; label: string; Icon: React.ComponentType<{ active: b
 
 export function BottomNav({ active, onChange }: Props) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-sm border-t border-slate-100
-                    shadow-[0_-4px_16px_-8px_rgba(23,50,58,0.1)] lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-surface/95 backdrop-blur-sm border-t border-rule lg:hidden">
       <div className="flex max-w-lg mx-auto">
         {TABS.map(({ key, label, Icon }) => (
           <button
             key={key}
             onClick={() => onChange(key)}
             className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors
-              ${active === key ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+              ${active === key ? 'text-accent' : 'text-muted hover:text-ink'}`}
           >
             <Icon active={active === key} />
-            <span className={`text-[10px] font-semibold tracking-wide ${active === key ? 'text-blue-600' : 'text-slate-400'}`}>
+            <span className={`text-[10px] font-semibold tracking-wide ${active === key ? 'text-accent' : 'text-muted'}`}>
               {label}
             </span>
           </button>

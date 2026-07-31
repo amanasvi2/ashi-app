@@ -3,31 +3,51 @@ import type { JournalMood, JournalEntry } from '../types';
 import { loadJournalEntries, saveJournalEntry, todaysJournalEntry } from '../storage';
 import { LoadingScreen } from '../components/LoadingScreen';
 
-// ── Mood data ─────────────────────────────────────────────────────────────────
+// ── Mood icons ────────────────────────────────────────────────────────────────
+// Word + line icon per mood, not a face — one neutral highlight style for
+// every mood (the label and which button is active carry the meaning, not
+// 14 invented colors).
 
-const MOOD_DATA: {
-  value: JournalMood; emoji: string; label: string;
-  inactive: string; active: string; dot: string;
-}[] = [
-  { value: 'happy',       emoji: '😊', label: 'Happy',       inactive: 'border-slate-200 text-slate-600', active: 'border-yellow-400 bg-yellow-50 text-yellow-700 font-semibold',   dot: 'bg-yellow-400' },
-  { value: 'excited',     emoji: '🤩', label: 'Excited',     inactive: 'border-slate-200 text-slate-600', active: 'border-orange-400 bg-orange-50 text-orange-700 font-semibold',   dot: 'bg-orange-400' },
-  { value: 'proud',       emoji: '🌟', label: 'Proud',       inactive: 'border-slate-200 text-slate-600', active: 'border-amber-400 bg-amber-50 text-amber-700 font-semibold',      dot: 'bg-amber-400' },
-  { value: 'calm',        emoji: '😌', label: 'Calm',        inactive: 'border-slate-200 text-slate-600', active: 'border-sky-400 bg-sky-50 text-sky-700 font-semibold',            dot: 'bg-sky-400' },
-  { value: 'loved',       emoji: '🥰', label: 'Loved',       inactive: 'border-slate-200 text-slate-600', active: 'border-pink-400 bg-pink-50 text-pink-700 font-semibold',         dot: 'bg-pink-400' },
-  { value: 'okay',        emoji: '😐', label: 'Okay',        inactive: 'border-slate-200 text-slate-600', active: 'border-slate-400 bg-slate-100 text-slate-700 font-semibold',    dot: 'bg-slate-400' },
-  { value: 'bored',       emoji: '😑', label: 'Bored',       inactive: 'border-slate-200 text-slate-600', active: 'border-slate-400 bg-slate-100 text-slate-600 font-semibold',    dot: 'bg-slate-400' },
-  { value: 'tired',       emoji: '😴', label: 'Tired',       inactive: 'border-slate-200 text-slate-600', active: 'border-indigo-300 bg-indigo-50 text-indigo-600 font-semibold',  dot: 'bg-indigo-300' },
-  { value: 'worried',     emoji: '😟', label: 'Worried',     inactive: 'border-slate-200 text-slate-600', active: 'border-amber-500 bg-amber-50 text-amber-700 font-semibold',     dot: 'bg-amber-500' },
-  { value: 'sad',         emoji: '😢', label: 'Sad',         inactive: 'border-slate-200 text-slate-600', active: 'border-blue-400 bg-blue-50 text-blue-700 font-semibold',        dot: 'bg-blue-400' },
-  { value: 'frustrated',  emoji: '😤', label: 'Frustrated',  inactive: 'border-slate-200 text-slate-600', active: 'border-orange-500 bg-orange-50 text-orange-700 font-semibold',  dot: 'bg-orange-500' },
-  { value: 'angry',       emoji: '😠', label: 'Angry',       inactive: 'border-slate-200 text-slate-600', active: 'border-red-500 bg-red-50 text-red-700 font-semibold',           dot: 'bg-red-500' },
-  { value: 'confused',    emoji: '😕', label: 'Confused',    inactive: 'border-slate-200 text-slate-600', active: 'border-blue-400 bg-blue-50 text-blue-700 font-semibold',  dot: 'bg-blue-400' },
-  { value: 'overwhelmed', emoji: '😩', label: 'Overwhelmed', inactive: 'border-slate-200 text-slate-600', active: 'border-rose-500 bg-rose-50 text-rose-700 font-semibold',        dot: 'bg-rose-500' },
-];
+function MoodIcon({ mood, size = 18 }: { mood: JournalMood; size?: number }) {
+  const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  switch (mood) {
+    case 'happy':
+      return <svg {...p}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4 4.2 19.8M19.8 4.2l-1.4 1.4"/></svg>;
+    case 'excited':
+      return <svg {...p}><path d="M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M15 15l4 4M19 5l-4 4M9 15l-4 4"/></svg>;
+    case 'proud':
+      return <svg {...p}><circle cx="12" cy="8" r="5"/><path d="M9 12.5 7 22l5-3 5 3-2-9.5"/></svg>;
+    case 'calm':
+      return <svg {...p}><path d="M2 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 14c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 20c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg>;
+    case 'loved':
+      return <svg {...p}><path d="M12 21s-7.5-4.9-10-9.6C.4 7.8 2.4 4 6.2 4 8.6 4 10.6 5.4 12 7.5 13.4 5.4 15.4 4 17.8 4 21.6 4 23.6 7.8 22 11.4 19.5 16.1 12 21 12 21z"/></svg>;
+    case 'okay':
+      return <svg {...p}><circle cx="12" cy="12" r="9"/><line x1="8" y1="12" x2="16" y2="12"/></svg>;
+    case 'bored':
+      return <svg {...p}><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>;
+    case 'tired':
+      return <svg {...p}><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>;
+    case 'worried':
+      return <svg {...p}><path d="M6 10a4 4 0 0 1 4-4c1.8 0 3 1 3.5 2.2A3.5 3.5 0 0 1 17 12H7a3 3 0 0 1-1-5.8"/><path d="M4 16c1-1 2-1 3 0s2 1 3 0 2-1 3 0 2 1 3 0 2-1 3 0"/></svg>;
+    case 'sad':
+      return <svg {...p}><path d="M12 3c3 4.5 6 8 6 11.5a6 6 0 0 1-12 0C6 11 9 7.5 12 3z"/></svg>;
+    case 'frustrated':
+      return <svg {...p}><polyline points="4 14 10 14 8 20 20 10 14 10 16 4"/></svg>;
+    case 'angry':
+      return <svg {...p}><path d="M12 22c4-1 6-3.5 6-7 0-3-2-4.5-3-7 0 2-1.2 2.7-2 2 0-1.5-.5-3.5-2-5-.5 3-2.5 4.5-3.5 7-1 2.5-1.5 4-1.5 5.5C6 20 8 21 12 22z"/><line x1="12" y1="14" x2="12" y2="17"/></svg>;
+    case 'confused':
+      return <svg {...p}><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.7 1.2c0 1.5-2.2 1.6-2.2 3.3"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>;
+    case 'overwhelmed':
+      return <svg {...p}><path d="M3 8h18"/><path d="M3 12.5h18"/><path d="M3 17h18"/></svg>;
+  }
+}
 
-const MOOD_DOT: Record<JournalMood, string> = Object.fromEntries(
-  MOOD_DATA.map(m => [m.value, m.dot])
-) as Record<JournalMood, string>;
+const MOOD_LABELS: Record<JournalMood, string> = {
+  happy: 'Happy', excited: 'Excited', proud: 'Proud', calm: 'Calm', loved: 'Loved',
+  okay: 'Okay', bored: 'Bored', tired: 'Tired', worried: 'Worried',
+  sad: 'Sad', frustrated: 'Frustrated', angry: 'Angry', confused: 'Confused', overwhelmed: 'Overwhelmed',
+};
+const ALL_MOODS = Object.keys(MOOD_LABELS) as JournalMood[];
 
 const EMOJI_GRID = [
   '😊','😄','😂','🤣','😍','🥰','😎','🤔',
@@ -47,6 +67,14 @@ const PROMPTS = [
   'What made you smile today?',
   'Is there anything you wish went differently?',
 ];
+
+function IconStreak() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="20" x2="4" y2="14"/><line x1="10" y1="20" x2="10" y2="10"/><line x1="16" y1="20" x2="16" y2="6"/>
+    </svg>
+  );
+}
 
 function calcJournalStreak(entries: JournalEntry[]): number {
   if (entries.length === 0) return 0;
@@ -103,9 +131,9 @@ function TodayEditor({ existing, onSave }: {
   const handleMood = (m: JournalMood) => { setMood(m); setSaved(false); };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-5">
+    <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5 space-y-5">
       {/* Privacy note */}
-      <div className="flex items-center gap-1.5 text-xs text-slate-400">
+      <div className="flex items-center gap-1.5 text-xs text-muted">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
@@ -114,18 +142,18 @@ function TodayEditor({ existing, onSave }: {
 
       {/* Mood grid */}
       <div>
-        <p className="text-xs font-semibold text-slate-500 mb-3">How are you feeling today?</p>
+        <p className="text-xs font-semibold text-muted mb-3">How are you feeling today?</p>
         <div className="grid grid-cols-7 gap-1.5">
-          {MOOD_DATA.map(m => (
+          {ALL_MOODS.map(m => (
             <button
-              key={m.value}
-              onClick={() => handleMood(m.value)}
-              title={m.label}
-              className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-center transition-all
-                ${mood === m.value ? m.active : m.inactive + ' hover:border-slate-300'}`}
+              key={m}
+              onClick={() => handleMood(m)}
+              title={MOOD_LABELS[m]}
+              className={`flex flex-col items-center gap-1 p-2 rounded-[4px] border text-center transition-colors
+                ${mood === m ? 'border-accent bg-accent/10 text-accent font-semibold' : 'border-rule text-muted hover:border-muted'}`}
             >
-              <span className="text-xl leading-none">{m.emoji}</span>
-              <span className="text-[9px] leading-tight font-medium">{m.label}</span>
+              <MoodIcon mood={m} />
+              <span className="text-[9px] leading-tight font-medium">{MOOD_LABELS[m]}</span>
             </button>
           ))}
         </div>
@@ -134,22 +162,22 @@ function TodayEditor({ existing, onSave }: {
       {/* Extra emoji */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-slate-500">Add an emoji {extraEmoji && <span>{extraEmoji}</span>}</p>
+          <p className="text-xs font-semibold text-muted">Add an emoji {extraEmoji && <span>{extraEmoji}</span>}</p>
           <button
             onClick={() => setShowPicker(v => !v)}
-            className="text-xs text-blue-500 hover:text-blue-700 transition-colors"
+            className="text-xs text-accent hover:text-ink transition-colors"
           >
             {showPicker ? 'Close' : 'Pick one'}
           </button>
         </div>
         {showPicker && (
-          <div className="grid grid-cols-8 gap-1 p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <div className="grid grid-cols-8 gap-1 p-3 bg-paper rounded-[4px] border border-rule">
             {EMOJI_GRID.map(e => (
               <button
                 key={e}
                 onClick={() => { setExtraEmoji(extraEmoji === e ? '' : e); setShowPicker(false); setSaved(false); }}
-                className={`text-xl p-1 rounded-lg transition-all hover:bg-white hover:shadow-sm
-                  ${extraEmoji === e ? 'bg-blue-100 scale-110' : ''}`}
+                className={`text-xl p-1 rounded-[4px] transition-colors hover:bg-surface
+                  ${extraEmoji === e ? 'bg-accent/10' : ''}`}
               >
                 {e}
               </button>
@@ -161,7 +189,7 @@ function TodayEditor({ existing, onSave }: {
       {/* Writing area */}
       <div className="space-y-2">
         {activePrompt && (
-          <p className="text-xs text-blue-500 italic bg-blue-50 rounded-lg px-3 py-2">{activePrompt}</p>
+          <p className="text-xs text-accent bg-accent/5 rounded-[4px] px-3 py-2">{activePrompt}</p>
         )}
         <textarea
           ref={textareaRef}
@@ -169,21 +197,21 @@ function TodayEditor({ existing, onSave }: {
           onChange={e => handleChange(e.target.value)}
           rows={5}
           placeholder="Write anything you want here…"
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-800
-                     placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+          className="w-full rounded-[4px] border border-rule px-4 py-3 text-sm text-ink
+                     placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40 resize-none"
         />
       </div>
 
       <div className="flex items-center justify-between gap-3">
         <button
           onClick={randomPrompt}
-          className="text-xs text-slate-400 hover:text-blue-500 transition-colors"
+          className="text-xs text-muted hover:text-accent transition-colors"
         >
           Need a prompt?
         </button>
         <div className="flex items-center gap-2">
           {saved && (
-            <span className="text-xs text-emerald-600 flex items-center gap-1">
+            <span className="text-xs text-ink font-semibold flex items-center gap-1">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
@@ -193,10 +221,10 @@ function TodayEditor({ existing, onSave }: {
           <button
             onClick={handleSave}
             disabled={!content.trim() || saved}
-            className="px-5 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white
-                       hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-5 py-2 rounded-[4px] text-sm font-semibold bg-accent text-white
+                       hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {saved ? 'Saved ✓' : 'Save'}
+            {saved ? 'Saved' : 'Save'}
           </button>
         </div>
       </div>
@@ -210,33 +238,30 @@ function PastEntry({ entry }: { entry: JournalEntry }) {
   const [expanded, setExpanded] = useState(false);
   const d = new Date(entry.date);
   const dateStr = d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-  const moodInfo = MOOD_DATA.find(m => m.value === entry.mood);
 
   return (
     <div
-      className="bg-white rounded-xl border border-slate-100 px-5 py-4 cursor-pointer hover:border-slate-200 transition-colors"
+      className="bg-surface rounded-[4px] border border-rule px-5 py-4 cursor-pointer hover:border-muted/50 transition-colors"
       onClick={() => setExpanded(e => !e)}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${MOOD_DOT[entry.mood]}`} />
-          <span className="text-sm font-medium text-slate-700">{dateStr}</span>
-          {moodInfo && (
-            <span className="text-sm">{moodInfo.emoji}</span>
-          )}
+          <span className="text-muted shrink-0"><MoodIcon mood={entry.mood} size={14} /></span>
+          <span className="text-sm font-medium text-ink">{dateStr}</span>
+          <span className="text-xs text-muted">{MOOD_LABELS[entry.mood]}</span>
           {entry.emoji && <span className="text-sm">{entry.emoji}</span>}
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          className={`text-slate-300 transition-transform ${expanded ? 'rotate-180' : ''}`}>
+          className={`text-muted transition-transform ${expanded ? 'rotate-180' : ''}`}>
           <polyline points="6 9 12 15 18 9"/>
         </svg>
       </div>
       {!expanded && (
-        <p className="text-xs text-slate-400 mt-1.5 ml-5 truncate">{entry.content}</p>
+        <p className="text-xs text-muted mt-1.5 ml-6 truncate">{entry.content}</p>
       )}
       {expanded && (
-        <p className="text-sm text-slate-700 mt-3 leading-relaxed whitespace-pre-wrap">{entry.content}</p>
+        <p className="text-sm text-ink mt-3 leading-relaxed whitespace-pre-wrap">{entry.content}</p>
       )}
     </div>
   );
@@ -276,7 +301,7 @@ export function Journal({ onBack }: Props) {
   if (loading) return <LoadingScreen />;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-paper">
       <div className="max-w-lg md:max-w-xl mx-auto px-4 md:px-6 py-6 pb-10 space-y-5">
 
         {/* Header */}
@@ -284,21 +309,21 @@ export function Journal({ onBack }: Props) {
           <div>
             <button
               onClick={onBack}
-              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-2"
+              className="flex items-center gap-1.5 text-sm text-muted hover:text-ink transition-colors mb-2"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
               Back
             </button>
-            <h1 className="text-xl font-bold text-slate-900">Your Journal</h1>
-            <p className="text-xs text-slate-400 mt-0.5">{today}</p>
+            <h1 className="text-xl font-bold text-ink">Your Journal</h1>
+            <p className="text-xs text-muted mt-0.5">{today}</p>
           </div>
           {streak > 0 && (
-            <div className="flex flex-col items-center bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2.5">
-              <span className="text-2xl">🔥</span>
-              <span className="text-base font-bold text-amber-700 leading-none">{streak}</span>
-              <span className="text-[10px] text-amber-600 font-medium">{streak === 1 ? 'day' : 'days'}</span>
+            <div className="flex flex-col items-center gap-0.5 bg-surface border border-rule shadow-[var(--shadow-raised)] rounded-[4px] px-4 py-2.5">
+              <span className="text-ink"><IconStreak /></span>
+              <span className="text-base font-bold text-ink leading-none">{streak}</span>
+              <span className="text-[10px] text-muted font-medium">{streak === 1 ? 'day' : 'days'}</span>
             </div>
           )}
         </div>
@@ -307,7 +332,7 @@ export function Journal({ onBack }: Props) {
 
         {pastEntries.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Past entries</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted">Past entries</h3>
             {pastEntries.slice(0, 30).map(e => (
               <PastEntry key={e.id} entry={e} />
             ))}
@@ -315,7 +340,7 @@ export function Journal({ onBack }: Props) {
         )}
 
         {allEntries.length === 0 && (
-          <p className="text-center text-sm text-slate-400 py-8">
+          <p className="text-center text-sm text-muted py-8">
             No entries yet. Write your first one above!
           </p>
         )}

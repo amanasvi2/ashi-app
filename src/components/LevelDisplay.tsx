@@ -9,11 +9,14 @@ export const TYPE_LABELS: Record<ItemType, string> = {
 };
 
 export const LEVEL_LABELS: Record<SupportLevel, string> = { 3: 'Most help', 2: 'Word bank', 1: 'Some help', 0: 'No hints' };
+// One neutral chip style for every level, on purpose — the pips (below)
+// and the label text carry the distinction, not a color invented per
+// level. The token palette has no spare hue for this.
 export const LEVEL_COLORS: Record<SupportLevel, string> = {
-  3: 'text-slate-500 bg-slate-100',
-  2: 'text-sky-700 bg-sky-50',
-  1: 'text-amber-700 bg-amber-50',
-  0: 'text-emerald-700 bg-emerald-50',
+  3: 'text-muted bg-rule/40',
+  2: 'text-muted bg-rule/40',
+  1: 'text-muted bg-rule/40',
+  0: 'text-muted bg-rule/40',
 };
 
 export function LevelPips({ level }: { level: SupportLevel }) {
@@ -21,7 +24,7 @@ export function LevelPips({ level }: { level: SupportLevel }) {
   return (
     <span className="flex gap-1">
       {[0, 1, 2].map(i => (
-        <span key={i} className={`w-2 h-2 rounded-full ${i < filled ? 'bg-blue-500' : 'bg-slate-200'}`} />
+        <span key={i} className={`w-1.5 h-1.5 rounded-[2px] ${i < filled ? 'bg-accent' : 'bg-rule'}`} />
       ))}
     </span>
   );

@@ -15,11 +15,10 @@ export function JournalFAB({ onOpen }: Props) {
   return (
     <button
       onClick={onOpen}
-      aria-label={done ? 'Journal written — tap to view' : 'Open your journal'}
-      className={`fixed z-40 right-4 bottom-[76px] lg:bottom-6 w-14 h-14 rounded-full shadow-xl
-                  flex items-center justify-center text-white
-                  transition-all hover:scale-105 active:scale-95
-                  ${done ? 'bg-amber-400 ring-4 ring-amber-200' : 'bg-amber-400 hover:bg-amber-500'}`}
+      aria-label={done ? 'You wrote in your journal today. Tap to see it.' : 'Open your journal'}
+      className="fixed z-40 right-4 bottom-[76px] lg:bottom-6 w-14 h-14 rounded-[4px] shadow-[var(--shadow-raised)]
+                 flex items-center justify-center text-white bg-accent
+                 transition-transform hover:scale-105 active:scale-95"
     >
       {done ? (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

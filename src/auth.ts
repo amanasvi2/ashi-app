@@ -19,24 +19,24 @@ interface AuthResult {
 export async function signUpOwner(email: string, password: string, ownerType: OwnerType): Promise<AuthResult> {
   const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password });
   if (error) return { error: error.message };
-  if (!data.user) return { error: 'Something went wrong creating your account.' };
+  if (!data.user) return { error: 'Your account was not created. Try again.' };
   // If email confirmation is enabled on the Supabase project, no session is
   // issued yet — the owner has to confirm their email, then sign in. (This
   // project has mailer_autoconfirm on, so this branch doesn't fire today,
   // but it's kept as a safety net for a differently-configured project.)
-  if (!data.session) return { error: 'Check your email to confirm your account, then sign in.' };
+  if (!data.session) return { error: 'Check your email to confirm your account. Then sign in.' };
 
   // Self-declared, not a trust boundary — RLS only lets an owner insert
   // their own row (see migration 0007), and it can never be updated after.
   const { error: ownerError } = await supabase.from('owners').insert({ id: data.user.id, owner_type: ownerType });
-  if (ownerError) return { error: 'Could not finish setting up your account.' };
+  if (ownerError) return { error: 'Your account was not finished setting up. Try again.' };
 
   return { session: { role: 'parent', userId: data.user.id, username: data.user.email ?? '' } };
 }
 
 export async function signInParent(email: string, password: string): Promise<AuthResult> {
   const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
-  if (error || !data.user) return { error: 'That email or password is not right.' };
+  if (error || !data.user) return { error: 'This email or password is not right. Try again.' };
   return { session: { role: 'parent', userId: data.user.id, username: data.user.email ?? '' } };
 }
 
@@ -49,11 +49,11 @@ export async function signInKid(username: string, password: string): Promise<Aut
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: username.trim().toLowerCase(), password }),
   });
-  if (!res.ok) return { error: 'That username or password is not right.' };
+  if (!res.ok) return { error: 'This username or password is not right. Try again.' };
 
   const { access_token, refresh_token } = await res.json();
   const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
-  if (error || !data.user) return { error: 'That username or password is not right.' };
+  if (error || !data.user) return { error: 'This username or password is not right. Try again.' };
   return { session: { role: 'kid', userId: data.user.id, username: username.trim().toLowerCase() } };
 }
 

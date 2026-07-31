@@ -200,19 +200,22 @@ export default function App() {
   const initial = session.username[0]?.toUpperCase() ?? '?';
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-paper">
 
       {/* Desktop top nav */}
-      <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-sm
-                      border-b border-slate-100 h-14 items-center px-8 gap-8">
-        <span className="text-sm font-bold text-blue-600 shrink-0">Ashi</span>
+      <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-30 bg-surface/95 backdrop-blur-sm
+                      border-b border-rule h-14 items-center px-8 gap-8">
+        <span className="flex items-center gap-2 text-sm font-bold text-ink shrink-0">
+          <span className="w-2 h-2 rounded-[2px] bg-accent" />
+          Ashi
+        </span>
         <div className="flex gap-1">
           {TAB_LABELS.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setMainTab(key)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors
-                ${mainTab === key ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-4 py-1.5 rounded-[4px] text-sm font-medium transition-colors
+                ${mainTab === key ? 'bg-accent/10 text-accent' : 'text-muted hover:text-ink'}`}
             >
               {label}
             </button>
@@ -220,8 +223,8 @@ export default function App() {
         </div>
         <button
           onClick={() => setShowProfile(true)}
-          className="ml-auto w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-sm
-                     flex items-center justify-center hover:bg-blue-200 transition-colors"
+          className="ml-auto w-8 h-8 rounded-[4px] bg-accent/10 text-accent font-bold text-sm
+                     flex items-center justify-center hover:bg-accent/20 transition-colors"
         >
           {initial}
         </button>

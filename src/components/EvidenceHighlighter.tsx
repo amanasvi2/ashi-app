@@ -30,10 +30,17 @@ interface Props {
   onConfirm: () => void;
 }
 
+// The signature interaction: click the sentence that shows why. The right
+// one sweeps a wash of `evidence` left-to-right and stays for the rest of
+// the item — the only bold visual moment in the app; everything else stays
+// quiet around it. A wrong pick nudges rather than turning red (the score
+// never drops, so nothing here should look like it did), and a quiet
+// "Continue anyway" is always available so a stuck student is never
+// trapped in this non-scored step.
 export function EvidenceHighlighter({ scenario, expectedEvidence, onConfirm }: Props) {
   const sentences = useMemo(() => splitSentences(scenario), [scenario]);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [checked, setChecked] = useState(false);
+  const [foundIdx, setFoundIdx] = useState<number | null>(null);
+  const [missedIdx, setMissedIdx] = useState<number | null>(null);
 
   // If the model's evidence string doesn't line up with any split sentence
   // (e.g. it spans a split boundary), fall back to the original
@@ -43,77 +50,63 @@ export function EvidenceHighlighter({ scenario, expectedEvidence, onConfirm }: P
     [sentences, expectedEvidence],
   );
   const evidenceCheckActive = expectedIdx !== -1;
-  const pickedCorrect = evidenceCheckActive && selected.has(expectedIdx);
+  const found = foundIdx !== null;
 
-  const toggle = (i: number) => {
-    if (checked) return;
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(i)) next.delete(i); else next.add(i);
-      return next;
-    });
+  const handleClick = (i: number) => {
+    if (found || !evidenceCheckActive) return;
+    if (i === expectedIdx) {
+      setFoundIdx(i);
+      setMissedIdx(null);
+    } else {
+      setMissedIdx(i);
+    }
   };
 
-  const handlePrimary = () => {
-    if (!evidenceCheckActive || checked) { onConfirm(); return; }
-    setChecked(true);
-  };
+  const caption = found
+    ? "That's the clue."
+    : missedIdx !== null
+    ? 'Not that one. Look for the sentence that shows why.'
+    : 'Tap the sentence that shows why.';
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="text-sm font-semibold text-slate-800">
-          Which part shows your answer?
-        </p>
-        <p className="text-xs text-slate-400 mt-0.5">
-          Tap the sentence that gives the clue.
-        </p>
+      <p className="text-sm font-medium text-ink">Which sentence shows why?</p>
+
+      <p className="font-serif text-lg leading-[1.8]">
+        {sentences.map((s, i) => (
+          <button
+            key={i}
+            type="button"
+            disabled={!evidenceCheckActive || found}
+            onClick={() => handleClick(i)}
+            className={`evidence-sentence inline rounded-[4px] text-left font-serif text-lg
+              ${evidenceCheckActive && !found ? 'cursor-pointer' : 'cursor-default'}
+              ${i === foundIdx ? 'evidence-confirmed' : ''}
+              ${i === missedIdx ? 'evidence-missed' : ''}`}
+          >
+            {s}{' '}
+          </button>
+        ))}
+      </p>
+
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-muted" aria-live="polite">{evidenceCheckActive ? caption : ''}</p>
+        {(found || !evidenceCheckActive) ? (
+          <button
+            onClick={onConfirm}
+            className="py-2.5 px-5 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
+          >
+            Continue
+          </button>
+        ) : (
+          <button
+            onClick={onConfirm}
+            className="text-sm text-muted hover:text-ink underline underline-offset-2 transition-colors"
+          >
+            Continue anyway
+          </button>
+        )}
       </div>
-
-      <div className="space-y-2">
-        {sentences.map((s, i) => {
-          const isSelected = selected.has(i);
-          const showCorrect = checked && evidenceCheckActive && i === expectedIdx;
-          const showWrong   = checked && evidenceCheckActive && isSelected && i !== expectedIdx;
-          return (
-            <button
-              key={i}
-              onClick={() => toggle(i)}
-              disabled={checked}
-              className={`w-full text-left px-4 py-3 rounded-xl border text-sm leading-snug transition-all duration-150
-                ${showCorrect
-                  ? 'border-emerald-400 bg-emerald-50 text-emerald-900 font-medium'
-                  : showWrong
-                  ? 'border-red-300 bg-red-50 text-red-800'
-                  : isSelected
-                  ? 'border-blue-400 bg-blue-50 text-blue-900 font-medium shadow-sm'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50/40'
-                } ${checked ? 'cursor-default' : ''}`}
-            >
-              {isSelected && !checked && <span className="mr-2 text-blue-500">✓</span>}
-              {showCorrect && <span className="mr-2 text-emerald-500">✓</span>}
-              {showWrong && <span className="mr-2 text-red-400">✕</span>}
-              {s}
-            </button>
-          );
-        })}
-      </div>
-
-      {checked && evidenceCheckActive && (
-        <p className={`text-sm rounded-xl px-4 py-2.5 ${pickedCorrect ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-          {pickedCorrect ? "Yes — that's the part that shows it." : 'Close — the highlighted sentence above is the one that shows it.'}
-        </p>
-      )}
-
-      <button
-        onClick={handlePrimary}
-        disabled={selected.size === 0}
-        className="w-full py-3.5 rounded-xl text-sm font-semibold transition-all
-                   bg-blue-600 text-white hover:bg-blue-700
-                   disabled:opacity-35 disabled:cursor-not-allowed"
-      >
-        {selected.size === 0 ? 'Pick a sentence to continue' : checked ? 'Continue →' : 'Check my pick'}
-      </button>
     </div>
   );
 }

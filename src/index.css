@@ -1,39 +1,8 @@
 @import "tailwindcss";
+@import "./tokens.css";
 
-/*
- * Reskins Tailwind's stock `blue` (accent) and `slate` (neutral) palettes
- * in one place rather than touching every className across the app —
- * every existing `bg-blue-600` / `text-slate-400` / etc. picks up these
- * values automatically. Swaps the default saturated corporate blue for a
- * muted, slightly cool petrol teal, and the default cool blue-gray neutral
- * for a warmer, teal-tinted charcoal — a considered, single-accent palette
- * per the product's "calm, a little stylish, not a template" design brief,
- * rather than the default Tailwind demo look.
- */
 @theme {
   --animate-soundbar: soundbar 0.6s ease-in-out infinite;
-
-  --color-blue-50:  #f0f5f6;
-  --color-blue-100: #dceaec;
-  --color-blue-200: #b9d5da;
-  --color-blue-300: #8fb9c1;
-  --color-blue-400: #5e97a3;
-  --color-blue-500: #3d7a87;
-  --color-blue-600: #2c6270;
-  --color-blue-700: #234e59;
-  --color-blue-800: #1c3e47;
-  --color-blue-900: #17323a;
-
-  --color-slate-50:  #f7f8f7;
-  --color-slate-100: #eff1f0;
-  --color-slate-200: #e1e4e2;
-  --color-slate-300: #c9cecb;
-  --color-slate-400: #9ca3a0;
-  --color-slate-500: #7c837f;
-  --color-slate-600: #5c635f;
-  --color-slate-700: #454b47;
-  --color-slate-800: #2e332f;
-  --color-slate-900: #1d211e;
 }
 
 @keyframes soundbar {
@@ -42,5 +11,65 @@
 }
 
 body {
-  font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+::selection {
+  background: var(--color-evidence);
+  color: var(--color-ink);
+}
+
+/*
+ * The signature interaction (EvidenceHighlighter.tsx): a wash of `evidence`
+ * sweeps left-to-right over the correct sentence and stays. Duration
+ * matches tokens.css's --duration-sweep (400ms) by convention, hardcoded
+ * here rather than referenced — Tailwind only keeps @theme custom
+ * properties alive in the compiled CSS once something recognizes them as
+ * a utility-generating namespace, which a plain timing value isn't.
+ */
+.evidence-sentence {
+  background-image: linear-gradient(var(--color-evidence), var(--color-evidence));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  background-position: left center;
+  transition: background-size 400ms ease;
+  padding: 0.05em 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  /* Real <button disabled> so the un-clicked-back options are inert once
+     an answer is confirmed, but that must never dim the confirmed
+     sentence's evidence fill — browsers vary on how much they dim
+     disabled controls by default. */
+  opacity: 1 !important;
+}
+.evidence-sentence.evidence-confirmed {
+  background-size: 100% 100%;
+}
+.evidence-sentence.evidence-missed {
+  animation: evidence-nudge 240ms ease;
+}
+@keyframes evidence-nudge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evidence-sentence { transition: none; }
+  .evidence-sentence.evidence-missed { animation: none; }
+}
+
+/* Blanket reduced-motion floor for every other animation/transition in the
+   app (not just the signature one above, which gets its own explicit rule
+   so it snaps cleanly instead of playing a near-instant flash frame). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -39,15 +39,15 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
   return (
     <div className={`flex ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
       {role === 'assistant' && (
-        <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center mr-2 mt-1 flex-shrink-0">
+        <div className="w-7 h-7 rounded-[4px] bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mr-2 mt-1 flex-shrink-0">
           A
         </div>
       )}
       <div
-        className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+        className={`max-w-[78%] px-4 py-2.5 rounded-[4px] text-sm leading-relaxed
           ${role === 'user'
-            ? 'bg-blue-600 text-white rounded-br-sm'
-            : 'bg-white border border-slate-100 text-slate-800 rounded-bl-sm shadow-sm'
+            ? 'bg-accent text-white'
+            : 'bg-surface border border-rule text-ink shadow-[var(--shadow-raised)]'
           }`}
       >
         {content}
@@ -59,14 +59,14 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
 function TypingIndicator() {
   return (
     <div className="flex justify-start items-end gap-2">
-      <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center flex-shrink-0">
+      <div className="w-7 h-7 rounded-[4px] bg-accent/10 text-accent text-xs font-bold flex items-center justify-center flex-shrink-0">
         A
       </div>
-      <div className="bg-white border border-slate-100 shadow-sm px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1 items-center">
+      <div className="bg-surface border border-rule shadow-[var(--shadow-raised)] px-4 py-3 rounded-[4px] flex gap-1 items-center">
         {[0, 1, 2].map(i => (
           <span
             key={i}
-            className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce"
+            className="w-1.5 h-1.5 rounded-[2px] bg-muted animate-bounce"
             style={{ animationDelay: `${i * 0.15}s`, animationDuration: '0.8s' }}
           />
         ))}
@@ -81,18 +81,18 @@ function TopicPicker({ onPick }: { onPick: (topic: ConversationTopic) => void })
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6">
       <div className="max-w-lg mx-auto">
-        <h2 className="text-base font-semibold text-slate-800 mb-1">What do you want to talk about?</h2>
-        <p className="text-sm text-slate-400 mb-4">Pick a topic and have a conversation with Alex.</p>
+        <h2 className="text-base font-semibold text-ink mb-1">What do you want to talk about?</h2>
+        <p className="text-sm text-muted mb-4">Pick a topic and have a conversation with Alex.</p>
 
         {/* Permanent, plain-language framing — not a one-time popup, so it */}
         {/* can't be seen once and forgotten. */}
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-5 space-y-1.5">
-          <p className="text-sm text-slate-700">
+        <div className="bg-surface border border-rule rounded-[4px] p-4 mb-5 space-y-1.5">
+          <p className="text-sm text-ink">
             <span className="font-semibold">Alex is not a real person.</span> Alex is a computer program made to
             sound like a kid your age, so you can practice talking. If you ask Alex if they are real, Alex will
             tell you the truth.
           </p>
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-ink">
             Your grown-up can read what you and Alex talk about. Your journal is different — that always stays private.
           </p>
         </div>
@@ -102,16 +102,16 @@ function TopicPicker({ onPick }: { onPick: (topic: ConversationTopic) => void })
             <button
               key={topic.id}
               onClick={() => onPick(topic)}
-              className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white
-                         hover:border-blue-300 hover:shadow-sm hover:shadow-blue-50
-                         transition-all text-left group"
+              className="flex items-start gap-3 p-4 rounded-[4px] border border-rule bg-surface
+                         shadow-[var(--shadow-raised)] hover:border-accent/40
+                         transition-colors text-left"
             >
-              <span className="text-blue-400 group-hover:text-blue-600 transition-colors mt-0.5 flex-shrink-0">
+              <span className="w-9 h-9 rounded-[4px] bg-accent/10 text-accent flex items-center justify-center shrink-0">
                 {TOPIC_ICONS[topic.id]}
               </span>
               <div>
-                <p className="text-sm font-medium text-slate-800">{topic.label}</p>
-                <p className="text-xs text-slate-400">{topic.description}</p>
+                <p className="text-sm font-medium text-ink">{topic.label}</p>
+                <p className="text-xs text-muted">{topic.description}</p>
               </div>
             </button>
           ))}
@@ -130,26 +130,24 @@ function FeedbackCard({ text, onDone }: { text: string; onDone: () => void }) {
     .filter(Boolean);
 
   return (
-    <div className="mx-4 mb-4 bg-white rounded-2xl border border-blue-100 shadow-sm p-5 space-y-4">
+    <div className="mx-4 mb-4 bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5 space-y-4">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">
           Conversation feedback
         </p>
-        <p className="text-xs text-slate-400">How that chat went, from Alex's perspective:</p>
+        <p className="text-xs text-muted">How that chat went, from Alex's perspective:</p>
       </div>
       <ul className="space-y-2.5">
         {lines.map((line, i) => (
-          <li key={i} className="flex gap-2.5 text-sm text-slate-700 leading-snug">
-            <span className="text-blue-400 mt-0.5 flex-shrink-0">
-              {i === 0 ? '✓' : i === 1 ? '→' : '★'}
-            </span>
+          <li key={i} className="flex gap-2.5 text-sm text-ink leading-snug">
+            <span className="w-1.5 h-1.5 rounded-[2px] bg-accent mt-1.5 flex-shrink-0" />
             {line}
           </li>
         ))}
       </ul>
       <button
         onClick={onDone}
-        className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
       >
         Done
       </button>
@@ -161,17 +159,17 @@ function FeedbackCard({ text, onDone }: { text: string; onDone: () => void }) {
 
 function EscalationCard({ onDone }: { onDone: () => void }) {
   return (
-    <div className="mx-4 mb-4 bg-amber-50 rounded-2xl border border-amber-200 shadow-sm p-5 space-y-4">
+    <div className="mx-4 mb-4 bg-alert/5 rounded-[4px] border border-alert/25 p-5 space-y-4">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-amber-600 mb-1">Chat ended</p>
-        <p className="text-sm text-slate-700 leading-relaxed">
+        <p className="text-xs font-semibold uppercase tracking-widest text-alert mb-1">Chat ended</p>
+        <p className="text-sm text-ink leading-relaxed">
           I let your grown-up know about this chat, so a real person can help. Talking to a real person about
           something hard is a good idea.
         </p>
       </div>
       <button
         onClick={onDone}
-        className="w-full py-3 rounded-xl text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+        className="w-full py-3 rounded-[4px] text-sm font-semibold bg-alert text-white hover:bg-alert/90 transition-colors"
       >
         Done
       </button>
@@ -272,34 +270,34 @@ export function Conversation({ onBack }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50">
+    <div className="flex flex-col h-screen bg-paper">
 
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+      <div className="bg-surface border-b border-rule px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <button
           onClick={topic ? handleDone : onBack}
-          className="text-slate-400 hover:text-slate-600 transition-colors p-1 -ml-1"
+          className="text-muted hover:text-ink transition-colors p-1 -ml-1"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6"/>
           </svg>
         </button>
         <div>
-          <p className="text-sm font-semibold text-slate-800">
+          <p className="text-sm font-semibold text-ink">
             {topic ? `Talking about: ${topic.label}` : 'Conversation Practice'}
           </p>
           {topic && !conversationEnded && (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted">
               with Alex (a computer)
               {kidGender === 'girl' ? ' · she/her' : kidGender === 'boy' ? ' · he/him' : ''}
               {turnsRemaining !== null ? ` · ${turnsRemaining} left` : ''}
             </p>
           )}
           {conversationEnded && endedReason !== 'escalation' && (
-            <p className="text-xs text-emerald-600 font-medium">Conversation complete</p>
+            <p className="text-xs text-muted font-medium">Conversation complete</p>
           )}
           {conversationEnded && endedReason === 'escalation' && (
-            <p className="text-xs text-amber-600 font-medium">Chat ended early</p>
+            <p className="text-xs text-alert font-medium">Chat ended early</p>
           )}
         </div>
       </div>
@@ -319,11 +317,11 @@ export function Conversation({ onBack }: Props) {
               <FeedbackCard text={feedbackText} onDone={handleDone} />
             )}
             {conversationEnded && endedReason !== 'escalation' && !feedbackText && (
-              <div className="mx-0 mb-4 bg-white rounded-2xl border border-blue-100 shadow-sm p-5 space-y-4">
-                <p className="text-sm text-slate-700">Nice job practicing! That's it for this chat.</p>
+              <div className="mx-0 mb-4 bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5 space-y-4">
+                <p className="text-sm text-ink">Nice job practicing! That's it for this chat.</p>
                 <button
                   onClick={handleDone}
-                  className="w-full py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
                 >
                   Done
                 </button>
@@ -336,7 +334,7 @@ export function Conversation({ onBack }: Props) {
 
       {/* Input */}
       {topic && !conversationEnded && (
-        <div className="bg-white border-t border-slate-100 px-4 py-3 flex-shrink-0">
+        <div className="bg-surface border-t border-rule px-4 py-3 flex-shrink-0">
           <div className="max-w-lg mx-auto flex gap-2 items-end">
             <textarea
               ref={inputRef}
@@ -346,8 +344,8 @@ export function Conversation({ onBack }: Props) {
               rows={1}
               placeholder="Type a message…"
               disabled={isLoading || !sessionId}
-              className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800
-                         placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300
+              className="flex-1 rounded-[4px] border border-rule px-4 py-2.5 text-sm text-ink
+                         placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40
                          resize-none disabled:opacity-50"
               style={{ minHeight: '42px', maxHeight: '120px' }}
               onInput={e => {
@@ -359,8 +357,8 @@ export function Conversation({ onBack }: Props) {
             <button
               onClick={handleSend}
               disabled={!input.trim() || isLoading || !sessionId}
-              className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center
-                         hover:bg-blue-700 disabled:opacity-35 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+              className="h-10 w-10 rounded-[4px] bg-accent text-white flex items-center justify-center
+                         hover:bg-accent-hover disabled:opacity-35 disabled:cursor-not-allowed transition-colors flex-shrink-0"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"/>
@@ -368,7 +366,7 @@ export function Conversation({ onBack }: Props) {
               </svg>
             </button>
           </div>
-          <p className="text-center text-xs text-slate-300 mt-2">Enter to send · Shift+Enter for new line</p>
+          <p className="text-center text-xs text-muted mt-2">Enter to send · Shift+Enter for new line</p>
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { SupportLevel, Difficulty, SessionRecord, ParentConfig, CoinsState, DifficultyState } from '../types';
+import type { Difficulty, SessionRecord, ParentConfig, CoinsState, DifficultyState } from '../types';
 import {
   loadSessions, getTotalScore, calculateStreak,
   sessionsTodayCount, loadConfig, loadLevelSlice, loadDifficulty, loadCoins,
@@ -8,29 +8,36 @@ import {
 import { LoadingScreen } from '../components/LoadingScreen';
 import type { LevelSlice } from '../adaptiveEngine';
 import { initialLevelState } from '../adaptiveEngine';
+import { TYPE_LABELS, LEVEL_LABELS, LEVEL_COLORS, LevelPips } from '../components/LevelDisplay';
 
-const LEVEL_LABELS: Record<SupportLevel, string> = { 3: 'Most help', 2: 'Word bank', 1: 'Some help', 0: 'No hints' };
-const LEVEL_COLORS: Record<SupportLevel, string> = {
-  3: 'text-slate-600 bg-slate-100',
-  2: 'text-sky-700 bg-sky-50',
-  1: 'text-amber-700 bg-amber-50',
-  0: 'text-emerald-700 bg-emerald-50',
-};
 const DIFF_LABELS: Record<Difficulty, string>  = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
+// No dedicated hue per difficulty — same neutral chip as the support level,
+// the label text carries the meaning.
 const DIFF_COLORS: Record<Difficulty, string>  = {
-  1: 'text-emerald-700 bg-emerald-50',
-  2: 'text-amber-700 bg-amber-50',
-  3: 'text-rose-700 bg-rose-50',
+  1: 'text-muted bg-rule/40',
+  2: 'text-muted bg-rule/40',
+  3: 'text-muted bg-rule/40',
 };
 
-function LevelPips({ level }: { level: SupportLevel }) {
-  const filled = 3 - level;
+function IconStreak() {
   return (
-    <span className="flex gap-1 items-center">
-      {[0, 1, 2].map(i => (
-        <span key={i} className={`w-2.5 h-2.5 rounded-full ${i < filled ? 'bg-blue-500' : 'bg-slate-200'}`} />
-      ))}
-    </span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="20" x2="4" y2="14"/><line x1="10" y1="20" x2="10" y2="10"/><line x1="16" y1="20" x2="16" y2="6"/>
+    </svg>
+  );
+}
+function IconCoin() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  );
+}
+function IconHint() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.75V17h8v-2.25A7 7 0 0 0 12 2z"/>
+    </svg>
   );
 }
 
@@ -75,76 +82,76 @@ export function ProgressPage() {
   const { levels }  = levelSlice;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 lg:pb-8">
+    <div className="min-h-screen bg-paper pb-24 lg:pb-8">
       <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-6 space-y-6">
 
         {/* Header */}
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Your Progress</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Keep it up!</p>
+          <h1 className="text-xl font-bold text-ink">Your Progress</h1>
+          <p className="text-xs text-muted mt-0.5">Keep it up!</p>
         </div>
 
         {/* Summary chips */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 text-center space-y-0.5">
-            <p className="text-2xl font-bold text-blue-600">{totalScore}</p>
-            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Total pts</p>
+          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-4 text-center space-y-0.5">
+            <p className="text-2xl font-bold text-accent">{totalScore}</p>
+            <p className="text-[10px] text-muted font-medium uppercase tracking-wide">Total pts</p>
           </div>
-          <div className={`rounded-2xl border p-4 text-center space-y-0.5 ${streak > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-100'}`}>
-            <p className={`text-2xl font-bold ${streak > 0 ? 'text-amber-600' : 'text-slate-300'}`}>
-              {streak > 0 ? `🔥 ${streak}` : '—'}
+          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-4 text-center space-y-0.5">
+            <p className="flex items-center justify-center gap-1.5 text-2xl font-bold text-ink">
+              {streak > 0 ? <><IconStreak />{streak}</> : <span className="text-muted">—</span>}
             </p>
-            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">{streak === 1 ? 'Day streak' : 'Day streak'}</p>
+            <p className="text-[10px] text-muted font-medium uppercase tracking-wide">Day streak</p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 text-center space-y-0.5">
-            <p className="text-2xl font-bold text-amber-500">⭐ {coins.balance}</p>
-            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Coins</p>
+          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-4 text-center space-y-0.5">
+            <p className="flex items-center justify-center gap-1.5 text-2xl font-bold text-ink">
+              <IconCoin />{coins.balance}
+            </p>
+            <p className="text-[10px] text-muted font-medium uppercase tracking-wide">Coins</p>
           </div>
         </div>
 
         {/* Daily goal */}
-        <section className="bg-white rounded-2xl border border-slate-100 p-5">
+        <section className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-slate-800">Today's goal</h2>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full
-              ${todayCount >= config.dailyMinimum ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+            <h2 className="text-sm font-semibold text-ink">Today's goal</h2>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-[4px] bg-rule/40 text-ink">
               {todayCount} / {config.dailyMinimum} done
             </span>
           </div>
           <div className="flex gap-2">
             {Array.from({ length: config.dailyMinimum }).map((_, i) => (
-              <div key={i} className={`h-2.5 flex-1 rounded-full transition-all ${i < todayCount ? 'bg-blue-500' : 'bg-slate-200'}`} />
+              <div key={i} className={`h-2.5 flex-1 rounded-[4px] transition-all ${i < todayCount ? 'bg-accent' : 'bg-rule'}`} />
             ))}
           </div>
           {todayCount > config.dailyMinimum && (
-            <p className="text-xs text-emerald-600 mt-2 font-medium">
-              +{todayCount - config.dailyMinimum} extra session{todayCount - config.dailyMinimum > 1 ? 's' : ''} — coins earned!
+            <p className="text-xs text-muted mt-2 font-medium">
+              {todayCount - config.dailyMinimum} extra session{todayCount - config.dailyMinimum > 1 ? 's' : ''} today. Coins earned.
             </p>
           )}
         </section>
 
         {/* Skill levels */}
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Skill levels</h2>
-          <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Skill levels</h2>
+          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
             {(['social', 'nonverbal', 'inference'] as const).map(key => {
-              const labels = { social: 'Social Problems', nonverbal: 'Nonverbal Cues', inference: 'Text Inference' };
               const level  = levels[key];
               const diff   = difficulty[key];
               return (
                 <div key={key} className="px-5 py-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-800">{labels[key]}</span>
+                    <span className="text-sm font-medium text-ink">{TYPE_LABELS[key]}</span>
                     <div className="flex items-center gap-2">
                       <LevelPips level={level} />
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${LEVEL_COLORS[level]}`}>
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-[4px] ${LEVEL_COLORS[level]}`}>
                         {LEVEL_LABELS[level]}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-xs text-slate-400">Questions:</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${DIFF_COLORS[diff]}`}>
+                    <span className="text-xs text-muted">Questions:</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-[4px] ${DIFF_COLORS[diff]}`}>
                       {DIFF_LABELS[diff]}
                     </span>
                   </div>
@@ -156,11 +163,11 @@ export function ProgressPage() {
 
         {/* Hint tokens */}
         {coins.hintTokens > 0 && (
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-3">
-            <span className="text-2xl">🔮</span>
+          <div className="bg-surface border border-rule shadow-[var(--shadow-raised)] rounded-[4px] p-4 flex items-center gap-3">
+            <span className="w-10 h-10 rounded-[4px] bg-accent/10 text-accent flex items-center justify-center shrink-0"><IconHint /></span>
             <div>
-              <p className="text-sm font-semibold text-blue-800">{coins.hintTokens} hint token{coins.hintTokens !== 1 ? 's' : ''} ready</p>
-              <p className="text-xs text-blue-600">Use them during practice to see extra choices.</p>
+              <p className="text-sm font-semibold text-ink">{coins.hintTokens} hint token{coins.hintTokens !== 1 ? 's' : ''} ready</p>
+              <p className="text-xs text-muted">Use them during practice to see extra choices.</p>
             </div>
           </div>
         )}
@@ -168,21 +175,19 @@ export function ProgressPage() {
         {/* Recent sessions */}
         {sessions.length > 0 ? (
           <section>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Recent sessions</h2>
-            <div className="bg-white rounded-2xl border border-slate-100 divide-y divide-slate-50">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Recent sessions</h2>
+            <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
               {sessions.slice(0, 10).map(s => {
                 const pct = s.maxScore > 0 ? Math.round((s.score / s.maxScore) * 100) : 0;
                 return (
                   <div key={s.id} className="flex items-center justify-between px-5 py-3.5">
                     <div>
-                      <p className="text-sm font-medium text-slate-700">{formatDate(s.date)}</p>
-                      <p className="text-xs text-slate-400">{MODE_LABELS[s.mode]}</p>
+                      <p className="text-sm font-medium text-ink">{formatDate(s.date)}</p>
+                      <p className="text-xs text-muted">{MODE_LABELS[s.mode]}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-slate-800">{s.score} / {s.maxScore}</p>
-                      <p className={`text-xs font-medium ${pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-slate-400'}`}>
-                        {pct}%
-                      </p>
+                      <p className="text-sm font-semibold text-ink">{s.score} / {s.maxScore}</p>
+                      <p className="text-xs font-medium text-muted">{pct}%</p>
                     </div>
                   </div>
                 );
@@ -190,7 +195,7 @@ export function ProgressPage() {
             </div>
           </section>
         ) : (
-          <p className="text-center text-sm text-slate-400 py-8">
+          <p className="text-center text-sm text-muted py-8">
             No practice sessions yet. Start one from Home!
           </p>
         )}

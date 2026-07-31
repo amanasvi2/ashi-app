@@ -43,10 +43,10 @@ export function HighlightedText({ text, speakingText, activeCharIndex, className
         return (
           <span
             key={i}
-            style={isActive ? { display: 'inline-block', transform: 'scale(1.18)', transformOrigin: 'bottom center' } : { display: 'inline-block' }}
+            style={isActive ? { display: 'inline-block', transform: 'scale(1.08)', transformOrigin: 'bottom center' } : { display: 'inline-block' }}
             className={
               isActive
-                ? 'bg-violet-200 text-violet-900 rounded font-bold transition-all duration-75'
+                ? 'text-accent font-bold transition-all duration-75'
                 : 'transition-all duration-75'
             }
           >
