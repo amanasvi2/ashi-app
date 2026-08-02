@@ -71,7 +71,8 @@ async function main() {
   const parsed: unknown = JSON.parse(jsonMatch[0]);
   if (!Array.isArray(parsed)) fail('Parsed response is not an array.');
 
-  const valid = parsed.filter(item => isValidItem(item, levels));
+  const expectedDifficulty: Partial<Record<ItemType, Difficulty>> = { [type]: difficulty };
+  const valid = parsed.filter(item => isValidItem(item, levels, expectedDifficulty));
   const invalidCount = parsed.length - valid.length;
   if (valid.length === 0) fail('No valid items in the response — nothing written.');
 

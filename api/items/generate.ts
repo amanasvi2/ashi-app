@@ -100,11 +100,20 @@ export function isValidWordBank(raw: unknown): boolean {
   return correctCount >= 1 && correctCount <= 2;
 }
 
-export function isValidItem(raw: unknown, levels: LevelState): raw is Item {
+export function isValidItem(
+  raw: unknown,
+  levels: LevelState,
+  expectedDifficulty: Partial<Record<ItemType, Difficulty>>,
+): raw is Item {
   if (!raw || typeof raw !== 'object') return false;
   const r = raw as Record<string, unknown>;
   if (!['social', 'nonverbal', 'inference'].includes(r.type as string)) return false;
   if (![1, 2, 3].includes(r.difficulty as number)) return false;
+  // The model is asked for a specific difficulty per type but sometimes
+  // self-labels a different one — reject rather than trust the label, since
+  // the adaptive engine's difficulty gating depends on served items actually
+  // matching what was requested.
+  if (r.difficulty !== expectedDifficulty[r.type as ItemType]) return false;
   if (typeof r.scenario !== 'string' || r.scenario.trim().length < 30) return false;
   if (!Array.isArray(r.questions) || r.questions.length === 0) return false;
 
@@ -240,7 +249,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const parsed: unknown = JSON.parse(jsonMatch[0]);
     if (!Array.isArray(parsed)) throw new Error('Parsed value is not an array');
 
-    const valid = (parsed as unknown[]).filter(item => isValidItem(item, levels));
+    // Every request for a given type shares one difficulty value (see
+    // buildRequests), so this is safe to key by type alone regardless of
+    // the order the model returns items in.
+    const expectedDifficulty: Partial<Record<ItemType, Difficulty>> = {};
+    for (const r of requests) expectedDifficulty[r.type] = r.difficulty;
+
+    const valid = (parsed as unknown[]).filter(item => isValidItem(item, levels, expectedDifficulty));
     if (valid.length === 0) throw new Error('No valid items in response');
 
     const items = valid.slice(0, count).map((item, i) => ({ ...item, id: `gen_${Date.now()}_${i}` }));
