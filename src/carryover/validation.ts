@@ -1,5 +1,5 @@
-import { isValidItem } from '../itemValidation';
-import { SKILL_TYPES, type CarryoverSkill } from './model';
+import { isValidItem } from '../itemValidation.js';
+import { SKILL_TYPES, type CarryoverSkill } from './model.js';
 import type { Item, LevelState, DifficultyState } from '../types';
 
 export function validatedBatch(raw: unknown, skill: CarryoverSkill, levels: LevelState, difficulty: DifficultyState): Item[] {

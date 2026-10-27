@@ -179,3 +179,10 @@ A green Vercel build or a working home page does not prove database health.
 Before release, check `/api/health` and the published model configuration. The
 retired `llama-3.3-70b-versatile` identifier is replaced with Groq-hosted
 `openai/gpt-oss-120b` in this source; environment overrides are server-only.
+
+`npm run test:runtime` compiles each deployed API handler and executes the emitted
+JavaScript in strict Node ESM with fake credentials and networking blocked. This
+catches server-transitive imports that Vite resolves locally but Vercel cannot
+load. Shared modules imported by server code need explicit `.js` runtime import
+suffixes. The GitHub validation workflow runs this alongside unit, database,
+build and lint checks without production credentials.

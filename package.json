@@ -15,7 +15,8 @@
     "items:report": "node scripts/items-report.js",
     "items:export-fewshot": "npx tsx scripts/items-export-fewshot.ts",
     "items:golden-test": "set -a && . ./.env.local && set +a && npx tsx scripts/items-golden-test.ts",
-    "test:carryover-db": "node scripts/carryover-db-check.mjs"
+    "test:carryover-db": "node scripts/carryover-db-check.mjs",
+    "test:runtime": "node scripts/runtime-smoke.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
