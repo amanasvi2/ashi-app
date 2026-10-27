@@ -89,6 +89,7 @@ export function isValidSkillId(id: string): id is SkillId {
 // --- supports ---------------------------------------------------------
 
 export const SUPPORTS = [
+  { id: "plain_language", label: "Always use plain language" },
   { id: "one_step_at_a_time",             label: "One step at a time" },
   { id: "short_directions",               label: "Short, simple directions" },
   { id: "repeat_directions",              label: "Repeat directions when needed" },

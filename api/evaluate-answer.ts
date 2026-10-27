@@ -58,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const client=supabaseAsUser(String(req.headers.authorization).replace(/^Bearer\s+/i,''));
-    const {data:profile,error:profileError}=await client.from('student_profiles').select('grade,reading_level').eq('student_id',user.id).eq('is_active',true).maybeSingle();
+    const {data:profile,error:profileError}=await client.from('student_profiles').select('grade,reading_level,supports').eq('student_id',user.id).eq('is_active',true).maybeSingle();
     if(profileError)return res.status(503).json({error:'Student profile could not be loaded.'});
     const text = await groqChat(
       [{ role: 'user', content: buildPrompt(scenario, questionText, correctAnswer, userAnswer,profile) }],

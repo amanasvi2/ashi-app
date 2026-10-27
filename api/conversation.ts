@@ -34,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = String(req.headers.authorization).replace(/^Bearer\s+/i, '');
     const client = supabaseAsUser(token);
 
-    const {data:languageProfile,error:languageError}=await client.from('student_profiles').select('grade,reading_level').eq('student_id',user.id).eq('is_active',true).maybeSingle();
+    const {data:languageProfile,error:languageError}=await client.from('student_profiles').select('grade,reading_level,supports').eq('student_id',user.id).eq('is_active',true).maybeSingle();
     if(languageError)return res.status(503).json({error:'Student profile could not be loaded.'});
 
     const { sessionId, topicId, message }: { sessionId?: string; topicId?: string; message?: string } = req.body ?? {};

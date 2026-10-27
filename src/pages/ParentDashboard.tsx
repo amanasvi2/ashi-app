@@ -1,3 +1,4 @@
+import {LearningProfileEditor} from '../pilot/LearningProfileEditor';
 import { Brand } from '../design/Brand';
 import { LoadFailure } from '../components/LoadingScreen';
 import { useEffect, useRef, useState } from 'react';
@@ -6,7 +7,7 @@ import {
   loadSessions, getTotalScore, practicedToday,
   loadLevelSlice, loadDifficulty,
   parentJournalWrittenToday, parentJournalActivity,
-  loadConfig, saveConfig, loadCoins,
+  loadConfig, saveConfig, loadCoins,saveLearningProfile,
   loadCustomRewards, addCustomReward, deleteCustomReward,
   loadFloorAlarms, loadStudentProfile, initialDifficulty,
   loadConversationSessions, loadConversationEscalation, type ConversationSessionSummary,
@@ -17,7 +18,7 @@ import { skillById, supportById, isActionableFocusSkill, type ActionableFocusSki
 import { TYPE_LABELS, LEVEL_LABELS, LEVEL_COLORS, LevelPips } from '../components/LevelDisplay';
 import { conversationTopicById } from '../conversationTopics';
 
-const defaultServices={loadSessions,loadLevelSlice,loadDifficulty,loadCoins,loadConfig,loadCustomRewards,parentJournalWrittenToday,parentJournalActivity,loadFloorAlarms,loadStudentProfile,loadConversationSessions,loadConversationEscalation,saveConfig,addCustomReward,deleteCustomReward};
+const defaultServices={loadSessions,loadLevelSlice,loadDifficulty,loadCoins,loadConfig,loadCustomRewards,parentJournalWrittenToday,parentJournalActivity,loadFloorAlarms,loadStudentProfile,loadConversationSessions,loadConversationEscalation,saveConfig,addCustomReward,deleteCustomReward,saveLearningProfile};
 export type ParentDashboardServices=typeof defaultServices;
 const CONVO_ENDED_REASON_LABELS: Record<string, string> = {
   student_exit:'finished by the student',turn_cap: 'reached the chat limit', time_cap: 'reached the time limit', escalation: 'ended early — see below',
@@ -476,6 +477,8 @@ export function ParentDashboard({
               </p>
 
               <p className="text-sm text-muted">School grade: {profile.grade===0?'K':profile.grade} · Reading grade: {profile.reading_level}</p>
+
+              <LearningProfileEditor key={student.id} profile={profile} onSave={async preferences=>{const current=generation.current;const next=await services.saveLearningProfile(student.id,preferences);if(current.active)setProfile(next);}}/>
 
               {profile.focus.length > 0 && (
                 <div>

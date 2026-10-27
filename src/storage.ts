@@ -1,3 +1,4 @@
+import {validateLearningPreferences,type LearningPreferences} from './pilot/preferences';
 import { supabase } from './supabase';
 import { callApi } from './api';
 import type {
@@ -530,4 +531,11 @@ export async function addCustomReward(studentId: string, reward: Omit<CustomRewa
 export async function deleteCustomReward(id: string): Promise<void> {
   const {data,error}=await supabase.from('custom_rewards').delete().eq('id', id).select('id').maybeSingle();
   if(error||!data)throw new Error('Reward was not deleted.');
+}
+
+// Owner-only API update; existing supports, focus, and support-engine state stay intact.
+export async function saveLearningProfile(studentId:string,preferences:LearningPreferences):Promise<StudentProfileInput>{
+ const result=await callApi<{profile:StudentProfileInput}>('/api/profile/save',{action:'update-learning-profile',studentId,preferences:validateLearningPreferences(preferences)});
+ if(!result.profile)throw new Error('The learning profile was not saved.');
+ return result.profile;
 }

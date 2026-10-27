@@ -1,3 +1,4 @@
+import {validateLearningPreferences,PLAIN_LANGUAGE_SUPPORT} from '../../src/pilot/preferences.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyUser } from '../../server/verifyUser.js';
 import { supabaseAsUser } from '../../server/asUser.js';
@@ -14,6 +15,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const owner = await verifyUser(req.headers.authorization);
     if (!owner) return res.status(401).json({ error: 'Unauthorized' });
+
+    if(req.body?.action==='update-learning-profile'){
+      const {studentId}=req.body;
+      if(typeof studentId!=='string'||!studentId)return res.status(400).json({error:'A student is required.'});
+      let preferences;
+      try{preferences=validateLearningPreferences(req.body.preferences);}catch(e){return res.status(400).json({error:(e as Error).message});}
+      const token=String(req.headers.authorization).replace(/^Bearer\s+/i,'');
+      const client=supabaseAsUser(token);
+      const {data:existing,error:readError}=await client.from('student_profiles').select('id,supports').eq('student_id',studentId).eq('owner_id',owner.id).eq('is_active',true).maybeSingle();
+      if(readError)return res.status(503).json({error:'The learning profile could not be loaded.'});
+      if(!existing)return res.status(403).json({error:'Only this learner’s owner can edit their learning profile.'});
+      const supports=(existing.supports??[]).filter((s:string)=>s!==PLAIN_LANGUAGE_SUPPORT);
+      if(preferences.plainLanguage)supports.push(PLAIN_LANGUAGE_SUPPORT);
+      const {data,error}=await client.from('student_profiles').update({grade:preferences.grade,reading_level:preferences.reading_level,interests:preferences.interests,supports}).eq('id',existing.id).eq('owner_id',owner.id).eq('student_id',studentId).eq('is_active',true).select('display_name,grade,reading_level,strengths,focus,supports,session_length_min,interests').maybeSingle();
+      if(error||!data)return res.status(503).json({error:'The learning profile was not saved. Please try again.'});
+      return res.status(200).json({profile:data});
+    }
+    if(req.body?.action)return res.status(400).json({error:'Unknown profile action.'});
 
     const { profile }: { profile?: StudentProfileInput } = req.body ?? {};
     if (!profile) return res.status(400).json({ error: 'Missing profile' });

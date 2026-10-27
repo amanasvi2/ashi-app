@@ -1,10 +1,12 @@
+import {PLAIN_LANGUAGE_SUPPORT} from '../pilot/preferences.js';
 import type { SessionMode } from '../types';
-export type LanguageProfile = {grade?:number|null;reading_level?:number|null}|null|undefined;
+export type LanguageProfile = {grade?:number|null;reading_level?:number|null;supports?:readonly string[]|null}|null|undefined;
 export type WordingBand = 'early'|'middle'|'older';
 // Grade is a context proxy, not a claim about chronological age or ability.
 // Missing profiles always get plain wording. Reading needs can simplify labels
 // without changing the child's age-appropriate situations or adaptive support.
 export function wordingBand(profile:LanguageProfile):WordingBand {
+ if(profile?.supports?.includes(PLAIN_LANGUAGE_SUPPORT))return 'early';
  const grade=profile?.grade;
  if(typeof grade!=='number'||!Number.isInteger(grade)||grade<0||grade>12)return 'early';
  const reading=profile?.reading_level;
@@ -24,5 +26,5 @@ export function languagePrompt(profile:LanguageProfile):string {
  const reading=profile?.reading_level;
  const validReading=typeof reading==='number'&&Number.isFinite(reading)&&reading>=0&&reading<=13;
  const contexts=!validGrade?'everyday activities, home, sharing materials and asking for help':grade<=2?'early elementary activities, home, play, taking turns and asking for help':grade<=5?'elementary school activities, home, group work and friendships':'age-respectful secondary school, home, friendships and group activities';
- return `Use ${contexts}. ${validGrade?`The confirmed school grade is ${grade}; this is not the student's exact age.`:'The age and grade are unknown; do not assume the student is a teenager.'} ${validReading?`Use vocabulary at or below reading grade ${reading}.`:'Use short, concrete sentences and familiar words.'} ${wordingBand(profile)==='older'?'Explain unfamiliar slang instead of assuming the student knows it.':'Avoid slang, internet expressions and unexplained idioms.'} Keep topics respectful of school grade even if reading level is lower. Do not assume gender or diagnosis. Reading level and adaptive difficulty are separate.`;
+ return `Use ${contexts}. ${profile?.supports?.includes(PLAIN_LANGUAGE_SUPPORT)?'The learner or caregiver selected plain language. Always use short concrete directions and familiar words; avoid slang.':''} ${validGrade?`The confirmed school grade is ${grade}; this is not the student's exact age.`:'The age and grade are unknown; do not assume the student is a teenager.'} ${validReading?`Use vocabulary at or below reading grade ${reading}.`:'Use short, concrete sentences and familiar words.'} ${wordingBand(profile)==='older'?'Explain unfamiliar slang instead of assuming the student knows it.':'Avoid slang, internet expressions and unexplained idioms.'} Keep topics respectful of school grade even if reading level is lower. Do not assume gender or diagnosis. Reading level and adaptive difficulty are separate.`;
 }
