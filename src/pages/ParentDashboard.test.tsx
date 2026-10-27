@@ -30,6 +30,7 @@ vi.mock('../storage', () => ({
   parentJournalActivity: async () => [],
   loadConfig: async () => ({ dailyMinimum: 1 }),
   saveConfig: async () => {},
+  saveLearningProfile:async()=>null,
   loadCoins: async () => ({ balance: 0, totalEarned: 0, hintTokens: 0 }),
   loadCustomRewards: async () => [],
   addCustomReward: async () => ({ id: 'x', label: '', emoji: '', url: '', cost: 0 }),

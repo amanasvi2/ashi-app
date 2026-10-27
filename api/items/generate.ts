@@ -176,7 +176,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // fetched through an RLS-scoped client so a kid can only ever read their
     // own row (and a parent calling this, which shouldn't normally happen,
     // just gets no match and falls back to an even split).
-    const {data:profileRow,error:profileError}=await client.from('student_profiles').select('focus,grade,reading_level').eq('student_id',user.id).eq('is_active',true).maybeSingle();
+    const {data:profileRow,error:profileError}=await client.from('student_profiles').select('focus,grade,reading_level,supports').eq('student_id',user.id).eq('is_active',true).maybeSingle();
     if(profileError)return res.status(503).json({error:'Student profile could not be loaded.'});
     let itemTypeWeights: Record<ItemType, number> | undefined;
     if(mode==='mixed'&&profileRow){

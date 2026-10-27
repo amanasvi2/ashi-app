@@ -1,0 +1,13 @@
+import {it,expect,vi,beforeEach} from 'vitest';
+const m=vi.hoisted(()=>({verify:vi.fn(),from:vi.fn()}));vi.mock('./verifyUser.js',()=>({verifyUser:m.verify}));vi.mock('./asUser.js',()=>({supabaseAsUser:()=>({from:m.from})}));
+import handler from '../api/profile/save';
+function query(data:unknown,error:unknown=null){const q:Record<string,ReturnType<typeof vi.fn>>={};for(const k of ['select','eq','update'])q[k]=vi.fn(()=>q);q.maybeSingle=vi.fn(async()=>({data,error}));return q;}
+function response(){return {code:0,body:{} as Record<string,unknown>,status(n:number){this.code=n;return this;},json(b:Record<string,unknown>){this.body=b;return this;}};}
+const preferences={grade:8,reading_level:8,interests:['drawing'],plainLanguage:true};
+beforeEach(()=>{vi.resetAllMocks();m.verify.mockResolvedValue({id:'owner'});});
+async function run(p:unknown=preferences){const res=response();await handler({method:'POST',headers:{authorization:'Bearer fake'},body:{action:'update-learning-profile',studentId:'child',preferences:p}} as never,res as never);return res;}
+it('authorizes the actual owner and updates only allowed fields while preserving other supports',async()=>{const read=query({id:'profile',supports:['read_aloud']});const write=query({grade:8,supports:['read_aloud','plain_language']});m.from.mockReturnValueOnce(read).mockReturnValueOnce(write);expect((await run()).code).toBe(200);expect(read.eq).toHaveBeenCalledWith('owner_id','owner');expect(write.eq).toHaveBeenCalledWith('student_id','child');expect(write.update).toHaveBeenCalledWith({grade:8,reading_level:8,interests:['drawing'],supports:['read_aloud','plain_language']});});
+it('blocks another owner or child before updating anything',async()=>{const read=query(null);m.from.mockReturnValue(read);expect((await run()).code).toBe(403);expect(read.update).not.toHaveBeenCalled();});
+it('removes only the plain-language flag when switched off',async()=>{m.from.mockReturnValueOnce(query({id:'profile',supports:['read_aloud','plain_language']}));const write=query({grade:8,supports:['read_aloud']});m.from.mockReturnValueOnce(write);expect((await run({...preferences,plainLanguage:false})).code).toBe(200);expect(write.update).toHaveBeenCalledWith(expect.objectContaining({supports:['read_aloud']}));});
+it('rejects invalid data without querying the database',async()=>{expect((await run({...preferences,grade:20})).code).toBe(400);expect(m.from).not.toHaveBeenCalled();});
+it('reports storage errors instead of claiming a successful save',async()=>{m.from.mockReturnValueOnce(query({id:'profile',supports:[]})).mockReturnValueOnce(query(null,{message:'denied'}));expect((await run()).code).toBe(503);});
