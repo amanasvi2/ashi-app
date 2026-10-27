@@ -1,5 +1,6 @@
+import {ChildLanguage} from '../language/ChildLanguage';
 import { afterEach,beforeEach,it,expect,vi } from 'vitest';
-import { render,screen,fireEvent,cleanup,waitFor } from '@testing-library/react';
+import { render,screen,fireEvent,cleanup,waitFor,act } from '@testing-library/react';
 const m=vi.hoisted(()=>({loadSessions:vi.fn(),loadLevelSlice:vi.fn(),loadLevelSliceForDisplay:vi.fn(),loadDifficulty:vi.fn(),loadCoins:vi.fn(),loadConfig:vi.fn(),loadCustomRewards:vi.fn(),loadInterests:vi.fn(),saveInterests:vi.fn(),updateKidGender:vi.fn(),loadJournalEntries:vi.fn(),todaysJournalEntry:vi.fn(),saveJournalEntry:vi.fn(),journalWrittenToday:vi.fn(),loadFloorAlarms:vi.fn(),parentJournalWrittenToday:vi.fn(),parentJournalActivity:vi.fn(),loadStudentProfile:vi.fn(),loadConversationSessions:vi.fn(),loadConversationEscalation:vi.fn(),saveConfig:vi.fn(),addCustomReward:vi.fn(),deleteCustomReward:vi.fn()}));
 vi.mock('../auth',()=>({getSession:async()=>({role:'kid',userId:'fake-child',username:'fake'}),signOut:async()=>{},signInKid:vi.fn(),signInParent:vi.fn(),signUpOwner:vi.fn()}));
 vi.mock('../supabase',()=>({supabase:{}}));
@@ -17,10 +18,10 @@ beforeEach(()=>{vi.resetAllMocks();m.loadSessions.mockResolvedValue([]);m.loadLe
 afterEach(cleanup);
 it('opens all four practice modes from the student home',async()=>{
  const start=vi.fn();render(<Home username="fake" onStart={start} onConversation={()=>{}} onLogout={()=>{}} onOpenProfile={()=>{}} onCarryover={()=>{}}/>);
- await screen.findByText('Remix');for(const name of ['Remix','Squad Quest','Vibe Check','Plot Twist'])fireEvent.click(screen.getByRole('button',{name:new RegExp('^'+name)}));
+ await screen.findByText('Play All');for(const name of ['Play All','Friends','People Clues','Story Clues'])fireEvent.click(screen.getByRole('button',{name:new RegExp('^'+name)}));
  expect(new Set(start.mock.calls.map(c=>c[0])).size).toBe(4);
 });
-it('opens conversation and carryover from home',async()=>{const conversation=vi.fn(),carryover=vi.fn();render(<Home username="fake" onStart={()=>{}} onConversation={conversation} onLogout={()=>{}} onOpenProfile={()=>{}} onCarryover={carryover}/>);await screen.findByText('Remix');fireEvent.click(screen.getByRole('button',{name:/Chat with Alex/}));fireEvent.click(screen.getByRole('button',{name:/Quick Play/}));expect(conversation).toHaveBeenCalled();expect(carryover).toHaveBeenCalled();});
+it('opens conversation and carryover from home',async()=>{const conversation=vi.fn(),carryover=vi.fn();render(<Home username="fake" onStart={()=>{}} onConversation={conversation} onLogout={()=>{}} onOpenProfile={()=>{}} onCarryover={carryover}/>);await screen.findByText('Play All');fireEvent.click(screen.getByRole('button',{name:/Chat with Alex/}));fireEvent.click(screen.getByRole('button',{name:/Quick Play/}));expect(conversation).toHaveBeenCalled();expect(carryover).toHaveBeenCalled();});
 it('shows an empty progress page without inventing sessions',async()=>{render(<ProgressPage/>);await screen.findByRole('heading',{name:'Your Progress'});expect(screen.getByText(/No practice sessions yet/i)).toBeTruthy();});
 it('shows stored session scores and mode on progress',async()=>{m.loadSessions.mockResolvedValue([{id:'session',date:new Date().toISOString(),mode:'inference',score:3,maxScore:4,itemCount:4,endedBy:'completed',levelSnapshot:levels.levels,difficultySnapshot:{social:1,nonverbal:2,inference:3}}]);render(<ProgressPage/>);await screen.findByRole('heading',{name:'Recent sessions'});expect(screen.getByText('3 / 4')).toBeTruthy();});
 it('can choose a journal mood, request a prompt, and save writing',async()=>{render(<Journal onBack={()=>{}}/>);const input=await screen.findByPlaceholderText('Write anything you want here…');fireEvent.click(screen.getByRole('button',{name:'Need a prompt?'}));fireEvent.change(input,{target:{value:'Today I asked for more time.'}});fireEvent.click(screen.getByRole('button',{name:'Happy'}));fireEvent.click(screen.getByRole('button',{name:'Save'}));await screen.findByRole('button',{name:'Saved'});expect(m.saveJournalEntry).toHaveBeenCalledWith(expect.objectContaining({mood:'happy',content:'Today I asked for more time.'}));});
@@ -40,12 +41,12 @@ it('shows and expands simulated conversation history',async()=>{m.loadConversati
 it('reports a rejected profile preference save',async()=>{m.updateKidGender.mockRejectedValue(new Error('Denied'));render(<ProfilePanel username="fake" onClose={()=>{}} onLogout={()=>{}}/>);fireEvent.click(await screen.findByRole('button',{name:'Boy'}));await screen.findByRole('alert');});
 
 it('walks the actual student app navigation, journal, profile and sign out with a simulated session',async()=>{
- render(<App/>);await screen.findByText('Remix');
+ render(<App/>);await screen.findByText('Play All');
  fireEvent.click(screen.getAllByRole('button',{name:'Progress'})[0]);await screen.findByRole('heading',{name:'Your Progress'});
  fireEvent.click(screen.getAllByRole('button',{name:'Rewards'})[0]);await screen.findByRole('heading',{name:'Rewards'});
- fireEvent.click(screen.getAllByRole('button',{name:'Home'})[0]);await screen.findByText('Remix');
+ fireEvent.click(screen.getAllByRole('button',{name:'Home'})[0]);await screen.findByText('Play All');
  fireEvent.click(screen.getByRole('button',{name:'Open your journal'}));await screen.findByRole('heading',{name:'Your Journal'});
- fireEvent.click(screen.getByRole('button',{name:'Back'}));await screen.findByText('Remix');
+ fireEvent.click(screen.getByRole('button',{name:'Back'}));await screen.findByText('Play All');
  fireEvent.click(screen.getAllByRole('button',{name:'Open profile'})[0]);await screen.findByRole('heading',{name:'Profile & Settings'});
  fireEvent.click(screen.getByRole('button',{name:'Sign out'}));await screen.findByLabelText('Username');
 });
@@ -55,7 +56,7 @@ it('ignores a late dashboard response from a previous child',async()=>{
  const view=render(<ParentDashboard student={student} onLogout={()=>{}}/>);
  view.rerender(<ParentDashboard student={{...student,id:'fake-b',displayName:'Fake B'}} onLogout={()=>{}}/>);
  await screen.findByText("Fake B's Progress");
- finishOld([{id:'old',date:new Date().toISOString(),mode:'social',score:9,maxScore:9,itemCount:9}]);
+ await act(async()=>finishOld([{id:'old',date:new Date().toISOString(),mode:'social',score:9,maxScore:9,itemCount:9}]));
  await waitFor(()=>expect(screen.queryByText('9 / 9')).toBeNull());
  expect(screen.getByText("Fake B's Progress")).toBeTruthy();
 });
@@ -70,3 +71,34 @@ it.each(['home','progress','journal','profile','roster','parent'])('shows recove
  if(page==='parent')render(<ParentDashboard student={student} onLogout={()=>{}}/>);
  await screen.findByRole('alert');expect(screen.getByRole('button',{name:'Reload ASHI'})).toBeTruthy();
 });
+
+it('ignores a reward save that finishes after switching children',async()=>{
+ let finish!:(value:unknown)=>void;m.addCustomReward.mockReturnValue(new Promise(r=>{finish=r;}));
+ const view=render(<ParentDashboard student={student} onLogout={()=>{}}/>);
+ fireEvent.click(await screen.findByRole('button',{name:'+ Add a video reward'}));
+ fireEvent.change(screen.getByPlaceholderText('Reward name'),{target:{value:'Old child reward'}});
+ fireEvent.change(screen.getByPlaceholderText('YouTube URL'),{target:{value:'https://youtu.be/fake'}});
+ fireEvent.click(screen.getByRole('button',{name:'Add reward'}));
+ view.rerender(<ParentDashboard student={{...student,id:'fake-b',displayName:'Fake B'}} onLogout={()=>{}}/>);
+ await screen.findByText("Fake B's Progress");
+ await act(async()=>finish({id:'old',label:'Old child reward',emoji:'*',url:'https://youtu.be/fake',cost:50}));
+ await waitFor(()=>expect(screen.queryByText('Old child reward')).toBeNull());
+ expect(m.addCustomReward).toHaveBeenCalledWith('fake-a',expect.objectContaining({label:'Old child reward'}));
+});
+it('prevents overlapping daily-goal saves and ignores stale completion after a switch',async()=>{
+ let finish!:()=>void;m.saveConfig.mockReturnValue(new Promise<void>(r=>{finish=r;}));
+ const view=render(<ParentDashboard student={student} onLogout={()=>{}}/>);
+ fireEvent.click(await screen.findByRole('button',{name:'2 sessions'}));
+ expect((screen.getByRole('button',{name:'3 sessions'}) as HTMLButtonElement).disabled).toBe(true);
+ view.rerender(<ParentDashboard student={{...student,id:'fake-b',displayName:'Fake B'}} onLogout={()=>{}}/>);
+ await screen.findByText("Fake B's Progress");await act(async()=>finish());
+ await waitFor(()=>expect(screen.getByRole('button',{name:'1 session'}).getAttribute('aria-pressed')).toBe('true'));
+ expect(m.saveConfig).toHaveBeenCalledTimes(1);
+});
+it('shows an error when a reward deletion fails and keeps the reward visible',async()=>{
+ m.loadCustomRewards.mockResolvedValue([{id:'fake-reward',label:'Keep me',emoji:'*',url:'https://youtu.be/fake',cost:25}]);m.deleteCustomReward.mockRejectedValue(new Error('denied'));
+ render(<ParentDashboard student={student} onLogout={()=>{}}/>);fireEvent.click(await screen.findByRole('button',{name:'Delete reward Keep me'}));
+ await screen.findByText('The reward was not deleted. Please try again.');expect(screen.getByText('Keep me')).toBeTruthy();
+});
+
+it.each([[1,'People Clues'],[8,'Vibe Check']] as const)('uses grade %i wording in the child progress screen',async(grade,label)=>{render(<ChildLanguage profile={{grade,reading_level:grade}}><ProgressPage/></ChildLanguage>);await screen.findByRole('heading',{name:'Your Progress'});expect(screen.getByText(label)).toBeTruthy();expect(screen.queryByText('Nonverbal Cues')).toBeNull();});

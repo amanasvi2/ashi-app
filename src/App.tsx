@@ -1,3 +1,4 @@
+import {StudentLanguage} from './language/ChildLanguage';
 import { PlayLogo } from './design/PlayArt';
 import { useEffect, useState } from 'react';
 import type { SessionMode } from './types';
@@ -55,6 +56,7 @@ export default function App() {
   // to finish setting up from the switcher/roster's banner.
   const [pendingLoginProfile, setPendingLoginProfile] = useState<ProfileSummary | null>(null);
   const [addingStudent, setAddingStudent] = useState(false);
+  const [ownerLoadedFor,setOwnerLoadedFor]=useState<string|null>(null);
   const [parentDataLoading, setParentDataLoading] = useState(false);
   const [page, setPage]       = useState<Page>({ tag: 'home' });
   const [mainTab, setMainTab] = useState<MainTab>('home');
@@ -70,6 +72,7 @@ export default function App() {
       setProfiles([]); setStudents([]); setSelectedStudentId(null); setPendingLoginProfile(null);
       return;
     }
+    let active=true;
     setParentDataLoading(true);
     (async () => {
       const [profs, studs, ot] = await Promise.all([
@@ -77,6 +80,8 @@ export default function App() {
         listMyStudents(session.userId),
         getMyOwnerType(session.userId),
       ]);
+      if(!active)return;
+      setOwnerLoadedFor(session.userId);
       setProfiles(profs);
       setStudents(studs);
       setOwnerType(ot);
@@ -87,7 +92,8 @@ export default function App() {
       // clinician lands on the roster (selectedStudentId stays null).
       if (ot === 'parent' && studs.length > 0) setSelectedStudentId(studs[0].id);
       setParentDataLoading(false);
-    })().catch(()=>{setStartupFailed(true);setParentDataLoading(false);});
+    })().catch(()=>{if(active){setStartupFailed(true);setParentDataLoading(false);}});
+    return()=>{active=false;};
   }, [session]);
 
   const handleLogin = (s: Session) => {
@@ -119,12 +125,12 @@ export default function App() {
   // ── Not logged in ─────────────────────────────────────────────────────────
   if (!session) return <Login onLogin={handleLogin} />;
 
-  if (carryoverStudent) return <CarryoverWorkspace key={carryoverStudent.id} studentId={carryoverStudent.id}
-    studentName={carryoverStudent.name} owner={session.role==='parent'} onBack={()=>setCarryoverStudent(null)}/>;
+  if (carryoverStudent) {const workspace=<CarryoverWorkspace key={carryoverStudent.id} studentId={carryoverStudent.id}
+    studentName={carryoverStudent.name} owner={session.role==='parent'} onBack={()=>setCarryoverStudent(null)}/>;return session.role==='kid'?<StudentLanguage studentId={session.userId}>{workspace}</StudentLanguage>:workspace;}
 
   // ── Parent / clinician view ─────────────────────────────────────────────
   if (session.role === 'parent') {
-    if (parentDataLoading) return <LoadingScreen />;
+    if (parentDataLoading||ownerLoadedFor!==session.userId) return <LoadingScreen />;
 
     if (profiles.length === 0 || addingStudent) {
       return (
@@ -176,7 +182,7 @@ export default function App() {
 
     const currentStudent = students.find(s => s.id === selectedStudentId) ?? students[0];
     return (
-      <ParentDashboard
+      <ParentDashboard key={currentStudent.id}
         onCarryover={()=>setCarryoverStudent({id:currentStudent.id,name:currentStudent.displayName})}
         onLogout={handleLogout}
         student={currentStudent}
@@ -193,23 +199,23 @@ export default function App() {
   // ── Kid: full-screen pages (no nav) ───────────────────────────────────────
   if (page.tag === 'practice') {
     return (
-      <div className="kid-zone kid-screen"><Practice
+      <StudentLanguage studentId={session.userId}><div className="kid-zone kid-screen"><Practice
         mode={page.mode}
         initialLevelSlice={page.levelSlice}
         initialDifficulty={page.difficulty}
         onExit={() => setPage({ tag: 'home' })}
         onComplete={() => setPage({ tag: 'home' })}
-      /></div>
+      /></div></StudentLanguage>
     );
   }
-  if (page.tag === 'conversation') return <div className="kid-zone kid-screen"><Conversation onBack={() => setPage({ tag: 'home' })} /></div>;
-  if (page.tag === 'journal') return <div className="kid-zone kid-screen"><Journal onBack={() => setPage({ tag: 'home' })} /></div>;
+  if (page.tag === 'conversation') return <StudentLanguage studentId={session.userId}><div className="kid-zone kid-screen"><Conversation onBack={() => setPage({ tag: 'home' })} /></div></StudentLanguage>;
+  if (page.tag === 'journal') return <StudentLanguage studentId={session.userId}><div className="kid-zone kid-screen"><Journal onBack={() => setPage({ tag: 'home' })} /></div></StudentLanguage>;
 
   // ── Kid: main tabbed view ─────────────────────────────────────────────────
   const initial = session.username[0]?.toUpperCase() ?? '?';
 
   return (
-    <div className="kid-zone kid-app min-h-screen bg-paper">
+    <StudentLanguage studentId={session.userId}><div className="kid-zone kid-app min-h-screen bg-paper">
 
       {/* Desktop top nav */}
       <nav className="kid-top-nav hidden lg:flex fixed top-0 left-0 right-0 z-30 bg-surface/95 backdrop-blur-sm
@@ -265,6 +271,6 @@ export default function App() {
           onLogout={handleLogout}
         />
       )}
-    </div>
+    </div></StudentLanguage>
   );
 }

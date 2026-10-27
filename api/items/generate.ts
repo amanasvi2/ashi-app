@@ -1,3 +1,4 @@
+import {languagePrompt,type LanguageProfile} from '../../src/language/wording.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyUser } from '../../server/verifyUser.js';
 import { groqChat } from '../../server/groq.js';
@@ -19,6 +20,7 @@ export function buildPrompt(
   requests: { type: ItemType; difficulty: Difficulty }[],
   levels: LevelState,
   interests: string[],
+  profile?:LanguageProfile,
 ): string {
   const interestNote =
     interests.length > 0
@@ -37,12 +39,12 @@ export function buildPrompt(
   const lines = requests.map((r, i) => {
     const typeGuide =
       r.type === 'social'
-        ? `Social problem: 3-5 sentence middle school scenario where someone is left out, misunderstood, or in conflict.
+        ? `Social problem: a short scenario where someone is left out, misunderstood, or in conflict.
    2 questions: (1) "What is the problem?" stem "The problem is that", (2) "Name 2 things [name] could do." stem "One thing [name] could do is".`
         : r.type === 'nonverbal'
-        ? `Nonverbal cue: 3-4 sentences describing specific body language, facial expression, or tone of voice.
+        ? `Nonverbal cue: a short description of specific body language, facial expression, or tone of voice.
    1 question: "What does that mean?" stem "[Name] is probably"`
-        : `Text inference: 4-6 sentence passage where the answer is NOT stated directly.
+        : `Text inference: a short passage where the answer is NOT stated directly.
    1 question whose answer requires inference. Include a short stem.`;
 
     const needsWordBank = levels[r.type] === 2;
@@ -51,13 +53,11 @@ export function buildPrompt(
    ${typeGuide}`;
   });
 
-  return `You are creating practice items for a 13-year-old with autism and a language processing disorder.
-She reads well but struggles with comprehension, social reasoning, and reading nonverbal cues.
+  return `You are creating pragmatic-language practice for a student.
+${languagePrompt(profile)}
 
 STRICT RULES:
-- Scenario text: 5th–6th grade reading level
-- Middle school contexts ONLY: group projects, group chats, lunch tables, hallways, siblings, sports teams
-- NO playgrounds, elementary school, or young-child situations
+- Use brief scenarios and one clear question at a time; preserve the requested inference difficulty.
 - NO idioms, sarcasm, metaphor, or figurative language in question text or answer choices
 - choices[0] is ALWAYS the correct answer (shuffled before display)
 - Wrong choices must be plausible on the surface but clearly wrong on reflection
@@ -176,20 +176,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // fetched through an RLS-scoped client so a kid can only ever read their
     // own row (and a parent calling this, which shouldn't normally happen,
     // just gets no match and falls back to an even split).
+    const {data:profileRow,error:profileError}=await client.from('student_profiles').select('focus,grade,reading_level').eq('student_id',user.id).eq('is_active',true).maybeSingle();
+    if(profileError)return res.status(503).json({error:'Student profile could not be loaded.'});
     let itemTypeWeights: Record<ItemType, number> | undefined;
-    if (mode === 'mixed') {
-      const { data: profileRow } = await client
-        .from('student_profiles')
-        .select('focus')
-        .eq('student_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle();
-      if (profileRow) {
-        let weights = deriveItemTypeWeights(profileRow.focus as string[]);
-        weights = applyMasteryToWeights(weights, mastery);
-        weights = excludeFloorAlarmed(weights, floorAlarm);
-        itemTypeWeights = weights;
-      }
+    if(mode==='mixed'&&profileRow){
+      let weights=deriveItemTypeWeights(profileRow.focus as string[]);
+      weights=applyMasteryToWeights(weights,mastery);
+      itemTypeWeights=excludeFloorAlarmed(weights,floorAlarm);
     }
 
     // Only reviewed, level/difficulty-matched items enter ordinary practice.
@@ -200,7 +193,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (carryover.length > 0) return res.status(200).json({ items: carryover });
 
     const requests = buildRequests(mode, difficulty, count, itemTypeWeights);
-    const text = await groqChat([{ role: 'user', content: buildPrompt(requests, levels, interests) }], {
+    const text = await groqChat([{ role: 'user', content: buildPrompt(requests, levels, interests,profileRow) }], {
       temperature: 0.85,
       maxTokens: 4096,
     });

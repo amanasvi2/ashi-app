@@ -10,12 +10,13 @@ export interface ProfileSummary {
 }
 
 export async function listMyProfiles(ownerId: string): Promise<ProfileSummary[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('student_profiles')
     .select('id, display_name, student_id')
     .eq('owner_id', ownerId)
     .eq('is_active', true)
     .order('created_at', { ascending: true });
+  if(error)throw new Error('Account data could not be loaded.');
   return (data ?? []).map(row => ({ id: row.id, displayName: row.display_name, studentId: row.student_id }));
 }
 
@@ -24,7 +25,8 @@ export async function listMyProfiles(ownerId: string): Promise<ProfileSummary[]>
 // and which owner-facing view App.tsx renders (dashboard+switcher vs. the
 // clinician roster).
 export async function getMyOwnerType(ownerId: string): Promise<OwnerType> {
-  const { data } = await supabase.from('owners').select('owner_type').eq('id', ownerId).maybeSingle();
+  const { data, error } = await supabase.from('owners').select('owner_type').eq('id', ownerId).maybeSingle();
+  if(error)throw new Error('Account data could not be loaded.');
   return (data?.owner_type as OwnerType | undefined) ?? 'parent';
 }
 

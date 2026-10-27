@@ -96,7 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Could not link profile to login' });
     }
 
-    await Promise.all([
+    const initialized=await Promise.all([
       supabaseAdmin.from('parent_config').insert({
         student_id: studentId, daily_minimum: 1, interests: profile.interests ?? [], kid_gender: gender ?? 'other',
       }),
@@ -108,6 +108,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
       supabaseAdmin.from('difficulty_state').insert({ student_id: studentId, state: DEFAULT_DIFFICULTY }),
     ]);
+
+    if(initialized.some(result=>result.error)){
+      // Auth deletion cascades student/state rows and unlinks the retained intake profile.
+      const {error:cleanupError}=await supabaseAdmin.auth.admin.deleteUser(studentId);
+      return res.status(500).json({error:cleanupError?'Account setup is incomplete. Contact support before retrying.':'Could not finish student setup. Please try again.'});
+    }
 
     res.status(200).json({ studentId, username: normalizedUsername, displayName: profile.display_name });
   } catch (err) {

@@ -34,6 +34,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = String(req.headers.authorization).replace(/^Bearer\s+/i, '');
     const client = supabaseAsUser(token);
 
+    const {data:languageProfile,error:languageError}=await client.from('student_profiles').select('grade,reading_level').eq('student_id',user.id).eq('is_active',true).maybeSingle();
+    if(languageError)return res.status(503).json({error:'Student profile could not be loaded.'});
+
     const { sessionId, topicId, message }: { sessionId?: string; topicId?: string; message?: string } = req.body ?? {};
 
     // ── Start a new session ────────────────────────────────────────────
@@ -49,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         opener = await groqChat(
           [
-            { role: 'system', content: buildSystemPrompt(topicId, MAX_TURNS, kidGender) },
+            { role: 'system', content: buildSystemPrompt(topicId, MAX_TURNS, kidGender,languageProfile) },
             { role: 'user', content: 'hey' },
           ],
           { maxTokens: 150 },
@@ -172,7 +175,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       modelReply = await groqChat(
         [
-          { role: 'system', content: buildSystemPrompt(row.topic, turnsRemainingBefore, kidGender) },
+          { role: 'system', content: buildSystemPrompt(row.topic, turnsRemainingBefore, kidGender,languageProfile) },
           ...transcript.map(m => ({ role: m.role, content: m.content })),
           { role: 'user', content: message },
         ],

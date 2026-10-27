@@ -8,11 +8,12 @@ export interface StudentSummary {
 }
 
 export async function listMyStudents(ownerId: string): Promise<StudentSummary[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('students')
     .select('id, username, display_name')
     .eq('owner_id', ownerId)
     .order('created_at', { ascending: true });
+  if(error)throw new Error('Account data could not be loaded.');
   return (data ?? []).map(row => ({ id: row.id, username: row.username, displayName: row.display_name }));
 }
 

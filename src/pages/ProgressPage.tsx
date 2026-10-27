@@ -1,3 +1,4 @@
+import {useChildWording} from '../language/useChildWording';
 import { useEffect, useState } from 'react';
 import type { Difficulty, SessionRecord, ParentConfig, CoinsState, DifficultyState } from '../types';
 import {
@@ -8,7 +9,7 @@ import {
 import { LoadingScreen, LoadFailure } from '../components/LoadingScreen';
 import type { LevelSlice } from '../adaptiveEngine';
 import { initialLevelState } from '../adaptiveEngine';
-import { TYPE_LABELS, LEVEL_LABELS, LEVEL_COLORS, LevelPips } from '../components/LevelDisplay';
+import { LEVEL_LABELS, LEVEL_COLORS, LevelPips } from '../components/LevelDisplay';
 
 const DIFF_LABELS: Record<Difficulty, string>  = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
 // No dedicated hue per difficulty — same neutral chip as the support level,
@@ -52,11 +53,8 @@ function formatDate(iso: string) {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-const MODE_LABELS: Record<string, string> = {
-  mixed: 'Mixed', social: 'Social', nonverbal: 'Nonverbal', inference: 'Inference',
-};
-
 export function ProgressPage() {
+  const {modeLabels}=useChildWording();
   const [loading, setLoading]     = useState(true);
   const [sessions, setSessions]   = useState<SessionRecord[]>([]);
   const [levelSlice, setLevelSlice] = useState<LevelSlice>(initialLevelState);
@@ -143,7 +141,7 @@ export function ProgressPage() {
               return (
                 <div key={key} className="px-5 py-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-ink">{TYPE_LABELS[key]}</span>
+                    <span className="text-sm font-medium text-ink">{modeLabels[key]}</span>
                     <div className="flex items-center gap-2">
                       <LevelPips level={level} />
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-xl ${LEVEL_COLORS[level]}`}>
@@ -185,7 +183,7 @@ export function ProgressPage() {
                   <div key={s.id} className="flex items-center justify-between px-5 py-3.5">
                     <div>
                       <p className="text-sm font-medium text-ink">{formatDate(s.date)}</p>
-                      <p className="text-xs text-muted">{MODE_LABELS[s.mode]}</p>
+                      <p className="text-xs text-muted">{modeLabels[s.mode]}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-ink">{s.score} / {s.maxScore}</p>

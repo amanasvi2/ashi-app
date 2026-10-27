@@ -1,3 +1,4 @@
+import {useChildWording} from '../language/useChildWording';
 import { LoadFailure } from '../components/LoadingScreen';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { Item, SessionMode, AnswerResult, SupportLevel, DifficultyState, WordBankOption, ItemType } from '../types';
@@ -347,7 +348,7 @@ function FinishedScreen({ score, maxScore, mode, coinsEarned, journalDone, floor
   const message =
     pct >= 90 ? 'Excellent work.' : pct >= 70 ? 'Great effort.' :
     pct >= 50 ? 'Good work. Keep going.' : 'Nice try. Every session counts.';
-  const modeLabel = { mixed: 'Remix', social: 'Squad Quest', nonverbal: 'Vibe Check', inference: 'Plot Twist' }[mode];
+  const modeLabel = useChildWording().modeLabels[mode];
 
   return (
     <div className="min-h-screen bg-paper flex items-center justify-center px-4">
@@ -401,6 +402,7 @@ interface Props {
 }
 
 export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, onComplete }: Props) {
+  const words=useChildWording();
   // ── State & refs ──────────────────────────────────────────────────────────
   const [loadFailed,setLoadFailed]=useState(false);
   const [items, setItems]       = useState<Item[]>([]);
@@ -631,7 +633,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  const TYPE_LABELS    = { social: 'Squad Quest', nonverbal: 'Vibe Check', inference: 'Plot Twist' };
+  const TYPE_LABELS=words.modeLabels;
   const DIFF_LABELS    = { 1: 'Straightforward', 2: 'Read carefully', 3: 'Look for clues' };
   const SUPPORT_LABELS: Record<SupportLevel, string> = { 3: 'Most help', 2: 'Word bank', 1: 'Some help', 0: 'Open question' };
 
