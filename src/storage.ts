@@ -23,7 +23,8 @@ async function currentUserId(): Promise<string> {
 export async function loadSessions(studentId?: string): Promise<SessionRecord[]> {
   let query = supabase.from('practice_sessions').select('*').order('date', { ascending: false }).limit(100);
   if (studentId) query = query.eq('student_id', studentId);
-  const { data } = await query;
+  const { data, error } = await query;
+  if (error) throw new Error('Practice history could not be loaded.');
   return (data ?? []).map(row => ({
     id: row.id,
     date: row.date,
@@ -109,11 +110,12 @@ export function calculateStreak(sessions: SessionRecord[]): number {
 // just looking.
 export async function loadLevelSlice(studentId?: string): Promise<LevelSlice> {
   if (studentId) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('level_state')
       .select('levels, streaks, pending')
       .eq('student_id', studentId)
       .maybeSingle();
+    if(error)throw new Error('Support levels could not be loaded.');
     return data
       ? { levels: data.levels, streaks: data.streaks, pending: data.pending }
       : { levels: initialPersistedLevelState.levels, streaks: initialPersistedLevelState.streaks, pending: initialPersistedLevelState.pending };
@@ -163,11 +165,12 @@ export const initialDifficulty: DifficultyState = { social: 1, nonverbal: 1, inf
 
 export async function loadDifficulty(studentId?: string): Promise<DifficultyState> {
   const id = studentId ?? await currentUserId();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('difficulty_state')
     .select('state')
     .eq('student_id', id)
     .maybeSingle();
+  if (error) throw new Error('Difficulty could not be loaded.');
   return data ? (data.state as DifficultyState) : initialDifficulty;
 }
 
@@ -187,23 +190,25 @@ const DEFAULT_FLAGS = { social: false, nonverbal: false, inference: false };
 // about their child, not by the student about themselves (RLS's
 // "parent reads own students' difficulty_state" policy covers this read).
 export async function loadFloorAlarms(studentId: string): Promise<Record<ItemType, boolean>> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('difficulty_state')
     .select('floor_alarm')
     .eq('student_id', studentId)
     .maybeSingle();
+  if (error) throw new Error('Practice alerts could not be loaded.');
   return data?.floor_alarm ?? DEFAULT_FLAGS;
 }
 
 // Same explicit-studentId reasoning as loadFloorAlarms above — the parent
 // dashboard reads this about their child, not about the signed-in user.
 export async function loadStudentProfile(studentId: string): Promise<StudentProfileInput | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('student_profiles')
     .select('display_name, grade, reading_level, strengths, focus, supports, session_length_min, interests')
     .eq('student_id', studentId)
     .eq('is_active', true)
     .maybeSingle();
+  if (error) throw new Error('Student profile could not be loaded.');
   if (!data) return null;
   return {
     display_name: data.display_name,
@@ -280,7 +285,8 @@ export async function parentJournalActivity(
   studentId: string,
   pastDays = 7,
 ): Promise<{ date: string; hasEntry: boolean }[]> {
-  const { data } = await supabase.rpc('journal_activity_for_owner', { p_student_id: studentId });
+  const { data, error } = await supabase.rpc('journal_activity_for_owner', { p_student_id: studentId });
+  if (error) throw new Error('Journal activity could not be loaded.');
   const entryDates = new Set((data ?? []).map((row: { date: string }) => new Date(row.date).toDateString()));
   return Array.from({ length: pastDays }, (_, i) => {
     const d = new Date();
@@ -316,12 +322,13 @@ export interface ConversationSessionSummary {
 
 export async function loadConversationSessions(studentId?: string): Promise<ConversationSessionSummary[]> {
   const id = studentId ?? await currentUserId();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('conversation_sessions')
     .select('id, topic, started_at, ended_at, turn_count, ended_reason, escalation, transcript')
     .eq('student_id', id)
     .order('started_at', { ascending: false })
     .limit(50);
+  if (error) throw new Error('Conversation history could not be loaded.');
   return (data ?? []).map(row => ({
     id: row.id,
     topic: row.topic,
@@ -336,12 +343,13 @@ export async function loadConversationSessions(studentId?: string): Promise<Conv
 
 export async function loadConversationEscalation(studentId?: string): Promise<boolean> {
   const id = studentId ?? await currentUserId();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('conversation_sessions')
     .select('id')
     .eq('student_id', id)
     .eq('escalation', true)
     .limit(1);
+  if (error) throw new Error('Conversation alerts could not be loaded.');
   return (data ?? []).length > 0;
 }
 
@@ -452,19 +460,20 @@ const defaultConfig: ParentConfig = { dailyMinimum: 1 };
 // parent's id, not the student's) silently matched zero rows.
 export async function loadConfig(studentId?: string): Promise<ParentConfig> {
   const id = studentId ?? await currentUserId();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('parent_config')
     .select('daily_minimum, kid_gender')
     .eq('student_id', id)
     .maybeSingle();
+  if (error) throw new Error('Daily goal could not be loaded.');
   return data ? { dailyMinimum: data.daily_minimum, kidGender: data.kid_gender ?? undefined } : defaultConfig;
 }
 
 // Parent-driven (daily goal).
 export async function saveConfig(c: ParentConfig, studentId?: string): Promise<void> {
   const id = studentId ?? await currentUserId();
-  const {error}=await supabase.from('parent_config').update({ daily_minimum: c.dailyMinimum }).eq('student_id', id);
-  if(error)throw new Error('Daily goal was not saved.');
+  const {data,error}=await supabase.from('parent_config').update({ daily_minimum: c.dailyMinimum }).eq('student_id', id).select('student_id').maybeSingle();
+  if(error||!data)throw new Error('Daily goal was not saved.');
 }
 
 // Kid-driven (self-edited via ProfilePanel, same as the original app).
@@ -503,7 +512,8 @@ export async function saveInterests(interests: string[], studentId?: string): Pr
 // *all* of the owner's students, not just the one being viewed.
 export async function loadCustomRewards(studentId?: string): Promise<CustomReward[]> {
   const id = studentId ?? await currentUserId();
-  const { data } = await supabase.from('custom_rewards').select('*').eq('student_id', id);
+  const { data, error } = await supabase.from('custom_rewards').select('*').eq('student_id', id);
+  if (error) throw new Error('Rewards could not be loaded.');
   return (data ?? []).map(row => ({ id: row.id, label: row.label, emoji: row.emoji, url: row.url, cost: row.cost }));
 }
 
@@ -518,6 +528,6 @@ export async function addCustomReward(studentId: string, reward: Omit<CustomRewa
 }
 
 export async function deleteCustomReward(id: string): Promise<void> {
-  const {error}=await supabase.from('custom_rewards').delete().eq('id', id);
-  if(error)throw new Error('Reward was not deleted.');
+  const {data,error}=await supabase.from('custom_rewards').delete().eq('id', id).select('id').maybeSingle();
+  if(error||!data)throw new Error('Reward was not deleted.');
 }

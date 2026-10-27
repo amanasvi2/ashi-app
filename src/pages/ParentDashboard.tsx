@@ -1,6 +1,6 @@
 import { Brand } from '../design/Brand';
 import { LoadFailure } from '../components/LoadingScreen';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Difficulty, CustomReward, ParentConfig, SessionRecord, DifficultyState, CoinsState } from '../types';
 import {
   loadSessions, getTotalScore, practicedToday,
@@ -17,8 +17,10 @@ import { skillById, supportById, isActionableFocusSkill, type ActionableFocusSki
 import { TYPE_LABELS, LEVEL_LABELS, LEVEL_COLORS, LevelPips } from '../components/LevelDisplay';
 import { conversationTopicById } from '../conversationTopics';
 
+const defaultServices={loadSessions,loadLevelSlice,loadDifficulty,loadCoins,loadConfig,loadCustomRewards,parentJournalWrittenToday,parentJournalActivity,loadFloorAlarms,loadStudentProfile,loadConversationSessions,loadConversationEscalation,saveConfig,addCustomReward,deleteCustomReward};
+export type ParentDashboardServices=typeof defaultServices;
 const CONVO_ENDED_REASON_LABELS: Record<string, string> = {
-  turn_cap: 'reached the chat limit', time_cap: 'reached the time limit', escalation: 'ended early — see below',
+  student_exit:'finished by the student',turn_cap: 'reached the chat limit', time_cap: 'reached the time limit', escalation: 'ended early — see below',
 };
 
 // Display-only mirror of server/skillMapping.ts's weight table — which
@@ -88,6 +90,7 @@ function IconTrash() {
 }
 
 interface Props {
+  services?:ParentDashboardServices;
   onCarryover?: () => void;
   onLogout: () => void;
   student: StudentSummary;
@@ -103,10 +106,13 @@ interface Props {
 }
 
 export function ParentDashboard({
-  onLogout, student, students, onSwitchStudent, onAddStudent, onBackToRoster, incompleteProfile, onFinishSetup, onCarryover,
+  services=defaultServices,onLogout, student, students, onSwitchStudent, onAddStudent, onBackToRoster, incompleteProfile, onFinishSetup, onCarryover,
 }: Props) {
+  const {saveConfig,addCustomReward,deleteCustomReward}=services;
   const kidName = student.displayName;
 
+  const generation=useRef({active:false});
+  const [savingGoal,setSavingGoal]=useState(false);
   const [loading, setLoading]   = useState(true);
   const [loadFailed,setLoadFailed]=useState(false);
   const [error,setError] = useState('');
@@ -132,6 +138,9 @@ export function ParentDashboard({
   const [newCost, setNewCost] = useState(50);
 
   useEffect(() => {
+    const current={active:true};generation.current=current;
+    const {loadSessions,loadLevelSlice,loadDifficulty,loadCoins,loadConfig,loadCustomRewards,parentJournalWrittenToday,parentJournalActivity,loadFloorAlarms,loadStudentProfile,loadConversationSessions,loadConversationEscalation}=services;
+    setSavingGoal(false);setSavingReward(false);setShowAddReward(false);setNewLabel('');setNewUrl('');setNewEmoji('🎬');setNewCost(50);
     let active=true;setLoading(true);setLoadFailed(false);setError('');
     (async () => {
       const [s, l, d, c, cfg, rewards, jToday, days, alarms, prof, convos, convoEscalation] = await Promise.all([
@@ -149,40 +158,39 @@ export function ParentDashboard({
       setExpandedConvoId(null);
       setLoading(false);
     })().catch(()=>{if(active){setLoadFailed(true);setLoading(false);}});
-    return()=>{active=false;};
-  }, [student.id]);
+    return()=>{active=false;current.active=false;};
+  }, [student.id,services]);
 
   const totalScore = getTotalScore(sessions);
   const doneToday  = practicedToday(sessions);
 
   const updateDailyMinimum = async (n: number) => {
+    if(savingGoal)return;
+    const current=generation.current;setSavingGoal(true);setError('');
     try {await saveConfig({ ...config, dailyMinimum: n }, student.id);
-    setConfig({ ...config, dailyMinimum: n });}
-    catch {setError('The daily goal was not saved. Please try again.');}
+      if(current.active)setConfig(prev=>({...prev,dailyMinimum:n}));}
+    catch {if(current.active)setError('The daily goal was not saved. Please try again.');}
+    finally {if(current.active)setSavingGoal(false);}
   };
 
   const handleAddReward = async () => {
-    if (!newLabel.trim() || !newUrl.trim()) return;
+    if (!newLabel.trim() || !newUrl.trim() || savingReward) return;
     try { const url=new URL(newUrl.trim());
       if(url.protocol!=='https:' || !['youtube.com','www.youtube.com','m.youtube.com','youtu.be'].includes(url.hostname))throw new Error();
     } catch {setError('Enter a valid HTTPS YouTube link.');return;}
-    if(savingReward)return;
-    setSavingReward(true);setError('');
+    const current=generation.current;setSavingReward(true);setError('');
     try {
-    const reward = await addCustomReward(student.id, {
-      label: newLabel.trim(), emoji: newEmoji, url: newUrl.trim(), cost: newCost,
-    });
-    setCustomRewards([...customRewards, reward]);
-    setNewLabel(''); setNewUrl(''); setNewEmoji('🎬'); setNewCost(50);
-    setShowAddReward(false);
-    } catch {setError('The reward was not saved. Please try again.');}
-    finally {setSavingReward(false);}
+      const reward = await addCustomReward(student.id, {label:newLabel.trim(),emoji:newEmoji,url:newUrl.trim(),cost:newCost});
+      if(!current.active)return;
+      setCustomRewards(prev=>[...prev,reward]);setNewLabel('');setNewUrl('');setNewEmoji('🎬');setNewCost(50);setShowAddReward(false);
+    } catch {if(current.active)setError('The reward was not saved. Please try again.');}
+    finally {if(current.active)setSavingReward(false);}
   };
 
   const handleDeleteReward = async (id: string) => {
-    try {await deleteCustomReward(id);
-    setCustomRewards(customRewards.filter(r => r.id !== id));}
-    catch {setError('The reward was not deleted. Please try again.');}
+    const current=generation.current;setError('');
+    try {await deleteCustomReward(id);if(current.active)setCustomRewards(prev=>prev.filter(r=>r.id!==id));}
+    catch {if(current.active)setError('The reward was not deleted. Please try again.');}
   };
 
   function formatDate(iso: string) {
@@ -290,7 +298,7 @@ export function ParentDashboard({
           <div className="bg-alert/5 border border-alert/25 rounded-xl p-5 space-y-1.5">
             <p className="text-sm font-semibold text-alert">Worth a look</p>
             <p className="text-sm text-ink">
-              {kidName} had a conversation-practice chat where she seemed to be going through something hard.
+              {kidName} had a conversation-practice chat where they seemed to be going through something hard.
               The chat ended early. Check the conversation history below, and it may be worth checking in with her.
             </p>
           </div>
@@ -304,8 +312,8 @@ export function ParentDashboard({
             {(Object.keys(floorAlarms) as ItemType[]).filter(t => floorAlarms[t]).map(t => (
               <p key={t} className="text-sm text-ink">
                 {kidName} is stuck on <span className="font-medium">{TYPE_LABELS[t]}</span> even with full support
-                and the easiest content — practice for it has paused. Consider updating her profile or checking in
-                with her teacher.
+                and the easiest content — practice for it has paused. Consider updating their profile or checking in
+                with their teacher.
               </p>
             ))}
           </div>
@@ -463,9 +471,11 @@ export function ParentDashboard({
             </h2>
             <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5 space-y-5">
               <p className="text-sm text-muted">
-                This comes from what you told us about {kidName} when you set up her profile.
-                It shapes which kinds of questions she gets and how much support she starts with.
+                This comes from what you told us about {kidName} when you set up their profile.
+                It shapes which kinds of questions they get and how much support they start with.
               </p>
+
+              <p className="text-sm text-muted">School grade: {profile.grade===0?'K':profile.grade} · Reading grade: {profile.reading_level}</p>
 
               {profile.focus.length > 0 && (
                 <div>
@@ -523,7 +533,7 @@ export function ParentDashboard({
               {profile.interests.length > 0 && (
                 <div>
                   <p className="text-sm font-semibold text-ink mb-2">Interests</p>
-                  <p className="text-xs text-muted mb-2">Used to make scenarios feel more familiar to her.</p>
+                  <p className="text-xs text-muted mb-2">Used to make scenarios feel more familiar to them.</p>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.interests.map(interest => (
                       <span key={interest} className="text-xs text-ink bg-rule/40 px-2.5 py-1 rounded-xl">
@@ -536,7 +546,7 @@ export function ParentDashboard({
 
               <p className="text-xs text-muted pt-1 border-t border-rule">
                 The support level and question difficulty shown above adjust automatically based on
-                how {kidName} is doing — you don't need to change anything here as she improves.
+                how {kidName} is doing — you don't need to change anything here as they improve.
               </p>
             </div>
           </section>
@@ -576,7 +586,7 @@ export function ParentDashboard({
           <section>
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Conversation history</h2>
             <p className="text-xs text-muted mb-3">
-              {kidName} is told you can read these — that's different from her journal, which always stays private.
+              {kidName} is told you can read these — that's different from their journal, which always stays private.
             </p>
             <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
               {conversations.map(c => {
@@ -630,6 +640,8 @@ export function ParentDashboard({
                 {[1, 2, 3].map(n => (
                   <button
                     key={n}
+                    disabled={savingGoal}
+                    aria-pressed={config.dailyMinimum===n}
                     onClick={() => updateDailyMinimum(n)}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-colors
                       ${config.dailyMinimum === n
@@ -678,6 +690,7 @@ export function ParentDashboard({
                 <p className="text-sm font-semibold text-ink">Add reward</p>
                 <div className="flex gap-2">
                   <input
+                    aria-label="Reward icon"
                     value={newEmoji}
                     onChange={e => setNewEmoji(e.target.value)}
                     maxLength={2}
@@ -685,6 +698,7 @@ export function ParentDashboard({
                     placeholder="🎬"
                   />
                   <input
+                    aria-label="Reward name"
                     value={newLabel}
                     onChange={e => setNewLabel(e.target.value)}
                     placeholder="Reward name"
@@ -693,6 +707,7 @@ export function ParentDashboard({
                   />
                 </div>
                 <input
+                  aria-label="YouTube URL"
                   value={newUrl}
                   onChange={e => setNewUrl(e.target.value)}
                   placeholder="YouTube URL"

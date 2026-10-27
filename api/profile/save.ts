@@ -27,11 +27,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // A Student is a profile (with or without a login yet), so this is
     // the one place a new Student gets created — the cap is checked here,
     // server-side, regardless of what the UI does or doesn't gate on.
-    const [{ data: ownerRow }, { count: activeCount }] = await Promise.all([
+    const [{ data: ownerRow,error:ownerError }, { count: activeCount,error:countError }] = await Promise.all([
       client.from('owners').select('owner_type').eq('id', owner.id).maybeSingle(),
       client.from('student_profiles').select('id', { count: 'exact', head: true })
         .eq('owner_id', owner.id).eq('is_active', true),
     ]);
+    if(ownerError||countError||!Number.isInteger(activeCount))return res.status(503).json({error:'Account limits could not be checked. Please try again.'});
     const ownerType: OwnerType = (ownerRow?.owner_type as OwnerType | undefined) ?? 'parent';
     if (!isUnderStudentCap(activeCount ?? 0, ownerType)) {
       return res.status(409).json({ error: `You've reached the limit of students for this account.` });

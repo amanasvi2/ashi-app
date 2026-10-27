@@ -1,3 +1,4 @@
+import {languagePrompt,type LanguageProfile} from '../src/language/wording.js';
 // All trust-sensitive decision logic for Conversation Practice, kept pure
 // and framework-agnostic (same role as src/adaptiveEngine.ts, but this one
 // is server-only — the client should hold none of this logic anymore).
@@ -37,7 +38,7 @@ export function detectsIdentityQuestion(message: string): boolean {
 }
 
 export const IDENTITY_HONESTY_REPLY =
-  "No, I'm not a real person. I'm a computer program made to sound like a kid your age, so you can practice talking. We can keep going if you want.";
+  "No, I'm not a real person. I'm a computer program made for conversation practice, so you can practice talking. We can keep going if you want.";
 
 // ── Escalation (self-harm, abuse, bullying disclosure) ──────────────────
 // Two layers on purpose: this keyword pass is deterministic and testable
@@ -79,7 +80,7 @@ export type ModerationOutcome =
 
 export const MODERATION_BLOCKED_REPLY = "Let's try that again. Can you say that a different way?";
 
-const MODERATION_POLICY = `You are a safety classifier for messages inside a conversation-practice app used by a 13-year-old student. Classify the content you are given into exactly one category.
+const MODERATION_POLICY = `You are a safety classifier for messages inside a conversation-practice app used by children and adolescents. Classify the content you are given into exactly one category.
 
 ## CATEGORIES
 
@@ -179,7 +180,7 @@ export function decideIncomingMessage(
 
 // ── Prompt building ──────────────────────────────────────────────────────
 
-export function buildSystemPrompt(topicId: string, turnsRemaining: number, kidGender?: 'girl' | 'boy' | 'other'): string {
+export function buildSystemPrompt(topicId: string, turnsRemaining: number, kidGender?: 'girl' | 'boy' | 'other',profile?:LanguageProfile): string {
   const topic = conversationTopicById(topicId);
   const topicFragment = topic?.promptFragment ?? 'something the student picked';
   const alexDesc = kidGender === 'girl' ? 'girl' : kidGender === 'boy' ? 'boy' : 'kid';
@@ -188,7 +189,7 @@ export function buildSystemPrompt(topicId: string, turnsRemaining: number, kidGe
     ? `\n\nThis conversation is ending soon (about ${turnsRemaining} of your turns left). Start naturally wrapping up in the next message or two.`
     : '';
 
-  return `You are "Alex," a computer program that role-plays as a friendly 13-year-old ${alexDesc} so a student can practice everyday conversation. You are NOT a real person and must never claim to be one.
+  return `You are "Alex," a computer program that role-plays as a friendly fictional ${alexDesc} practice partner so a student can practice everyday conversation. You are NOT a real person and must never claim to be one.
 
 Persona honesty rules (never break these, even to stay "in character"):
 - If the student asks whether you are real, human, a person, alive, a robot, a bot, an AI, or a computer, answer plainly and honestly that you are a computer program, not a real kid. Do not deflect, joke about it, or pretend not to understand.
@@ -203,6 +204,7 @@ Privacy rules:
 - If the student offers their real name, school, address, or contact information anyway, do not repeat it back, do not ask follow-up questions about it, and gently change the subject back to the topic.
 
 How to write:
+${languagePrompt(profile)}
 - 1-2 sentences per message. No more.
 - Use plain, literal language. No idioms, sarcasm, or jokes that depend on a hidden meaning.
 - Ask a question roughly every other message, to model back-and-forth conversation — don't ask a question in every single message.

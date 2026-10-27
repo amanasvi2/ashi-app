@@ -1,3 +1,5 @@
+import {languagePrompt,type LanguageProfile} from '../src/language/wording.js';
+import {supabaseAsUser} from '../server/asUser.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyUser } from '../server/verifyUser.js';
 import { groqChat } from '../server/groq.js';
@@ -7,9 +9,10 @@ export interface EvaluationResult {
   feedback: string;
 }
 
-export function buildPrompt(scenario: string, questionText: string, correctAnswer: string, userAnswer: string): string {
+export function buildPrompt(scenario: string, questionText: string, correctAnswer: string, userAnswer: string,profile?:LanguageProfile): string {
   return `You are evaluating a student's typed answer to a reading comprehension / social
-reasoning question, for a 13-year-old with autism and a language processing disorder.
+reasoning question.
+${languagePrompt(profile)}
 There are many valid ways to correctly answer — judge for MEANING, not exact wording.
 
 Scenario:
@@ -54,8 +57,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    const client=supabaseAsUser(String(req.headers.authorization).replace(/^Bearer\s+/i,''));
+    const {data:profile,error:profileError}=await client.from('student_profiles').select('grade,reading_level').eq('student_id',user.id).eq('is_active',true).maybeSingle();
+    if(profileError)return res.status(503).json({error:'Student profile could not be loaded.'});
     const text = await groqChat(
-      [{ role: 'user', content: buildPrompt(scenario, questionText, correctAnswer, userAnswer) }],
+      [{ role: 'user', content: buildPrompt(scenario, questionText, correctAnswer, userAnswer,profile) }],
       { temperature: 0.3, maxTokens: 200 },
     );
 

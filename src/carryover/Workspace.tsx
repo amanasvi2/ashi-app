@@ -1,3 +1,4 @@
+import {useChildWording} from '../language/useChildWording';
 import { PlayBuddy } from '../design/PlayArt';
 import { WorkspaceFrame } from '../design/WorkspaceFrame';
 import { TierPanel } from '../tiers/Panel';
@@ -35,7 +36,7 @@ export function CarryoverWorkspace({studentId,studentName,owner,onBack,transport
   const skills=[...new Set(data.moments.map(m=>m.skill_id))];
   const recentSkills=[...new Set(data.moments.filter(m=>Date.now()-new Date(m.created_at).getTime()<7*86400000).map(m=>m.skill_id))];
   const due=recentSkills.filter(skill=>!data.checks.some(c=>c.skill_id===skill&&c.week===weekKey()));
-  return <WorkspaceFrame owner={owner} studentName={studentName} tab={tab} onTab={setTab} onBack={onBack} pending={data.items.filter(i=>i.status==='pending').length} moments={data.moments.length} due={due.length}>
+  return <WorkspaceFrame owner={owner} studentName={studentName} tab={tab} onTab={next=>{setTab(next);setNotice('');setError('');}} onBack={onBack} pending={data.items.filter(i=>i.status==='pending').length} moments={data.moments.length} due={due.length}>
       {error&&<p role="alert" className="border border-alert p-3">{error}</p>}{notice&&<p role="status">{notice}</p>}
       {tab==='tiers'&&<TierPanel childView={!owner} heading={false} data={data} owner={owner} busy={busy} onSave={assessment=>act({action:'assessment',assessment},'Skill check saved. Tiers updated from the available evidence.')}/>}
       {owner&&tab==='moments'&&<div className="capture-layout">
@@ -117,7 +118,7 @@ function LabPanel({events,transport,studentId,refresh,mission,initialLab}:{initi
   useEffect(()=>{const id=setTimeout(()=>setExpired(true),12*60*1000);return()=>clearTimeout(id);},[]);
   const choices=useMemo(()=>LAB[activity][scene].choices.map((text,index)=>({text,index})).sort(()=>Math.random()-.5),[activity,scene]);
   const s=LAB[activity][scene];const seen=events.some(e=>e.activity===activity&&e.scene===scene);
-  const labels={unfamiliar:'New moves',repair:'Fix a mix-up',interpretations:'Plot twists',tone:'Vibe check'};
+  const labels=useChildWording().labLabels;
   function reset(a:LabActivity,n:number){window.speechSynthesis?.cancel();setActivity(a);setScene(n);setHint(false);setFeedback('');setAnswered(false);}
   useEffect(()=>()=>{window.speechSynthesis?.cancel();},[]);
   if(count>=5||expired)return <section className={`${box} lab-complete`}><PlayBuddy win/><h2>Practice complete</h2><p>Nice exploring. Time for a break!</p><p className="text-sm">{count>0?"Your answers are saved for your grown-up.":"Come back when you’re ready."}</p></section>;

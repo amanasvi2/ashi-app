@@ -138,7 +138,7 @@ export function Login({ onLogin }: { onLogin: (session: Session) => void }) {
   const [tab, setTab] = useState<'parent' | 'kid'>('kid');
 
   return <main className={`login-page ${tab==='kid'?'kid-zone kid-login':''}`}>
-    <header className="login-nav">{tab==='kid'?<PlayLogo/>:<Brand/>}<span>{tab==='kid'?'Big brain energy.':'A little practice, every day.'}</span></header>
+    <header className="login-nav">{tab==='kid'?<PlayLogo/>:<Brand/>}<span>{tab==='kid'?'Find clues. Play your way.':'A little practice, every day.'}</span></header>
     <div className="login-layout"><section className="login-story">{tab==='kid'?<><span className="play-tag">YOUR NEXT QUEST IS WAITING</span><h1>Ready.<br/>Set. <span>Play.</span></h1><p>Find clues. Try new moves. Be you.</p><div className="login-buddy-scene"><PlayBuddy/><span aria-hidden="true" className="login-sticker">LET’S GO!</span></div></>:<><span className="eyebrow">A LITTLE MORE UNDERSTANDING</span><h1>Little moments.<br/><em>Bigger possibilities.</em></h1><p>A space to practice understanding people, finding your words, and feeling ready for everyday life.</p><JourneyIllustration/></>}</section>
     <section className="login-card"><span className="eyebrow">{tab==='kid'?'PLAYER SIGN-IN':'YOUR NEXT SMALL STEP'}</span><h2>{tab==='kid'?'Jump back in.':'Welcome back.'}</h2>{tab==='parent'&&<p className="text-sm text-muted">A little practice can go a long way.</p>}
       <div className="login-role-switch" aria-label="Choose account type"><button aria-pressed={tab==='kid'} onClick={()=>setTab('kid')}>Student</button><button aria-pressed={tab==='parent'} onClick={()=>setTab('parent')}>Parent or clinician</button></div>
