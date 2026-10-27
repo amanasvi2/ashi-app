@@ -142,6 +142,11 @@ export async function loadLevelSlice(studentId?: string): Promise<LevelSlice> {
   return { levels: resolved.levels, streaks: resolved.streaks, pending: resolved.pending };
 }
 
+// Reading progress must not apply changes queued for the next practice session.
+export async function loadLevelSliceForDisplay(): Promise<LevelSlice> {
+  return loadLevelSlice(await currentUserId());
+}
+
 // Called after every answer during a session — levels never change here
 // (see adaptiveEngine.ts's nextLevelState), only streaks and the queued
 // pending change for next session.
@@ -219,8 +224,10 @@ export async function recordAttempt(
   difficulty: number,
   optionCount: number | null,
   result: AnswerResult,
+  item?: { id: string; source?: string; skillId?: string },
 ): Promise<void> {
-  await callApi('/api/record-attempt', { itemType, supportLevel, difficulty, optionCount, result });
+  await callApi('/api/record-attempt', { itemType, supportLevel, difficulty, optionCount, result,
+    source: item?.source ?? 'generated', carryoverItemId: item?.source === 'carryover' ? item.id : undefined });
 }
 
 // ── Journal (kid-private — RLS scopes every row to the student themselves) ─────
@@ -244,7 +251,7 @@ export async function loadJournalEntries(): Promise<JournalEntry[]> {
 
 export async function saveJournalEntry(entry: JournalEntry): Promise<void> {
   const studentId = await currentUserId();
-  await supabase.from('journal_entries').upsert({
+  const { error } = await supabase.from('journal_entries').upsert({
     id: entry.id,
     student_id: studentId,
     date: entry.date,
@@ -252,6 +259,7 @@ export async function saveJournalEntry(entry: JournalEntry): Promise<void> {
     emoji: entry.emoji ?? null,
     content: entry.content,
   });
+  if (error) throw new Error('Journal entry was not saved.');
 }
 
 export async function todaysJournalEntry(): Promise<JournalEntry | null> {
@@ -343,19 +351,21 @@ const defaultCoins: CoinsState = { balance: 0, totalEarned: 0, hintTokens: 0 };
 
 export async function loadCoins(studentId?: string): Promise<CoinsState> {
   const id = studentId ?? await currentUserId();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('coins_state')
     .select('balance, total_earned, hint_tokens')
     .eq('student_id', id)
     .maybeSingle();
+  if (error) throw new Error('Coin balance could not be loaded.');
   return data ? { balance: data.balance, totalEarned: data.total_earned, hintTokens: data.hint_tokens } : defaultCoins;
 }
 
 async function saveCoins(c: CoinsState): Promise<void> {
   const studentId = await currentUserId();
-  await supabase.from('coins_state')
+  const { error } = await supabase.from('coins_state')
     .update({ balance: c.balance, total_earned: c.totalEarned, hint_tokens: c.hintTokens })
     .eq('student_id', studentId);
+  if (error) throw new Error('Coin balance was not saved.');
 }
 
 export async function addCoins(amount: number): Promise<CoinsState> {
@@ -374,6 +384,16 @@ export async function spendCoins(amount: number): Promise<CoinsState | null> {
   const c = await loadCoins();
   if (c.balance < amount) return null;
   const next = { ...c, balance: c.balance - amount };
+  await saveCoins(next);
+  return next;
+}
+
+// Deduct coins and add hints in one persisted update, avoiding half a purchase.
+export async function buyHintTokens(cost: number, count: number): Promise<CoinsState | null> {
+  if (!Number.isInteger(cost) || cost <= 0 || !Number.isInteger(count) || count <= 0) throw new Error('Invalid hint purchase.');
+  const c = await loadCoins();
+  if (c.balance < cost) return null;
+  const next = { ...c, balance:c.balance-cost, hintTokens:c.hintTokens+count };
   await saveCoins(next);
   return next;
 }
@@ -443,13 +463,15 @@ export async function loadConfig(studentId?: string): Promise<ParentConfig> {
 // Parent-driven (daily goal).
 export async function saveConfig(c: ParentConfig, studentId?: string): Promise<void> {
   const id = studentId ?? await currentUserId();
-  await supabase.from('parent_config').update({ daily_minimum: c.dailyMinimum }).eq('student_id', id);
+  const {error}=await supabase.from('parent_config').update({ daily_minimum: c.dailyMinimum }).eq('student_id', id);
+  if(error)throw new Error('Daily goal was not saved.');
 }
 
 // Kid-driven (self-edited via ProfilePanel, same as the original app).
 export async function updateKidGender(gender: 'girl' | 'boy' | 'other', studentId?: string): Promise<void> {
   const id = studentId ?? await currentUserId();
-  await supabase.from('parent_config').update({ kid_gender: gender }).eq('student_id', id);
+  const {error}=await supabase.from('parent_config').update({ kid_gender: gender }).eq('student_id', id);
+  if(error)throw new Error('Partner preference was not saved.');
 }
 
 // ── Interests (student_profiles — kid self-edits these directly) ─────────────
@@ -467,10 +489,11 @@ export async function loadInterests(studentId?: string): Promise<string[]> {
 
 export async function saveInterests(interests: string[], studentId?: string): Promise<void> {
   const id = studentId ?? await currentUserId();
-  await supabase.from('student_profiles')
+  const {error}=await supabase.from('student_profiles')
     .update({ interests })
     .eq('student_id', id)
     .eq('is_active', true);
+  if(error)throw new Error('Interests were not saved.');
 }
 
 // ── Custom rewards ────────────────────────────────────────────────────────────
@@ -495,5 +518,6 @@ export async function addCustomReward(studentId: string, reward: Omit<CustomRewa
 }
 
 export async function deleteCustomReward(id: string): Promise<void> {
-  await supabase.from('custom_rewards').delete().eq('id', id);
+  const {error}=await supabase.from('custom_rewards').delete().eq('id', id);
+  if(error)throw new Error('Reward was not deleted.');
 }

@@ -1,3 +1,4 @@
+import { Brand, JourneyIllustration } from '../design/Brand';
 import { useState } from 'react';
 import { signInParent, signUpOwner, signInKid } from '../auth';
 import type { Session } from '../auth';
@@ -11,10 +12,10 @@ function Field({ label, id, type = 'text', value, onChange, autoComplete }: {
     <div className="space-y-1">
       <label htmlFor={id} className="block text-xs font-medium text-muted">{label}</label>
       <input
-        id={id} type={type} value={value}
+        required id={id} type={type} value={value}
         onChange={e => onChange(e.target.value)}
         autoComplete={autoComplete}
-        className="w-full rounded-[4px] border border-rule bg-surface px-4 py-2.5 text-sm text-ink
+        className="w-full rounded-xl border border-rule bg-surface px-4 py-2.5 text-sm text-ink
                    placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40 transition-colors"
       />
     </div>
@@ -32,14 +33,16 @@ function ParentAuth({ onLogin }: { onLogin: (s: Session) => void }) {
   const handleSubmit = async () => {
     setError('');
     setLoading(true);
+    try {
     const result = mode === 'signin' ? await signInParent(email, password) : await signUpOwner(email, password, ownerType);
-    setLoading(false);
     if (result.error) { setError(result.error); return; }
     if (result.session) onLogin(result.session);
+    } catch { setError('Could not connect. Check your connection and try again.'); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="space-y-4">
+    <form className="space-y-4" onSubmit={e=>{e.preventDefault();if(!loading)void handleSubmit();}}>
       <Field label="Email" id="parent-email" type="email" value={email} onChange={setEmail} autoComplete="username" />
       <Field label="Password" id="parent-password" type="password" value={password} onChange={setPassword}
         autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} />
@@ -52,7 +55,7 @@ function ParentAuth({ onLogin }: { onLogin: (s: Session) => void }) {
                 key={o.v}
                 type="button"
                 onClick={() => setOwnerType(o.v)}
-                className={`flex-1 py-2 rounded-[4px] text-sm border transition-colors
+                className={`flex-1 py-2 rounded-xl text-sm border transition-colors
                   ${ownerType === o.v ? 'bg-accent text-white border-accent font-semibold' : 'border-rule text-ink hover:border-muted'}`}
               >
                 {o.l}
@@ -62,7 +65,7 @@ function ParentAuth({ onLogin }: { onLogin: (s: Session) => void }) {
         </div>
       )}
       {error && (
-        <p className="flex items-start gap-2 text-sm text-ink">
+        <p role="alert" className="flex items-start gap-2 text-sm text-ink">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0">
             <circle cx="12" cy="12" r="2" fill="currentColor" />
           </svg>
@@ -70,21 +73,21 @@ function ParentAuth({ onLogin }: { onLogin: (s: Session) => void }) {
         </p>
       )}
       <button
-        onClick={handleSubmit}
-        onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+        type="submit"
         disabled={loading || !email.trim() || !password}
-        className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover
+        className="w-full py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover
                    disabled:opacity-40 transition-colors"
       >
         {loading ? 'Please wait' : mode === 'signin' ? 'Sign in' : 'Create account'}
       </button>
       <button
+        type="button"
         onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}
         className="w-full text-center text-xs text-muted hover:text-ink transition-colors"
       >
         {mode === 'signin' ? 'New here? Create an account' : 'Already have an account? Sign in'}
       </button>
-    </div>
+    </form>
   );
 }
 
@@ -97,19 +100,21 @@ function KidAuth({ onLogin }: { onLogin: (s: Session) => void }) {
   const handleSubmit = async () => {
     setError('');
     setLoading(true);
+    try {
     const result = await signInKid(username, password);
-    setLoading(false);
     if (result.error) { setError(result.error); return; }
     if (result.session) onLogin(result.session);
+    } catch { setError('Could not connect. Check your connection and try again.'); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="space-y-4">
+    <form className="space-y-4" onSubmit={e=>{e.preventDefault();if(!loading)void handleSubmit();}}>
       <Field label="Username" id="kid-username" value={username} onChange={setUsername} autoComplete="username" />
       <Field label="Password" id="kid-password" type="password" value={password} onChange={setPassword}
         autoComplete="current-password" />
       {error && (
-        <p className="flex items-start gap-2 text-sm text-ink">
+        <p role="alert" className="flex items-start gap-2 text-sm text-ink">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0">
             <circle cx="12" cy="12" r="2" fill="currentColor" />
           </svg>
@@ -117,51 +122,28 @@ function KidAuth({ onLogin }: { onLogin: (s: Session) => void }) {
         </p>
       )}
       <button
-        onClick={handleSubmit}
-        onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+        type="submit"
         disabled={loading || !username.trim() || !password}
-        className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover
+        className="w-full py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover
                    disabled:opacity-40 transition-colors"
       >
         {loading ? 'Please wait' : 'Sign in'}
       </button>
-    </div>
+    </form>
   );
 }
 
 export function Login({ onLogin }: { onLogin: (session: Session) => void }) {
   const [tab, setTab] = useState<'parent' | 'kid'>('kid');
 
-  return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-paper">
-      <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-8 w-full max-w-sm space-y-6">
-        <div className="space-y-1.5">
-          <p className="flex items-center gap-2 text-2xl font-extrabold text-ink tracking-tight">
-            <span className="w-2.5 h-2.5 rounded-[2px] bg-accent" />
-            Ashi
-          </p>
-          <p className="text-xs text-muted">Daily practice understanding stories and people</p>
-        </div>
-
-        <div className="flex gap-2 p-1 bg-paper rounded-[4px] border border-rule">
-          <button
-            onClick={() => setTab('kid')}
-            className={`flex-1 py-2 rounded-[4px] text-sm font-medium transition-colors
-              ${tab === 'kid' ? 'bg-surface text-ink shadow-[var(--shadow-raised)]' : 'text-muted'}`}
-          >
-            Student
-          </button>
-          <button
-            onClick={() => setTab('parent')}
-            className={`flex-1 py-2 rounded-[4px] text-sm font-medium transition-colors
-              ${tab === 'parent' ? 'bg-surface text-ink shadow-[var(--shadow-raised)]' : 'text-muted'}`}
-          >
-            Parent or clinician
-          </button>
-        </div>
-
-        {tab === 'kid' ? <KidAuth onLogin={onLogin} /> : <ParentAuth onLogin={onLogin} />}
-      </div>
-    </div>
-  );
+  return <main className="login-page">
+    <header className="login-nav"><Brand/><span>A little practice, every day.</span></header>
+    <div className="login-layout"><section className="login-story"><span className="eyebrow">A LITTLE MORE UNDERSTANDING</span><h1>Little moments.<br/><em>Bigger possibilities.</em></h1><p>A space to practice understanding people, finding your words, and feeling ready for everyday life.</p><JourneyIllustration/><div className="login-story-note"><span className="note-spark" aria-hidden="true">✳</span><p>There is no one way to grow.<br/><strong>Let’s find the next small step.</strong></p></div></section>
+    <section className="login-card"><span className="eyebrow">YOUR NEXT SMALL STEP</span><h2>Welcome back.</h2><p className="text-sm text-muted">A little practice can go a long way.</p>
+      <div className="login-role-switch" aria-label="Choose account type"><button aria-pressed={tab==='kid'} onClick={()=>setTab('kid')}>Student</button><button aria-pressed={tab==='parent'} onClick={()=>setTab('parent')}>Parent or clinician</button></div>
+      {tab==='kid'?<KidAuth onLogin={onLogin}/>:<ParentAuth onLogin={onLogin}/>}
+      <p className="login-privacy">Practice with a computer partner.<br/>A grown-up can review conversations.</p>
+    </section></div>
+    <footer className="login-footer"><span>At your pace. With the support you need.</span><span>Made for the moments that matter.</span></footer>
+  </main>;
 }

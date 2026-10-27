@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import type { Difficulty, SessionRecord, ParentConfig, CoinsState, DifficultyState } from '../types';
 import {
   loadSessions, getTotalScore, calculateStreak,
-  sessionsTodayCount, loadConfig, loadLevelSlice, loadDifficulty, loadCoins,
+  sessionsTodayCount, loadConfig, loadLevelSliceForDisplay, loadDifficulty, loadCoins,
   initialDifficulty,
 } from '../storage';
-import { LoadingScreen } from '../components/LoadingScreen';
+import { LoadingScreen, LoadFailure } from '../components/LoadingScreen';
 import type { LevelSlice } from '../adaptiveEngine';
 import { initialLevelState } from '../adaptiveEngine';
 import { TYPE_LABELS, LEVEL_LABELS, LEVEL_COLORS, LevelPips } from '../components/LevelDisplay';
@@ -64,16 +64,18 @@ export function ProgressPage() {
   const [coins, setCoins]         = useState<CoinsState>({ balance: 0, totalEarned: 0, hintTokens: 0 });
   const [config, setConfig]       = useState<ParentConfig>({ dailyMinimum: 1 });
 
+  const [loadFailed,setLoadFailed]=useState(false);
   useEffect(() => {
     (async () => {
       const [s, l, d, c, cfg] = await Promise.all([
-        loadSessions(), loadLevelSlice(), loadDifficulty(), loadCoins(), loadConfig(),
+        loadSessions(), loadLevelSliceForDisplay(), loadDifficulty(), loadCoins(), loadConfig(),
       ]);
       setSessions(s); setLevelSlice(l); setDifficulty(d); setCoins(c); setConfig(cfg);
       setLoading(false);
-    })();
+    })().catch(()=>{setLoadFailed(true);setLoading(false);});
   }, []);
 
+  if (loadFailed) return <LoadFailure/>;
   if (loading) return <LoadingScreen />;
 
   const streak      = calculateStreak(sessions);
@@ -93,17 +95,17 @@ export function ProgressPage() {
 
         {/* Summary chips */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-4 text-center space-y-0.5">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-4 text-center space-y-0.5">
             <p className="text-2xl font-bold text-accent">{totalScore}</p>
             <p className="text-[10px] text-muted font-medium uppercase tracking-wide">Total pts</p>
           </div>
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-4 text-center space-y-0.5">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-4 text-center space-y-0.5">
             <p className="flex items-center justify-center gap-1.5 text-2xl font-bold text-ink">
               {streak > 0 ? <><IconStreak />{streak}</> : <span className="text-muted">—</span>}
             </p>
             <p className="text-[10px] text-muted font-medium uppercase tracking-wide">Day streak</p>
           </div>
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-4 text-center space-y-0.5">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-4 text-center space-y-0.5">
             <p className="flex items-center justify-center gap-1.5 text-2xl font-bold text-ink">
               <IconCoin />{coins.balance}
             </p>
@@ -112,16 +114,16 @@ export function ProgressPage() {
         </div>
 
         {/* Daily goal */}
-        <section className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
+        <section className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-ink">Today's goal</h2>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-[4px] bg-rule/40 text-ink">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-xl bg-rule/40 text-ink">
               {todayCount} / {config.dailyMinimum} done
             </span>
           </div>
           <div className="flex gap-2">
             {Array.from({ length: config.dailyMinimum }).map((_, i) => (
-              <div key={i} className={`h-2.5 flex-1 rounded-[4px] transition-all ${i < todayCount ? 'bg-accent' : 'bg-rule'}`} />
+              <div key={i} className={`h-2.5 flex-1 rounded-xl transition-all ${i < todayCount ? 'bg-accent' : 'bg-rule'}`} />
             ))}
           </div>
           {todayCount > config.dailyMinimum && (
@@ -134,7 +136,7 @@ export function ProgressPage() {
         {/* Skill levels */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Skill levels</h2>
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
             {(['social', 'nonverbal', 'inference'] as const).map(key => {
               const level  = levels[key];
               const diff   = difficulty[key];
@@ -144,14 +146,14 @@ export function ProgressPage() {
                     <span className="text-sm font-medium text-ink">{TYPE_LABELS[key]}</span>
                     <div className="flex items-center gap-2">
                       <LevelPips level={level} />
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-[4px] ${LEVEL_COLORS[level]}`}>
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-xl ${LEVEL_COLORS[level]}`}>
                         {LEVEL_LABELS[level]}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-xs text-muted">Questions:</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-[4px] ${DIFF_COLORS[diff]}`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-xl ${DIFF_COLORS[diff]}`}>
                       {DIFF_LABELS[diff]}
                     </span>
                   </div>
@@ -163,8 +165,8 @@ export function ProgressPage() {
 
         {/* Hint tokens */}
         {coins.hintTokens > 0 && (
-          <div className="bg-surface border border-rule shadow-[var(--shadow-raised)] rounded-[4px] p-4 flex items-center gap-3">
-            <span className="w-10 h-10 rounded-[4px] bg-accent/10 text-accent flex items-center justify-center shrink-0"><IconHint /></span>
+          <div className="bg-surface border border-rule shadow-[var(--shadow-raised)] rounded-xl p-4 flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0"><IconHint /></span>
             <div>
               <p className="text-sm font-semibold text-ink">{coins.hintTokens} hint token{coins.hintTokens !== 1 ? 's' : ''} ready</p>
               <p className="text-xs text-muted">Use them during practice to see extra choices.</p>
@@ -176,7 +178,7 @@ export function ProgressPage() {
         {sessions.length > 0 ? (
           <section>
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Recent sessions</h2>
-            <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
+            <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
               {sessions.slice(0, 10).map(s => {
                 const pct = s.maxScore > 0 ? Math.round((s.score / s.maxScore) * 100) : 0;
                 return (

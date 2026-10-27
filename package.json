@@ -14,7 +14,8 @@
     "items:review": "node review/server.js",
     "items:report": "node scripts/items-report.js",
     "items:export-fewshot": "npx tsx scripts/items-export-fewshot.ts",
-    "items:golden-test": "set -a && . ./.env.local && set +a && npx tsx scripts/items-golden-test.ts"
+    "items:golden-test": "set -a && . ./.env.local && set +a && npx tsx scripts/items-golden-test.ts",
+    "test:carryover-db": "node scripts/carryover-db-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
@@ -22,6 +23,7 @@
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.12",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^24.13.2",

@@ -1,7 +1,8 @@
+import { Brand } from '../design/Brand';
 import { useEffect, useState } from 'react';
 import type { SessionMode, SessionRecord, ParentConfig, CoinsState } from '../types';
 import { loadSessions, calculateStreak, sessionsTodayCount, loadConfig, loadCoins, journalWrittenToday } from '../storage';
-import { LoadingScreen } from '../components/LoadingScreen';
+import { LoadingScreen, LoadFailure } from '../components/LoadingScreen';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -68,11 +69,11 @@ function ModeCard({ mode, label, description, icon, onStart }: {
   return (
     <button
       onClick={() => onStart(mode)}
-      className="flex items-center gap-3.5 px-4 py-4 bg-surface rounded-[4px] border border-rule text-left w-full
+      className="flex items-center gap-3.5 px-4 py-4 bg-surface rounded-xl border border-rule text-left w-full
                  shadow-[var(--shadow-raised)] hover:border-accent/40
                  active:scale-[0.98] transition-all duration-150"
     >
-      <span className="w-10 h-10 rounded-[4px] bg-accent/10 text-accent flex items-center justify-center shrink-0">{icon}</span>
+      <span className="w-10 h-10 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-ink">{label}</p>
         <p className="text-xs text-muted mt-0.5">{description}</p>
@@ -85,6 +86,7 @@ function ModeCard({ mode, label, description, icon, onStart }: {
 // ── Home ──────────────────────────────────────────────────────────────────────
 
 interface Props {
+  onCarryover?: () => void;
   username: string;
   onStart: (mode: SessionMode) => void;
   onConversation: () => void;
@@ -92,21 +94,23 @@ interface Props {
   onOpenProfile: () => void;
 }
 
-export function Home({ username, onStart, onConversation, onOpenProfile }: Props) {
+export function Home({ username, onStart, onConversation, onOpenProfile, onCarryover }: Props) {
   const [loading, setLoading]   = useState(true);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [config, setConfig]     = useState<ParentConfig>({ dailyMinimum: 1 });
   const [coins, setCoins]       = useState<CoinsState>({ balance: 0, totalEarned: 0, hintTokens: 0 });
   const [journalDone, setJournalDone] = useState(false);
 
+  const [loadFailed,setLoadFailed]=useState(false);
   useEffect(() => {
     (async () => {
       const [s, c, co, j] = await Promise.all([loadSessions(), loadConfig(), loadCoins(), journalWrittenToday()]);
       setSessions(s); setConfig(c); setCoins(co); setJournalDone(j);
       setLoading(false);
-    })();
+    })().catch(()=>{setLoadFailed(true);setLoading(false);});
   }, []);
 
+  if (loadFailed) return <LoadFailure/>;
   if (loading) return <LoadingScreen />;
 
   const streak      = calculateStreak(sessions);
@@ -116,9 +120,10 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
   const initial = username[0]?.toUpperCase() ?? '?';
 
   return (
-    <div className="min-h-screen bg-paper pb-24 lg:pb-8">
+    <div className="student-home min-h-screen bg-paper pb-24 lg:pb-8">
       <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto px-4 md:px-6 lg:px-8 py-6 space-y-6">
 
+        <div className="lg:hidden"><Brand small/></div>
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -129,17 +134,17 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
           </div>
           <div className="flex items-center gap-2">
             {coins.balance > 0 && (
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-ink bg-rule/40 px-2.5 py-1.5 rounded-[4px]">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-ink bg-rule/40 px-2.5 py-1.5 rounded-xl">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 {coins.balance}
               </span>
             )}
             {streak > 0 && (
-              <span className="text-xs font-semibold text-muted bg-rule/40 px-2.5 py-1.5 rounded-[4px]">{streak}d streak</span>
+              <span className="text-xs font-semibold text-muted bg-rule/40 px-2.5 py-1.5 rounded-xl">{streak}d streak</span>
             )}
             <button
               onClick={onOpenProfile}
-              className="lg:hidden w-9 h-9 rounded-[4px] bg-accent/10 text-accent font-bold text-sm
+              className="lg:hidden w-9 h-9 rounded-xl bg-accent/10 text-accent font-bold text-sm
                          flex items-center justify-center hover:bg-accent/20 transition-colors"
             >
               {initial}
@@ -147,17 +152,18 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
           </div>
         </div>
 
+        <section className="student-welcome"><span className="eyebrow">ONE SMALL STEP AT A TIME</span><h2>What would you like<br/>to practice today?</h2><p>Choose something that feels useful. We’ll take it at your pace.</p></section>
         {/* Daily goal bar */}
-        <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] px-5 py-4">
+        <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] px-5 py-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-ink">Today's goal</p>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-[4px] bg-rule/40 text-ink">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-xl bg-rule/40 text-ink">
               {todayCount} / {config.dailyMinimum} done
             </span>
           </div>
           <div className="flex gap-2">
             {Array.from({ length: config.dailyMinimum }).map((_, i) => (
-              <div key={i} className={`h-1.5 flex-1 rounded-[4px] transition-all ${i < todayCount ? 'bg-accent' : 'bg-rule'}`} />
+              <div key={i} className={`h-1.5 flex-1 rounded-xl transition-all ${i < todayCount ? 'bg-accent' : 'bg-rule'}`} />
             ))}
           </div>
           {todayCount > config.dailyMinimum && (
@@ -173,7 +179,7 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
         {/* Practice sessions */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Start a session</h2>
-          <div className="space-y-2">
+          <div className="practice-mode-grid">
             {MODE_CONFIG.map(cfg => (
               <ModeCard key={cfg.mode} {...cfg} onStart={onStart} />
             ))}
@@ -181,9 +187,12 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
         </section>
 
         {/* Talk with Alex */}
-        <section className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
+        {onCarryover&&<button onClick={onCarryover} className="w-full p-5 text-left bg-surface border border-accent rounded-xl">
+          <span className="block font-semibold">My practice lab and missions</span><span className="text-sm text-muted">Try new situations, fix mix-ups, and choose your goal.</span>
+        </button>}
+        <section className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5">
           <div className="flex items-start gap-4 mb-4">
-            <div className="w-10 h-10 rounded-[4px] bg-accent text-white flex items-center justify-center font-bold text-base shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center font-bold text-base shrink-0">
               A
             </div>
             <div>
@@ -195,7 +204,7 @@ export function Home({ username, onStart, onConversation, onOpenProfile }: Props
           </div>
           <button
             onClick={onConversation}
-            className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white
+            className="w-full py-3 rounded-xl text-sm font-semibold bg-accent text-white
                        hover:bg-accent-hover transition-colors flex items-center justify-center gap-2"
           >
             <IconChat />

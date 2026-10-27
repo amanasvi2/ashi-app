@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JournalMood, JournalEntry } from '../types';
 import { loadJournalEntries, saveJournalEntry, todaysJournalEntry } from '../storage';
-import { LoadingScreen } from '../components/LoadingScreen';
+import { LoadingScreen, LoadFailure } from '../components/LoadingScreen';
 
 // ── Mood icons ────────────────────────────────────────────────────────────────
 // Word + line icon per mood, not a face — one neutral highlight style for
@@ -103,6 +103,8 @@ function TodayEditor({ existing, onSave }: {
   const [content, setContent] = useState(existing?.content ?? '');
   const [extraEmoji, setExtraEmoji] = useState(existing?.emoji ?? '');
   const [saved, setSaved]     = useState(!!existing);
+  const [saving,setSaving] = useState(false);
+  const [saveError,setSaveError] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const [activePrompt, setActivePrompt] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -114,7 +116,8 @@ function TodayEditor({ existing, onSave }: {
   };
 
   const handleSave = async () => {
-    if (!content.trim()) return;
+    if (!content.trim() || saving) return;
+    setSaving(true);setSaveError('');
     const entry: JournalEntry = {
       id: existing?.id ?? crypto.randomUUID(),
       date: existing?.date ?? new Date().toISOString(),
@@ -122,16 +125,19 @@ function TodayEditor({ existing, onSave }: {
       emoji: extraEmoji || undefined,
       content: content.trim(),
     };
-    await saveJournalEntry(entry);
-    await onSave(entry);
-    setSaved(true);
+    try {
+      await saveJournalEntry(entry);
+      await onSave(entry);
+      setSaved(true);
+    } catch { setSaveError('Your entry was not confirmed saved. Your writing is still here; please try again.'); }
+    finally { setSaving(false); }
   };
 
   const handleChange = (v: string) => { setContent(v); setSaved(false); };
   const handleMood = (m: JournalMood) => { setMood(m); setSaved(false); };
 
   return (
-    <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5 space-y-5">
+    <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5 space-y-5">
       {/* Privacy note */}
       <div className="flex items-center gap-1.5 text-xs text-muted">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -149,7 +155,7 @@ function TodayEditor({ existing, onSave }: {
               key={m}
               onClick={() => handleMood(m)}
               title={MOOD_LABELS[m]}
-              className={`flex flex-col items-center gap-1 p-2 rounded-[4px] border text-center transition-colors
+              className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-center transition-colors
                 ${mood === m ? 'border-accent bg-accent/10 text-accent font-semibold' : 'border-rule text-muted hover:border-muted'}`}
             >
               <MoodIcon mood={m} />
@@ -171,12 +177,12 @@ function TodayEditor({ existing, onSave }: {
           </button>
         </div>
         {showPicker && (
-          <div className="grid grid-cols-8 gap-1 p-3 bg-paper rounded-[4px] border border-rule">
+          <div className="grid grid-cols-8 gap-1 p-3 bg-paper rounded-xl border border-rule">
             {EMOJI_GRID.map(e => (
               <button
                 key={e}
                 onClick={() => { setExtraEmoji(extraEmoji === e ? '' : e); setShowPicker(false); setSaved(false); }}
-                className={`text-xl p-1 rounded-[4px] transition-colors hover:bg-surface
+                className={`text-xl p-1 rounded-xl transition-colors hover:bg-surface
                   ${extraEmoji === e ? 'bg-accent/10' : ''}`}
               >
                 {e}
@@ -189,7 +195,7 @@ function TodayEditor({ existing, onSave }: {
       {/* Writing area */}
       <div className="space-y-2">
         {activePrompt && (
-          <p className="text-xs text-accent bg-accent/5 rounded-[4px] px-3 py-2">{activePrompt}</p>
+          <p className="text-xs text-accent bg-accent/5 rounded-xl px-3 py-2">{activePrompt}</p>
         )}
         <textarea
           ref={textareaRef}
@@ -197,7 +203,7 @@ function TodayEditor({ existing, onSave }: {
           onChange={e => handleChange(e.target.value)}
           rows={5}
           placeholder="Write anything you want here…"
-          className="w-full rounded-[4px] border border-rule px-4 py-3 text-sm text-ink
+          className="w-full rounded-xl border border-rule px-4 py-3 text-sm text-ink
                      placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40 resize-none"
         />
       </div>
@@ -220,14 +226,15 @@ function TodayEditor({ existing, onSave }: {
           )}
           <button
             onClick={handleSave}
-            disabled={!content.trim() || saved}
-            className="px-5 py-2 rounded-[4px] text-sm font-semibold bg-accent text-white
+            disabled={!content.trim() || saved || saving}
+            className="px-5 py-2 rounded-xl text-sm font-semibold bg-accent text-white
                        hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {saved ? 'Saved' : 'Save'}
+            {saving?'Saving…':saved ? 'Saved' : 'Save'}
           </button>
         </div>
       </div>
+      {saveError&&<p role="alert">{saveError}</p>}
     </div>
   );
 }
@@ -241,7 +248,7 @@ function PastEntry({ entry }: { entry: JournalEntry }) {
 
   return (
     <div
-      className="bg-surface rounded-[4px] border border-rule px-5 py-4 cursor-pointer hover:border-muted/50 transition-colors"
+      className="bg-surface rounded-xl border border-rule px-5 py-4 cursor-pointer hover:border-muted/50 transition-colors"
       onClick={() => setExpanded(e => !e)}
     >
       <div className="flex items-center justify-between">
@@ -278,12 +285,13 @@ export function Journal({ onBack }: Props) {
   const [todayEntry, setTodayEntry] = useState<JournalEntry | null>(null);
   const [allEntries, setAllEntries] = useState<JournalEntry[]>([]);
 
+  const [loadFailed,setLoadFailed]=useState(false);
   useEffect(() => {
     (async () => {
       const [t, all] = await Promise.all([todaysJournalEntry(), loadJournalEntries()]);
       setTodayEntry(t); setAllEntries(all);
       setLoading(false);
-    })();
+    })().catch(()=>{setLoadFailed(true);setLoading(false);});
   }, []);
 
   const streak = calcJournalStreak(allEntries);
@@ -298,6 +306,7 @@ export function Journal({ onBack }: Props) {
     e => new Date(e.date).toDateString() !== new Date().toDateString()
   );
 
+  if (loadFailed) return <LoadFailure/>;
   if (loading) return <LoadingScreen />;
 
   return (
@@ -320,7 +329,7 @@ export function Journal({ onBack }: Props) {
             <p className="text-xs text-muted mt-0.5">{today}</p>
           </div>
           {streak > 0 && (
-            <div className="flex flex-col items-center gap-0.5 bg-surface border border-rule shadow-[var(--shadow-raised)] rounded-[4px] px-4 py-2.5">
+            <div className="flex flex-col items-center gap-0.5 bg-surface border border-rule shadow-[var(--shadow-raised)] rounded-xl px-4 py-2.5">
               <span className="text-ink"><IconStreak /></span>
               <span className="text-base font-bold text-ink leading-none">{streak}</span>
               <span className="text-[10px] text-muted font-medium">{streak === 1 ? 'day' : 'days'}</span>

@@ -120,14 +120,14 @@ export function IntakeFlow({ onDone }: Props) {
 
   return (
     <div className="min-h-screen bg-paper flex items-center justify-center px-4 py-10">
-      <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-8 w-full max-w-lg space-y-6">
+      <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-8 w-full max-w-lg space-y-6">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Tell us about your child</p>
           <p className="text-sm text-muted">{step === 'describe' ? 'Step 1 of 2' : 'Step 2 of 2, review'}</p>
         </div>
 
         {error && (
-          <p className="flex items-start gap-2 text-sm text-ink bg-paper rounded-[4px] border border-rule px-4 py-2.5">
+          <p className="flex items-start gap-2 text-sm text-ink bg-paper rounded-xl border border-rule px-4 py-2.5">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0">
               <circle cx="12" cy="12" r="2" fill="currentColor" />
             </svg>
@@ -142,13 +142,13 @@ export function IntakeFlow({ onDone }: Props) {
               onChange={e => updateDescription(e.target.value)}
               rows={8}
               placeholder="Tell us about your child. What are they good at, what's hard for them, and what helps them learn? A few sentences is plenty, or paste anything useful from a school report or IEP."
-              className="w-full rounded-[4px] border border-rule px-4 py-3 text-sm text-ink placeholder:text-muted
+              className="w-full rounded-xl border border-rule px-4 py-3 text-sm text-ink placeholder:text-muted
                          focus:outline-none focus:ring-2 focus:ring-accent/40 resize-none"
             />
             <button
               onClick={handleContinue}
               disabled={extracting || description.trim().length < 5}
-              className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover
+              className="w-full py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover
                          disabled:opacity-40 transition-colors"
             >
               {extracting ? 'Reading that' : 'Continue →'}
@@ -160,24 +160,24 @@ export function IntakeFlow({ onDone }: Props) {
           <div className="space-y-5">
             <div className="space-y-1">
               <label className="block text-xs font-medium text-muted">Her name or nickname</label>
-              <input value={profile.display_name} onChange={e => setProfile(p => ({ ...p, display_name: e.target.value }))}
-                className="w-full rounded-[4px] border border-rule px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/40" />
+              <input aria-label="Name or nickname" value={profile.display_name} onChange={e => setProfile(p => ({ ...p, display_name: e.target.value }))}
+                className="w-full rounded-xl border border-rule px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/40" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-muted">Grade (0 means kindergarten)</label>
-                <input type="number" min={0} max={12} value={Number.isFinite(profile.grade) ? profile.grade : ''}
+                <input aria-label="Grade" type="number" min={0} max={12} value={Number.isFinite(profile.grade) ? profile.grade : ''}
                   onChange={e => setProfile(p => ({ ...p, grade: e.target.value === '' ? NaN : Number(e.target.value) }))}
-                  className="w-full rounded-[4px] border border-rule px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/40" />
+                  className="w-full rounded-xl border border-rule px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/40" />
               </div>
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-muted">Reading level</label>
-                <input type="number" step={0.1} min={0} max={13}
+                <input aria-label="Reading level" type="number" step={0.1} min={0} max={13}
                   value={Number.isFinite(profile.reading_level) ? profile.reading_level : ''}
                   placeholder={Number.isFinite(profile.grade) ? String(profile.grade) : ''}
                   onChange={e => setProfile(p => ({ ...p, reading_level: e.target.value === '' ? NaN : Number(e.target.value) }))}
-                  className="w-full rounded-[4px] border border-rule px-4 py-2.5 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40" />
+                  className="w-full rounded-xl border border-rule px-4 py-2.5 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40" />
               </div>
             </div>
 
@@ -190,7 +190,7 @@ export function IntakeFlow({ onDone }: Props) {
                     <div className="flex flex-wrap gap-1.5">
                       {skillsByDomain(domain).map(s => (
                         <button key={s.id} onClick={() => toggleStrength(s.id)}
-                          className={`px-2.5 py-1 rounded-[4px] text-xs border transition-colors
+                          className={`px-2.5 py-1 rounded-xl text-xs border transition-colors
                             ${profile.strengths.includes(s.id) ? 'bg-accent/10 border-accent text-accent font-medium' : 'border-rule text-ink hover:border-muted'}`}>
                           {s.label}
                         </button>
@@ -212,7 +212,7 @@ export function IntakeFlow({ onDone }: Props) {
                   return (
                     <button key={s.id} onClick={() => toggleFocus(s.id)}
                       disabled={!selected && profile.focus.length >= MAX_FOCUS_SKILLS}
-                      className={`px-2.5 py-1 rounded-[4px] text-xs border transition-colors flex items-center gap-1
+                      className={`px-2.5 py-1 rounded-xl text-xs border transition-colors flex items-center gap-1
                         ${selected ? 'bg-accent text-white border-accent font-medium' : 'border-rule text-ink hover:border-muted'}
                         disabled:opacity-40`}>
                       {s.label}
@@ -239,7 +239,7 @@ export function IntakeFlow({ onDone }: Props) {
               <div className="flex flex-wrap gap-1.5">
                 {SUPPORTS.map(s => (
                   <button key={s.id} onClick={() => toggleSupport(s.id)}
-                    className={`px-2.5 py-1 rounded-[4px] text-xs border transition-colors
+                    className={`px-2.5 py-1 rounded-xl text-xs border transition-colors
                       ${profile.supports.includes(s.id) ? 'bg-accent/10 border-accent text-accent font-medium' : 'border-rule text-ink hover:border-muted'}`}>
                     {s.label}
                   </button>
@@ -253,7 +253,7 @@ export function IntakeFlow({ onDone }: Props) {
               </label>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {profile.interests.map(i => (
-                  <span key={i} className="px-2.5 py-1 rounded-[4px] text-xs bg-accent/10 text-accent font-medium flex items-center gap-1.5">
+                  <span key={i} className="px-2.5 py-1 rounded-xl text-xs bg-accent/10 text-accent font-medium flex items-center gap-1.5">
                     {i}
                     <button onClick={() => removeInterest(i)} aria-label={`Remove ${i}`} className="text-accent/70 hover:text-accent">×</button>
                   </span>
@@ -263,8 +263,8 @@ export function IntakeFlow({ onDone }: Props) {
                 <input value={newInterest} onChange={e => setNewInterest(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addInterest(); } }}
                   placeholder="Minecraft, horses, drawing"
-                  className="flex-1 rounded-[4px] border border-rule px-4 py-2 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40" />
-                <button onClick={addInterest} className="px-4 py-2 rounded-[4px] text-sm font-semibold border border-rule text-ink hover:border-muted">
+                  className="flex-1 rounded-xl border border-rule px-4 py-2 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40" />
+                <button onClick={addInterest} className="px-4 py-2 rounded-xl text-sm font-semibold border border-rule text-ink hover:border-muted">
                   Add
                 </button>
               </div>
@@ -278,7 +278,7 @@ export function IntakeFlow({ onDone }: Props) {
               <div className="flex gap-2">
                 {[5, 10, 15, 20, 30].map(n => (
                   <button key={n} onClick={() => setProfile(p => ({ ...p, session_length_min: n }))}
-                    className={`flex-1 py-2 rounded-[4px] text-sm font-semibold border transition-colors
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors
                       ${profile.session_length_min === n ? 'bg-accent text-white border-accent' : 'border-rule text-ink hover:border-muted'}`}>
                     {n}m
                   </button>
@@ -288,11 +288,11 @@ export function IntakeFlow({ onDone }: Props) {
 
             <div className="flex gap-3">
               <button onClick={() => setStep('describe')}
-                className="flex-1 py-3 rounded-[4px] text-sm font-semibold border border-rule text-ink hover:border-muted">
+                className="flex-1 py-3 rounded-xl text-sm font-semibold border border-rule text-ink hover:border-muted">
                 ← Back
               </button>
               <button onClick={handleConfirm} disabled={saving || !canConfirm}
-                className="flex-1 py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover disabled:opacity-40">
+                className="flex-1 py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover disabled:opacity-40">
                 {saving ? 'Saving' : 'Confirm →'}
               </button>
             </div>

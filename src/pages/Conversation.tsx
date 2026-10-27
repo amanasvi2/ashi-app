@@ -39,12 +39,12 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
   return (
     <div className={`flex ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
       {role === 'assistant' && (
-        <div className="w-7 h-7 rounded-[4px] bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mr-2 mt-1 flex-shrink-0">
+        <div className="w-7 h-7 rounded-xl bg-accent/10 text-accent text-xs font-bold flex items-center justify-center mr-2 mt-1 flex-shrink-0">
           A
         </div>
       )}
       <div
-        className={`max-w-[78%] px-4 py-2.5 rounded-[4px] text-sm leading-relaxed
+        className={`max-w-[78%] px-4 py-2.5 rounded-xl text-sm leading-relaxed
           ${role === 'user'
             ? 'bg-accent text-white'
             : 'bg-surface border border-rule text-ink shadow-[var(--shadow-raised)]'
@@ -59,10 +59,10 @@ function Bubble({ role, content }: { role: 'user' | 'assistant'; content: string
 function TypingIndicator() {
   return (
     <div className="flex justify-start items-end gap-2">
-      <div className="w-7 h-7 rounded-[4px] bg-accent/10 text-accent text-xs font-bold flex items-center justify-center flex-shrink-0">
+      <div className="w-7 h-7 rounded-xl bg-accent/10 text-accent text-xs font-bold flex items-center justify-center flex-shrink-0">
         A
       </div>
-      <div className="bg-surface border border-rule shadow-[var(--shadow-raised)] px-4 py-3 rounded-[4px] flex gap-1 items-center">
+      <div className="bg-surface border border-rule shadow-[var(--shadow-raised)] px-4 py-3 rounded-xl flex gap-1 items-center">
         {[0, 1, 2].map(i => (
           <span
             key={i}
@@ -86,7 +86,7 @@ function TopicPicker({ onPick }: { onPick: (topic: ConversationTopic) => void })
 
         {/* Permanent, plain-language framing — not a one-time popup, so it */}
         {/* can't be seen once and forgotten. */}
-        <div className="bg-surface border border-rule rounded-[4px] p-4 mb-5 space-y-1.5">
+        <div className="bg-surface border border-rule rounded-xl p-4 mb-5 space-y-1.5">
           <p className="text-sm text-ink">
             <span className="font-semibold">Alex is not a real person.</span> Alex is a computer program made to
             sound like a kid your age, so you can practice talking. If you ask Alex if they are real, Alex will
@@ -102,11 +102,11 @@ function TopicPicker({ onPick }: { onPick: (topic: ConversationTopic) => void })
             <button
               key={topic.id}
               onClick={() => onPick(topic)}
-              className="flex items-start gap-3 p-4 rounded-[4px] border border-rule bg-surface
+              className="flex items-start gap-3 p-4 rounded-xl border border-rule bg-surface
                          shadow-[var(--shadow-raised)] hover:border-accent/40
                          transition-colors text-left"
             >
-              <span className="w-9 h-9 rounded-[4px] bg-accent/10 text-accent flex items-center justify-center shrink-0">
+              <span className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
                 {TOPIC_ICONS[topic.id]}
               </span>
               <div>
@@ -130,7 +130,7 @@ function FeedbackCard({ text, onDone }: { text: string; onDone: () => void }) {
     .filter(Boolean);
 
   return (
-    <div className="mx-4 mb-4 bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5 space-y-4">
+    <div className="mx-4 mb-4 bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5 space-y-4">
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">
           Conversation feedback
@@ -147,7 +147,7 @@ function FeedbackCard({ text, onDone }: { text: string; onDone: () => void }) {
       </ul>
       <button
         onClick={onDone}
-        className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
+        className="w-full py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
       >
         Done
       </button>
@@ -159,17 +159,16 @@ function FeedbackCard({ text, onDone }: { text: string; onDone: () => void }) {
 
 function EscalationCard({ onDone }: { onDone: () => void }) {
   return (
-    <div className="mx-4 mb-4 bg-alert/5 rounded-[4px] border border-alert/25 p-5 space-y-4">
+    <div className="mx-4 mb-4 bg-alert/5 rounded-xl border border-alert/25 p-5 space-y-4">
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-alert mb-1">Chat ended</p>
         <p className="text-sm text-ink leading-relaxed">
-          I let your grown-up know about this chat, so a real person can help. Talking to a real person about
-          something hard is a good idea.
+          Your grown-up can see this chat and a review flag in their dashboard. You can also ask a trusted adult for help now.
         </p>
       </div>
       <button
         onClick={onDone}
-        className="w-full py-3 rounded-[4px] text-sm font-semibold bg-alert text-white hover:bg-alert/90 transition-colors"
+        className="w-full py-3 rounded-xl text-sm font-semibold bg-alert text-white hover:bg-alert/90 transition-colors"
       >
         Done
       </button>
@@ -196,6 +195,8 @@ export function Conversation({ onBack }: Props) {
   const [endedReason, setEndedReason] = useState<'turn_cap' | 'time_cap' | 'escalation' | undefined>(undefined);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const requestVersion=useRef(0);
+  useEffect(()=>()=>{requestVersion.current++;},[]);
 
   useEffect(() => {
     loadConfig().then(c => setKidGender(c.kidGender));
@@ -206,6 +207,7 @@ export function Conversation({ onBack }: Props) {
   }, [messages, isLoading]);
 
   const startConversation = async (t: ConversationTopic) => {
+    const version=++requestVersion.current;
     setTopic(t);
     setIsLoading(true);
     setMessages([]);
@@ -213,14 +215,16 @@ export function Conversation({ onBack }: Props) {
 
     try {
       const result = await sendConversationTurn({ topicId: t.id });
+      if(version!==requestVersion.current)return;
       setSessionId(result.sessionId ?? null);
       setMessages([{ role: 'assistant', content: result.reply }]);
       setTurnsRemaining(result.turnsRemaining);
     } catch (err) {
+      if(version!==requestVersion.current)return;
       console.error(err);
       setMessages([{ role: 'assistant', content: "Sorry, I'm having trouble connecting right now." }]);
     } finally {
-      setIsLoading(false);
+      if(version===requestVersion.current)setIsLoading(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
@@ -229,12 +233,14 @@ export function Conversation({ onBack }: Props) {
     const text = input.trim();
     if (!text || isLoading || conversationEnded || !sessionId) return;
 
+    const version=requestVersion.current;
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: text }]);
     setIsLoading(true);
 
     try {
       const result = await sendConversationTurn({ sessionId, message: text });
+      if(version!==requestVersion.current)return;
       if (result.reply) setMessages(prev => [...prev, { role: 'assistant', content: result.reply }]);
       setTurnsRemaining(result.turnsRemaining);
       if (result.ended) {
@@ -243,10 +249,11 @@ export function Conversation({ onBack }: Props) {
         if (result.feedback) setFeedbackText(result.feedback);
       }
     } catch (err) {
+      if(version!==requestVersion.current)return;
       console.error(err);
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong.' }]);
     } finally {
-      setIsLoading(false);
+      if(version===requestVersion.current)setIsLoading(false);
       if (!conversationEnded) setTimeout(() => inputRef.current?.focus(), 50);
     }
   };
@@ -259,6 +266,8 @@ export function Conversation({ onBack }: Props) {
   };
 
   const handleDone = () => {
+    requestVersion.current++;
+    setIsLoading(false);
     setTopic(null);
     setSessionId(null);
     setMessages([]);
@@ -275,6 +284,7 @@ export function Conversation({ onBack }: Props) {
       {/* Header */}
       <div className="bg-surface border-b border-rule px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <button
+          aria-label={topic?'Back to topics':'Back to home'}
           onClick={topic ? handleDone : onBack}
           className="text-muted hover:text-ink transition-colors p-1 -ml-1"
         >
@@ -317,11 +327,11 @@ export function Conversation({ onBack }: Props) {
               <FeedbackCard text={feedbackText} onDone={handleDone} />
             )}
             {conversationEnded && endedReason !== 'escalation' && !feedbackText && (
-              <div className="mx-0 mb-4 bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5 space-y-4">
+              <div className="mx-0 mb-4 bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5 space-y-4">
                 <p className="text-sm text-ink">Nice job practicing! That's it for this chat.</p>
                 <button
                   onClick={handleDone}
-                  className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
+                  className="w-full py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
                 >
                   Done
                 </button>
@@ -344,7 +354,7 @@ export function Conversation({ onBack }: Props) {
               rows={1}
               placeholder="Type a message…"
               disabled={isLoading || !sessionId}
-              className="flex-1 rounded-[4px] border border-rule px-4 py-2.5 text-sm text-ink
+              className="flex-1 rounded-xl border border-rule px-4 py-2.5 text-sm text-ink
                          placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40
                          resize-none disabled:opacity-50"
               style={{ minHeight: '42px', maxHeight: '120px' }}
@@ -355,9 +365,10 @@ export function Conversation({ onBack }: Props) {
               }}
             />
             <button
+              aria-label="Send message"
               onClick={handleSend}
               disabled={!input.trim() || isLoading || !sessionId}
-              className="h-10 w-10 rounded-[4px] bg-accent text-white flex items-center justify-center
+              className="h-10 w-10 rounded-xl bg-accent text-white flex items-center justify-center
                          hover:bg-accent-hover disabled:opacity-35 disabled:cursor-not-allowed transition-colors flex-shrink-0"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./tokens.css";
+@import "./design/design.css";
 
 @theme {
   --animate-soundbar: soundbar 0.6s ease-in-out infinite;

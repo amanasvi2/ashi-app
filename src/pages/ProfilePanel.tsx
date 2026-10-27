@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { loadConfig, loadInterests, saveInterests, updateKidGender } from '../storage';
-import { LoadingScreen } from '../components/LoadingScreen';
+import { LoadingScreen, LoadFailure } from '../components/LoadingScreen';
 
 function IconGaming() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="15" cy="11" r="1"/><circle cx="17" cy="13" r="1"/><path d="M6 9h12l1.5 9H4.5L6 9z"/></svg>;
@@ -54,29 +54,37 @@ interface Props {
 
 export function ProfilePanel({ username, onClose, onLogout }: Props) {
   const [loading, setLoading]   = useState(true);
+  const [error,setError] = useState('');
+  const [saving,setSaving] = useState(false);
   const [kidGender, setKidGender] = useState<'girl' | 'boy' | 'other'>('other');
   const [interests, setInterests] = useState<string[]>([]);
 
+  const [loadFailed,setLoadFailed]=useState(false);
   useEffect(() => {
     (async () => {
       const [config, ints] = await Promise.all([loadConfig(), loadInterests()]);
       setKidGender(config.kidGender ?? 'other');
       setInterests(ints);
       setLoading(false);
-    })();
+    })().catch(()=>{setLoadFailed(true);setLoading(false);});
   }, []);
 
   const handleGender = async (gender: 'girl' | 'boy' | 'other') => {
-    setKidGender(gender);
-    await updateKidGender(gender);
+    if(saving)return;setSaving(true);setError('');
+    try{await updateKidGender(gender);setKidGender(gender);}
+    catch{setError('The partner preference was not saved. Try again.');}
+    finally{setSaving(false);}
   };
 
   const toggleInterest = async (id: string) => {
     const next = interests.includes(id) ? interests.filter(x => x !== id) : [...interests, id];
-    setInterests(next);
-    await saveInterests(next);
+    if(saving)return;setSaving(true);setError('');
+    try{await saveInterests(next);setInterests(next);}
+    catch{setError('Your interests were not saved. Try again.');}
+    finally{setSaving(false);}
   };
 
+  if(loadFailed)return <LoadFailure/>;
   const initial = username[0]?.toUpperCase() ?? '?';
 
   return (
@@ -93,6 +101,7 @@ export function ProfilePanel({ username, onClose, onLogout }: Props) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-rule">
           <h2 className="text-base font-semibold text-ink">Profile & Settings</h2>
           <button
+            aria-label="Close profile"
             onClick={onClose}
             className="text-muted hover:text-ink transition-colors p-1"
           >
@@ -104,9 +113,10 @@ export function ProfilePanel({ username, onClose, onLogout }: Props) {
 
         {loading ? <LoadingScreen /> : (
           <div className="flex-1 px-6 py-5 space-y-6">
+            {error&&<p role="alert">{error}</p>}
             {/* Avatar + name */}
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-[4px] bg-accent/10 text-accent font-bold text-2xl flex items-center justify-center flex-shrink-0">
+              <div className="w-16 h-16 rounded-xl bg-accent/10 text-accent font-bold text-2xl flex items-center justify-center flex-shrink-0">
                 {initial}
               </div>
               <div>
@@ -127,8 +137,9 @@ export function ProfilePanel({ username, onClose, onLogout }: Props) {
                 ] as const).map(opt => (
                   <button
                     key={opt.value}
+                    disabled={saving}
                     onClick={() => handleGender(opt.value)}
-                    className={`flex-1 py-2 rounded-[4px] text-sm border transition-colors
+                    className={`flex-1 py-2 rounded-xl text-sm border transition-colors
                       ${kidGender === opt.value
                         ? 'bg-accent text-white border-accent font-semibold'
                         : 'border-rule text-muted hover:border-accent/40'}`}
@@ -146,8 +157,9 @@ export function ProfilePanel({ username, onClose, onLogout }: Props) {
                 {INTEREST_OPTIONS.map(opt => (
                   <button
                     key={opt.id}
+                    disabled={saving}
                     onClick={() => toggleInterest(opt.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-sm border transition-colors
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm border transition-colors
                       ${interests.includes(opt.id)
                         ? 'border-accent bg-accent/10 text-accent font-medium'
                         : 'border-rule text-muted hover:border-muted'}`}
@@ -164,7 +176,7 @@ export function ProfilePanel({ username, onClose, onLogout }: Props) {
         <div className="px-6 py-4 border-t border-rule">
           <button
             onClick={() => { onClose(); onLogout(); }}
-            className="w-full py-2.5 rounded-[4px] text-sm font-semibold border border-rule
+            className="w-full py-2.5 rounded-xl text-sm font-semibold border border-rule
                        text-ink hover:bg-paper transition-colors"
           >
             Sign out

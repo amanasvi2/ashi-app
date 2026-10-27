@@ -4,7 +4,9 @@
 
 export const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-export const CONVERSATION_MODEL = 'llama-3.3-70b-versatile';
+// The previous llama-3.3-70b-versatile ID was retired on 2026-08-16.
+// Use Groq's supported replacement; allow an explicit server-side override.
+export const CONVERSATION_MODEL = process.env.GROQ_CHAT_MODEL || 'openai/gpt-oss-120b';
 
 // Groq-hosted policy-following safety classifier. Replaces the now-
 // deprecated meta-llama/llama-guard-4-12b (deprecated 2026-02-10) — see
@@ -33,6 +35,7 @@ export async function groqChat(
   opts: { temperature?: number; maxTokens?: number } = {},
 ): Promise<string> {
   const res = await fetch(GROQ_URL, {
+    signal: AbortSignal.timeout(20000),
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -42,7 +45,8 @@ export async function groqChat(
       model: CONVERSATION_MODEL,
       messages,
       temperature: opts.temperature ?? 0.7,
-      max_tokens: opts.maxTokens ?? 1024,
+      max_completion_tokens: (opts.maxTokens ?? 1024) + (CONVERSATION_MODEL.startsWith('openai/gpt-oss-') ? 2048 : 0),
+      ...(CONVERSATION_MODEL.startsWith('openai/gpt-oss-') ? { reasoning_effort:'low', include_reasoning:false } : {}),
     }),
   });
 

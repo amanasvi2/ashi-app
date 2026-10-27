@@ -1,0 +1,65 @@
+// Isolated PostgreSQL/WASM RLS checks. No Supabase project, secrets, or network.
+import { PGlite } from '@electric-sql/pglite';
+import { readFile,writeFile } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const db=new PGlite();const results=[];
+const owner='10000000-0000-4000-8000-000000000001';const other='10000000-0000-4000-8000-000000000002';
+const child='20000000-0000-4000-8000-000000000001';const child2='20000000-0000-4000-8000-000000000002';const child3='20000000-0000-4000-8000-000000000003';
+const moment='30000000-0000-4000-8000-000000000001';const item='40000000-0000-4000-8000-000000000001';
+await db.exec(`create schema auth; create role authenticated; grant usage on schema public,auth to authenticated;
+create table auth.users(id uuid primary key);
+create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+create table public.students(id uuid primary key references auth.users(id),owner_id uuid references auth.users(id));
+create function public.is_owner_of(student uuid) returns boolean language sql stable security definer set search_path=public as $$select exists(select 1 from public.students where id=student and owner_id=auth.uid())$$;
+create table public.item_attempts(id uuid primary key default gen_random_uuid(), student_id uuid, support_level integer, result text, created_at timestamptz default now());
+alter table public.item_attempts enable row level security;
+create policy "Student manages own attempts" on public.item_attempts for all using(student_id=auth.uid()) with check(student_id=auth.uid());
+grant select,insert,update,delete on public.item_attempts to authenticated;
+insert into auth.users values('${owner}'),('${other}'),('${child}'),('${child2}'),('${child3}');
+insert into public.students values('${child}','${owner}'),('${child2}','${other}'),('${child3}','${owner}');`);
+await db.exec(await readFile(new URL('../supabase/migrations/0009_carryover.sql',import.meta.url),'utf8'));
+results.push({test:'New migration executes against PostgreSQL with existing auth/student interfaces',status:'passed'});
+async function as(id){await db.exec(`reset role; select set_config('request.jwt.claim.sub','${id}',false); set role authenticated;`);}
+async function test(name,run){try{await run();results.push({test:name,status:'passed'});}catch(e){results.push({test:name,status:'failed',error:e.message});}}
+const insertMoment=(id,student)=>`insert into carryover_moments(id,student_id,situation,setting,role,response,skill_id) values('${id}','${student}','excluded','lunch','friend','stayed quiet','perspective_taking')`;
+await test('Owner creates a moment for their own child',async()=>{await as(owner);await db.exec(insertMoment(moment,child));});
+await test('Different owner cannot read the moment',async()=>{await as(other);assert.equal((await db.query('select * from carryover_moments')).rows.length,0);});
+await test('Different owner cannot create moments for that child',async()=>{await as(other);await assert.rejects(db.exec(insertMoment('30000000-0000-4000-8000-000000000002',child)),/row-level security/);});
+await test('Student cannot write owner observations',async()=>{await as(child);await assert.rejects(db.exec(`insert into carryover_checks values('${child}','perspective_taking','2026-10-26','yes','better','independent')`),/row-level security/);});
+await test('Owner creates pending practice',async()=>{await as(owner);await db.exec(`insert into carryover_items(id,student_id,moment_id,skill_id,support_level,difficulty,item) values('${item}','${child}','${moment}','perspective_taking',3,1,'{}')`);});
+await test('Pending practice is invisible to student',async()=>{await as(child);assert.equal((await db.query('select * from carryover_items')).rows.length,0);});
+await test('Student cannot approve pending practice',async()=>{await as(child);await db.exec(`update carryover_items set status='approved' where id='${item}'`);await as(owner);assert.equal((await db.query(`select status from carryover_items where id='${item}'`)).rows[0].status,'pending');});
+await test('Approved practice is visible to the correct student',async()=>{await as(owner);await db.exec(`update carryover_items set status='approved' where id='${item}'`);await as(child);assert.equal((await db.query('select * from carryover_items')).rows.length,1);});
+await test('Another student cannot read approved practice',async()=>{await as(child2);assert.equal((await db.query('select * from carryover_items')).rows.length,0);});
+await test('One owner cannot link a moment to a different one of their children',async()=>{await as(owner);await assert.rejects(db.exec(`insert into carryover_items(student_id,moment_id,skill_id,support_level,difficulty,item) values('${child3}','${moment}','perspective_taking',3,1,'{}')`),/foreign key/);});
+await test('No-opportunity observations cannot contain success/failure ratings',async()=>{await as(owner);await assert.rejects(db.exec(`insert into carryover_checks values('${child}','perspective_taking','2026-10-26','no','better','independent')`),/check constraint/);});
+await test('Student chooses mission; owner can read it but cannot overwrite it',async()=>{await as(child);await db.exec(`insert into carryover_missions values('${child}','Set a boundary')`);await as(owner);assert.equal((await db.query('select mission from carryover_missions')).rows[0].mission,'Set a boundary');await db.exec(`update carryover_missions set mission='Join an activity'`);assert.equal((await db.query('select mission from carryover_missions')).rows[0].mission,'Set a boundary');});
+await test('Unlisted names cannot be inserted as moment roles',async()=>{await as(owner);await assert.rejects(db.exec(`update carryover_moments set role='Alice'`),/check constraint/);});
+await test('Withdrawn approval removes student visibility',async()=>{await as(owner);await db.exec(`update carryover_items set status='rejected' where id='${item}'`);await as(child);assert.equal((await db.query('select * from carryover_items')).rows.length,0);});
+
+await db.exec('reset role');
+await db.exec(await readFile(new URL('../supabase/migrations/0010_skill_tiers.sql',import.meta.url),'utf8'));
+results.push({test:'Tier migration 0010 executes after actual migration 0009',status:'passed'});
+const assessmentId='50000000-0000-4000-8000-000000000001';
+const assessmentInsert=(student=child,task='explanation')=>`insert into skill_assessments(id,student_id,skill_id,task,situation,setting,context,result,help) values('${assessmentId}','${student}','perspective_taking','${task}','excluded','home','new','correct','independent')`;
+await test('Owner records a structured skill check for their child',async()=>{await as(owner);await db.exec(assessmentInsert());});
+await test('Student can read own skill checks',async()=>{await as(child);assert.equal((await db.query('select * from skill_assessments')).rows.length,1);});
+await test('Student cannot insert adult skill evidence',async()=>{await as(child);await assert.rejects(db.exec(assessmentInsert()),/row-level security/);});
+await test('Student cannot change or delete adult skill evidence',async()=>{await as(child);await db.exec("update skill_assessments set result='incorrect'; delete from skill_assessments");await as(owner);assert.equal((await db.query('select result from skill_assessments')).rows[0].result,'correct');});
+await test('Other owner and sibling cannot read this child skill evidence',async()=>{for(const user of [other,child2,child3]){await as(user);assert.equal((await db.query('select * from skill_assessments')).rows.length,0);}});
+await test('Owner cannot write skill checks for another family',async()=>{await as(other);await assert.rejects(db.exec(assessmentInsert(child)),/row-level security/);});
+await test('Database rejects unlisted tier task values',async()=>{await as(owner);await assert.rejects(db.exec(assessmentInsert(child,'all-mastered')),/check constraint/);});
+await test('Student can read own transfer observations for shared tier calculation',async()=>{await as(owner);await db.exec(`insert into carryover_checks values('${child}','perspective_taking','2026-10-19','yes','better','independent')`);await as(child);assert.equal((await db.query('select * from carryover_checks')).rows.length,1);});
+await test('Student still cannot change transfer observations',async()=>{await as(child);await db.exec("update carryover_checks set help='model'");await as(owner);assert.equal((await db.query('select help from carryover_checks')).rows[0].help,'independent');});
+await test('Owner sees only own child carryover attempts, not legacy attempts or other children',async()=>{
+ await as(child);await db.exec(`insert into item_attempts(student_id,source,skill_id) values('${child}','carryover','perspective_taking'),('${child}','generated',null)`);
+ await as(child2);await db.exec(`insert into item_attempts(student_id,source,skill_id) values('${child2}','carryover','perspective_taking')`);
+ await as(owner);const rows=(await db.query('select * from item_attempts')).rows;assert.equal(rows.length,1);assert.equal(rows[0].student_id,child);assert.equal(rows[0].source,'carryover');
+});
+await test('Owner cannot forge a child app result through the new read policy',async()=>{await as(owner);await assert.rejects(db.exec(`insert into item_attempts(student_id,source,skill_id) values('${child}','carryover','perspective_taking')`),/row-level security/);});
+await db.close();
+const output={environment:'Isolated PGlite PostgreSQL; minimal auth/student fixture, not a live Supabase project',runAt:new Date().toISOString(),passed:results.filter(r=>r.status==='passed').length,total:results.length,results};
+const report=process.env.ASHI_DB_REPORT;
+if(report)await writeFile(report,JSON.stringify(output,null,2));
+console.log(JSON.stringify(output,null,2));
+if(output.passed!==output.total)process.exitCode=1;
