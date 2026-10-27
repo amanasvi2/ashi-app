@@ -1,0 +1,27 @@
+name: Validate ASHI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://example.invalid
+      VITE_SUPABASE_ANON_KEY: synthetic-public-key
+      SUPABASE_SERVICE_ROLE_KEY: synthetic-server-key
+      GROQ_API_KEY: synthetic-model-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --maxWorkers=2
+      - run: npm run test:runtime
+      - run: npm run test:carryover-db
+      - run: npm run build
+      - run: npm run lint

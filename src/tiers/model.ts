@@ -1,4 +1,4 @@
-import { LAB, SETTINGS, SITUATIONS, SKILL_TYPES, type CarryoverSkill, type LabEvent, type TransferCheck } from '../carryover/model';
+import { LAB, SETTINGS, SITUATIONS, SKILL_TYPES, type CarryoverSkill, type LabEvent, type TransferCheck } from '../carryover/model.js';
 
 export const TIER_NAMES = ['Building evidence', 'Recognize', 'Explain', 'Respond', 'Generalize', 'Carry over'] as const;
 export const TIER_RULES = { version: 'pilot-v1', days: 90, window: 10, minimum: 3, accuracy: .8, delayDays: 7 } as const;
