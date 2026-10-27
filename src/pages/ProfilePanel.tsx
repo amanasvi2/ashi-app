@@ -127,7 +127,7 @@ export function ProfilePanel({ username, onClose, onLogout }: Props) {
 
             {/* Gender / AI partner */}
             <div>
-              <p className="text-xs font-semibold text-muted mb-1">AI conversation partner</p>
+              <p className="text-xs font-semibold text-muted mb-1">Your computer practice buddy</p>
               <p className="text-xs text-muted mb-3">This changes whether Alex is a girl or a boy.</p>
               <div className="flex gap-2">
                 {([

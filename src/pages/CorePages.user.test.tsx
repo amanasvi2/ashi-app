@@ -1,3 +1,4 @@
+import {ChildLanguage} from '../language/ChildLanguage';
 import { afterEach,beforeEach,it,expect,vi } from 'vitest';
 import { render,screen,fireEvent,cleanup,waitFor,act } from '@testing-library/react';
 const m=vi.hoisted(()=>({loadSessions:vi.fn(),loadLevelSlice:vi.fn(),loadLevelSliceForDisplay:vi.fn(),loadDifficulty:vi.fn(),loadCoins:vi.fn(),loadConfig:vi.fn(),loadCustomRewards:vi.fn(),loadInterests:vi.fn(),saveInterests:vi.fn(),updateKidGender:vi.fn(),loadJournalEntries:vi.fn(),todaysJournalEntry:vi.fn(),saveJournalEntry:vi.fn(),journalWrittenToday:vi.fn(),loadFloorAlarms:vi.fn(),parentJournalWrittenToday:vi.fn(),parentJournalActivity:vi.fn(),loadStudentProfile:vi.fn(),loadConversationSessions:vi.fn(),loadConversationEscalation:vi.fn(),saveConfig:vi.fn(),addCustomReward:vi.fn(),deleteCustomReward:vi.fn()}));
@@ -99,3 +100,5 @@ it('shows an error when a reward deletion fails and keeps the reward visible',as
  render(<ParentDashboard student={student} onLogout={()=>{}}/>);fireEvent.click(await screen.findByRole('button',{name:'Delete reward Keep me'}));
  await screen.findByText('The reward was not deleted. Please try again.');expect(screen.getByText('Keep me')).toBeTruthy();
 });
+
+it.each([[1,'People Clues'],[8,'Vibe Check']] as const)('uses grade %i wording in the child progress screen',async(grade,label)=>{render(<ChildLanguage profile={{grade,reading_level:grade}}><ProgressPage/></ChildLanguage>);await screen.findByRole('heading',{name:'Your Progress'});expect(screen.getByText(label)).toBeTruthy();expect(screen.queryByText('Nonverbal Cues')).toBeNull();});
