@@ -1,4 +1,4 @@
-import { Brand } from './design/Brand';
+import { PlayLogo } from './design/PlayArt';
 import { useEffect, useState } from 'react';
 import type { SessionMode } from './types';
 import { getSession, signOut } from './auth';
@@ -193,29 +193,29 @@ export default function App() {
   // ── Kid: full-screen pages (no nav) ───────────────────────────────────────
   if (page.tag === 'practice') {
     return (
-      <Practice
+      <div className="kid-zone kid-screen"><Practice
         mode={page.mode}
         initialLevelSlice={page.levelSlice}
         initialDifficulty={page.difficulty}
         onExit={() => setPage({ tag: 'home' })}
         onComplete={() => setPage({ tag: 'home' })}
-      />
+      /></div>
     );
   }
-  if (page.tag === 'conversation') return <Conversation onBack={() => setPage({ tag: 'home' })} />;
-  if (page.tag === 'journal')      return <Journal onBack={() => setPage({ tag: 'home' })} />;
+  if (page.tag === 'conversation') return <div className="kid-zone kid-screen"><Conversation onBack={() => setPage({ tag: 'home' })} /></div>;
+  if (page.tag === 'journal') return <div className="kid-zone kid-screen"><Journal onBack={() => setPage({ tag: 'home' })} /></div>;
 
   // ── Kid: main tabbed view ─────────────────────────────────────────────────
   const initial = session.username[0]?.toUpperCase() ?? '?';
 
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="kid-zone kid-app min-h-screen bg-paper">
 
       {/* Desktop top nav */}
-      <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-30 bg-surface/95 backdrop-blur-sm
+      <nav className="kid-top-nav hidden lg:flex fixed top-0 left-0 right-0 z-30 bg-surface/95 backdrop-blur-sm
                       border-b border-rule h-14 items-center px-8 gap-8">
         <span className="flex items-center gap-2 text-sm font-bold text-ink shrink-0">
-          <Brand small/>
+          <PlayLogo/>
         </span>
         <div className="flex gap-1">
           {TAB_LABELS.map(({ key, label }) => (
@@ -230,6 +230,7 @@ export default function App() {
           ))}
         </div>
         <button
+          aria-label="Open profile"
           onClick={() => setShowProfile(true)}
           className="ml-auto w-8 h-8 rounded-xl bg-accent/10 text-accent font-bold text-sm
                      flex items-center justify-center hover:bg-accent/20 transition-colors"

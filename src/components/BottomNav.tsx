@@ -43,11 +43,12 @@ const TABS: { key: MainTab; label: string; Icon: React.ComponentType<{ active: b
 
 export function BottomNav({ active, onChange }: Props) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-surface/95 backdrop-blur-sm border-t border-rule lg:hidden">
+    <nav aria-label="Main navigation" className="kid-bottom-nav fixed bottom-0 left-0 right-0 z-30 bg-surface/95 backdrop-blur-sm border-t border-rule lg:hidden">
       <div className="flex max-w-lg mx-auto">
         {TABS.map(({ key, label, Icon }) => (
           <button
             key={key}
+            aria-current={active===key?'page':undefined}
             onClick={() => onChange(key)}
             className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors
               ${active === key ? 'text-accent' : 'text-muted hover:text-ink'}`}

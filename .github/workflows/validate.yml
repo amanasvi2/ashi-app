@@ -24,4 +24,5 @@ jobs:
       - run: npm run test:runtime
       - run: npm run test:carryover-db
       - run: npm run build
+      - run: npm run test:bundle
       - run: npm run lint

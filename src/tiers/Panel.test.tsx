@@ -17,5 +17,5 @@ it('records an adult check only after confirmation and refreshes the evidence',a
 });
 it('lets a child view tiers without recording an adult assessment',async()=>{
  render(<CarryoverWorkspace studentId="child" studentName="Fake" owner={false} onBack={()=>{}} transport={demoTransport(seedWorkspace('child'))}/>);
- fireEvent.click(screen.getByRole('button',{name:'Skill tiers'}));expect(screen.queryByRole('button',{name:'Save skill check'})).toBeNull();expect(screen.getAllByText(/Building evidence/)).toHaveLength(5);
+ fireEvent.click(screen.getByRole('button',{name:'My Skills'}));expect(screen.queryByRole('button',{name:'Save skill check'})).toBeNull();expect(screen.getAllByText('Getting started')).toHaveLength(5);expect(screen.getAllByLabelText('Tier 0 of 5 supported by current evidence')).toHaveLength(5);
 });

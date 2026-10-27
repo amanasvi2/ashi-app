@@ -41,12 +41,12 @@ describe('Carryover owner and child screens',()=>{
   expect(data.checks.find(c=>c.opportunity==='no')).toMatchObject({opportunity:'no',rating:null,help:null});
  });
  it('lets the child choose a self-advocacy mission',async()=>{
-  const {data}=setup(false);fireEvent.click(screen.getByRole('button',{name:'My mission'}));
+  const {data}=setup(false);fireEvent.click(screen.getByRole('button',{name:'My Mission'}));
   fireEvent.click(screen.getByRole('button',{name:'Set a boundary'}));await screen.findByText('Your mission is saved.');expect(data.mission).toBe('Set a boundary');
   expect(screen.queryByRole('button',{name:'Review practice'})).toBeNull();
  });
  it('responds to clarification with a partner repair and records help separately',async()=>{
-  const {data}=setup(false);fireEvent.click(screen.getByRole('button',{name:'Fix a misunderstanding'}));
+  const {data}=setup(false);fireEvent.click(screen.getByRole('button',{name:'Fix a mix-up'}));
   fireEvent.click(screen.getByRole('button',{name:'Show a cue'}));
   fireEvent.click(screen.getByRole('button',{name:'I mean a break today, not quitting.'}));
   await screen.findByText('Partner: “Thanks for explaining. A break today makes sense.”');
@@ -94,4 +94,12 @@ it('invokes browser printing for the evidence brief',async()=>{
  setup();await screen.findAllByRole('button',{name:'Generate practice'});
  fireEvent.click(screen.getByRole('button',{name:'Evidence brief'}));
  fireEvent.click(screen.getByRole('button',{name:'Print or save brief as PDF'}));expect(print).toHaveBeenCalledOnce();print.mockRestore();
+});
+
+it('keeps the current round number during feedback and advances on Next',async()=>{
+ setup(false);expect(screen.getByText('Round 1 / 5')).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Ask if they want a turn'}));
+ await screen.findByRole('button',{name:'Next situation'});
+ expect(screen.getByText('Round 1 / 5')).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Next situation'}));expect(screen.getByText('Round 2 / 5')).toBeTruthy();
 });
