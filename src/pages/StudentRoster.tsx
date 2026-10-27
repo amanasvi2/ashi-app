@@ -3,7 +3,7 @@ import type { StudentSummary } from '../students';
 import type { ProfileSummary } from '../profiles';
 import { loadSessions, loadFloorAlarms, loadLevelSlice } from '../storage';
 import type { ItemType, LevelState } from '../types';
-import { LoadingScreen } from '../components/LoadingScreen';
+import { LoadingScreen, LoadFailure } from '../components/LoadingScreen';
 import { TYPE_LABELS, LEVEL_LABELS, LEVEL_COLORS } from '../components/LevelDisplay';
 
 const ITEM_TYPES: ItemType[] = ['social', 'nonverbal', 'inference'];
@@ -42,6 +42,7 @@ export function StudentRoster({
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<RosterRow[]>([]);
 
+  const [loadFailed,setLoadFailed]=useState(false);
   useEffect(() => {
     (async () => {
       const loaded = await Promise.all(students.map(async student => {
@@ -59,9 +60,10 @@ export function StudentRoster({
       }));
       setRows(loaded);
       setLoading(false);
-    })();
+    })().catch(()=>{setLoadFailed(true);setLoading(false);});
   }, [students]);
 
+  if (loadFailed) return <LoadFailure/>;
   if (loading) return <LoadingScreen />;
 
   return (
@@ -79,7 +81,7 @@ export function StudentRoster({
         </div>
 
         {incompleteProfile && (
-          <div className="bg-surface border border-rule shadow-[var(--shadow-raised)] rounded-[4px] p-4 flex items-center justify-between gap-3">
+          <div className="bg-surface border border-rule shadow-[var(--shadow-raised)] rounded-xl p-4 flex items-center justify-between gap-3">
             <p className="text-sm text-ink">
               <span className="font-semibold capitalize">{incompleteProfile.displayName}</span>'s profile is saved,
               but they don't have a login yet.
@@ -93,7 +95,7 @@ export function StudentRoster({
           </div>
         )}
 
-        <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
+        <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
           {rows.map(row => (
             <button
               key={row.student.id}
@@ -104,7 +106,7 @@ export function StudentRoster({
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-ink capitalize">{row.student.displayName}</p>
                   {row.floorAlarm && (
-                    <span className="text-xs font-semibold text-alert bg-alert/10 px-2 py-0.5 rounded-[4px] shrink-0">
+                    <span className="text-xs font-semibold text-alert bg-alert/10 px-2 py-0.5 rounded-xl shrink-0">
                       Worth a look
                     </span>
                   )}
@@ -117,7 +119,7 @@ export function StudentRoster({
                   <span
                     key={t}
                     title={`${TYPE_LABELS[t]}: ${LEVEL_LABELS[row.levels[t]]}`}
-                    className={`text-[11px] font-medium px-2 py-1 rounded-[4px] ${LEVEL_COLORS[row.levels[t]]}`}
+                    className={`text-[11px] font-medium px-2 py-1 rounded-xl ${LEVEL_COLORS[row.levels[t]]}`}
                   >
                     {LEVEL_LABELS[row.levels[t]]}
                   </span>
@@ -140,7 +142,7 @@ export function StudentRoster({
         {canAddStudent ? (
           <button
             onClick={onAddStudent}
-            className="w-full py-3 rounded-[4px] border-2 border-dashed border-rule text-sm text-muted
+            className="w-full py-3 rounded-xl border-2 border-dashed border-rule text-sm text-muted
                        hover:border-accent/40 hover:text-accent transition-colors"
           >
             + Add a student

@@ -1,3 +1,4 @@
+import { LoadFailure } from '../components/LoadingScreen';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { Item, SessionMode, AnswerResult, SupportLevel, DifficultyState, WordBankOption, ItemType } from '../types';
 import type { SessionRecord } from '../types';
@@ -81,7 +82,7 @@ function SpeakButton({ text, speak, stop, speakingText }: {
     <button
       onClick={() => isPlaying ? stop() : speak(text)}
       aria-label={isPlaying ? 'Stop reading' : 'Read aloud'}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-sm font-medium transition-colors
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors
         ${isPlaying ? 'bg-accent/10 text-accent border border-accent/30' : 'border border-rule text-muted hover:text-ink hover:border-muted'}`}
     >
       {isPlaying ? (
@@ -154,7 +155,7 @@ interface QuestionPanelProps {
   onNext: () => void;
 }
 
-function QuestionPanel(props: QuestionPanelProps) {
+export function QuestionPanel(props: QuestionPanelProps) {
   const {
     scenario, questionText, stem, choices, evidence, wordBank, level, hintTokens, hintActive, onUseHint,
     speak, stop, speakingText, activeCharIndex,
@@ -224,7 +225,7 @@ function QuestionPanel(props: QuestionPanelProps) {
 
       {/* Question — a stem reads as the sentence the student is completing;
           it stays part of the reading flow rather than a boxed label. */}
-      {stem ? (
+      {stem && effectiveLevel > 0 ? (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-muted uppercase tracking-wide">{questionText}</p>
           <p className="font-serif text-xl leading-snug text-ink">
@@ -252,7 +253,7 @@ function QuestionPanel(props: QuestionPanelProps) {
       {level <= 2 && !hintActive && !feedback && hintTokens > 0 && (
         <button
           onClick={onUseHint}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-xs font-medium
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium
                      border border-accent/30 text-accent hover:bg-accent/5 transition-colors"
         >
           Use a hint ({hintTokens} left)
@@ -266,7 +267,7 @@ function QuestionPanel(props: QuestionPanelProps) {
             <button
               key={idx}
               onClick={() => setSelected(idx)}
-              className={`w-full text-left px-4 py-3.5 rounded-[4px] border font-serif text-[17px] leading-snug transition-colors
+              className={`w-full text-left px-4 py-3.5 rounded-xl border font-serif text-[17px] leading-snug transition-colors
                 ${selected === idx
                   ? 'border-accent bg-accent/5 text-ink'
                   : 'border-rule bg-surface text-ink hover:border-muted'
@@ -290,7 +291,7 @@ function QuestionPanel(props: QuestionPanelProps) {
             <button
               key={idx}
               onClick={() => setSelected(idx)}
-              className={`px-3.5 py-2 rounded-[4px] border font-serif text-base transition-colors
+              className={`px-3.5 py-2 rounded-xl border font-serif text-base transition-colors
                 ${selected === idx
                   ? 'border-accent bg-accent/5 text-ink'
                   : 'border-rule bg-surface text-ink hover:border-muted'
@@ -318,7 +319,7 @@ function QuestionPanel(props: QuestionPanelProps) {
         <button
           onClick={doSubmit}
           disabled={!canSubmit}
-          className="relative w-full py-3.5 rounded-[4px] text-sm font-semibold transition-colors
+          className="relative w-full py-3.5 rounded-xl text-sm font-semibold transition-colors
                      bg-accent text-white hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed overflow-hidden"
         >
           {!readingReady && (
@@ -350,7 +351,7 @@ function FinishedScreen({ score, maxScore, mode, coinsEarned, journalDone, floor
 
   return (
     <div className="min-h-screen bg-paper flex items-center justify-center px-4">
-      <div className="bg-surface rounded-[4px] shadow-[var(--shadow-raised)] p-8 max-w-sm w-full text-center space-y-5">
+      <div className="bg-surface rounded-xl shadow-[var(--shadow-raised)] p-8 max-w-sm w-full text-center space-y-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Session complete</p>
           <p className="text-sm text-muted">{modeLabel}</p>
@@ -359,29 +360,29 @@ function FinishedScreen({ score, maxScore, mode, coinsEarned, journalDone, floor
           <div className="text-6xl font-bold text-ink tabular-nums">
             {score}<span className="text-3xl text-muted font-normal"> / {maxScore}</span>
           </div>
-          <div className="mt-3 h-1.5 bg-rule rounded-[4px] overflow-hidden">
-            <div className="h-full bg-accent rounded-[4px] transition-all duration-1000" style={{ width: `${pct}%` }} />
+          <div className="mt-3 h-1.5 bg-rule rounded-xl overflow-hidden">
+            <div className="h-full bg-accent rounded-xl transition-all duration-1000" style={{ width: `${pct}%` }} />
           </div>
           <p className="text-xs text-muted mt-1.5">{pct}%</p>
         </div>
         {coinsEarned > 0 && (
-          <div className="border border-rule rounded-[4px] px-4 py-3">
+          <div className="border border-rule rounded-xl px-4 py-3">
             <p className="text-ink font-semibold text-sm">+{coinsEarned} coins earned</p>
           </div>
         )}
         <p className="text-ink text-base font-medium">{message}</p>
         {!journalDone && (
-          <p className="text-xs text-muted bg-paper rounded-[4px] px-4 py-2.5 border border-rule">
+          <p className="text-xs text-muted bg-paper rounded-xl px-4 py-2.5 border border-rule">
             Remember to write in your journal today.
           </p>
         )}
         {floorAlarmNotice && (
-          <p className="text-xs text-alert bg-alert/5 rounded-[4px] px-4 py-2.5 border border-alert/25">
+          <p className="text-xs text-alert bg-alert/5 rounded-xl px-4 py-2.5 border border-alert/25">
             Your parent will see a note about this practice type.
           </p>
         )}
         <button onClick={onGoHome}
-          className="w-full py-3.5 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors">
+          className="w-full py-3.5 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors">
           Back to home
         </button>
       </div>
@@ -401,6 +402,7 @@ interface Props {
 
 export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, onComplete }: Props) {
   // ── State & refs ──────────────────────────────────────────────────────────
+  const [loadFailed,setLoadFailed]=useState(false);
   const [items, setItems]       = useState<Item[]>([]);
   const [loading, setLoading]   = useState(true);
   const [itemIdx, setItemIdx]   = useState(0);
@@ -450,7 +452,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
       } finally {
         setLoading(false);
       }
-    })();
+    })().catch(()=>{setLoadFailed(true);setLoading(false);});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -531,6 +533,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
 
   // ── Early returns (after all hooks) ──────────────────────────────────────
 
+  if (loadFailed)return <LoadFailure/>;
   if (done) {
     return (
       <FinishedScreen
@@ -546,11 +549,11 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
   if (blockedType) {
     return (
       <div className="min-h-screen bg-paper flex items-center justify-center px-4">
-        <div className="bg-surface rounded-[4px] shadow-[var(--shadow-raised)] p-8 max-w-sm w-full text-center space-y-4">
+        <div className="bg-surface rounded-xl shadow-[var(--shadow-raised)] p-8 max-w-sm w-full text-center space-y-4">
           <p className="text-base font-semibold text-ink">This practice is paused for now.</p>
           <p className="text-sm text-muted">Your parent can see more about this on their dashboard.</p>
           <button onClick={onExit}
-            className="w-full py-3 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors">
+            className="w-full py-3 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors">
             Back to home
           </button>
         </div>
@@ -609,7 +612,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
     setMaxScore(s => s + 1);
     setFeedback({ result, text: feedbackText });
     dispatchLevel({ type: 'RECORD', itemType: currentItem.type, result });
-    void recordAttempt(currentItem.type, effectiveLevel, currentItem.difficulty, optionCount, result);
+    void recordAttempt(currentItem.type, effectiveLevel, currentItem.difficulty, optionCount, result, currentItem);
   };
 
   // Called by EvidenceHighlighter when the student picks a sentence
@@ -646,7 +649,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
           </button>
           <div className="flex gap-1.5 flex-1">
             {items.map((_, i) => (
-              <div key={i} className={`h-1 flex-1 rounded-[4px] transition-all duration-500
+              <div key={i} className={`h-1 flex-1 rounded-xl transition-all duration-500
                 ${i < itemIdx ? 'bg-accent' : i === itemIdx ? 'bg-accent/40' : 'bg-rule'}`} />
             ))}
           </div>
@@ -687,7 +690,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
           enough separation (one shadow, no heavy border) to read as
           distinct from the passage above it. */}
       <div className="flex-1 max-w-[70ch] mx-auto w-full px-4 md:px-6 pb-8">
-        <div className="bg-surface rounded-[4px] shadow-[var(--shadow-raised)] px-6 py-6">
+        <div className="bg-surface rounded-xl shadow-[var(--shadow-raised)] px-6 py-6">
           <QuestionPanel
             key={`item-${itemIdx}`}
             scenario={currentItem.scenario}

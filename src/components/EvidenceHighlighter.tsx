@@ -79,7 +79,7 @@ export function EvidenceHighlighter({ scenario, expectedEvidence, onConfirm }: P
             type="button"
             disabled={!evidenceCheckActive || found}
             onClick={() => handleClick(i)}
-            className={`evidence-sentence inline rounded-[4px] text-left font-serif text-lg
+            className={`evidence-sentence inline rounded-xl text-left font-serif text-lg
               ${evidenceCheckActive && !found ? 'cursor-pointer' : 'cursor-default'}
               ${i === foundIdx ? 'evidence-confirmed' : ''}
               ${i === missedIdx ? 'evidence-missed' : ''}`}
@@ -94,7 +94,7 @@ export function EvidenceHighlighter({ scenario, expectedEvidence, onConfirm }: P
         {(found || !evidenceCheckActive) ? (
           <button
             onClick={onConfirm}
-            className="py-2.5 px-5 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
+            className="py-2.5 px-5 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover transition-colors"
           >
             Continue
           </button>

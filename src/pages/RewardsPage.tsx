@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CustomReward, CoinsState } from '../types';
-import { loadCoins, spendCoins, addHintTokens, loadCustomRewards } from '../storage';
+import { loadCoins, spendCoins, buyHintTokens, loadCustomRewards } from '../storage';
 import { LoadingScreen } from '../components/LoadingScreen';
 
 const HINT_COST = 25;
@@ -30,7 +30,7 @@ function IconCheck() {
 
 function CoinDisplay({ balance }: { balance: number }) {
   return (
-    <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
+    <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5">
       <p className="text-xs font-semibold uppercase tracking-widest text-muted">Your coins</p>
       <div className="flex items-end gap-2 mt-1">
         <span className="text-5xl font-bold text-ink">{balance}</span>
@@ -46,22 +46,22 @@ function CoinDisplay({ balance }: { balance: number }) {
 interface HintCardProps {
   hintTokens: number;
   coinBalance: number;
-  onBuy: () => void;
+  onBuy: () => Promise<boolean>;
+  pending: boolean;
 }
 
-function HintCard({ hintTokens, coinBalance, onBuy }: HintCardProps) {
+function HintCard({ hintTokens, coinBalance, onBuy, pending }: HintCardProps) {
   const [confirming, setConfirming] = useState(false);
-  const canAfford = coinBalance >= HINT_COST;
+  const canAfford = coinBalance >= HINT_COST && !pending;
 
-  const handleConfirm = () => {
-    onBuy();
-    setConfirming(false);
+  const handleConfirm = async () => {
+    if (await onBuy()) setConfirming(false);
   };
 
   return (
-    <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
+    <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-[4px] bg-accent/10 text-accent flex items-center justify-center flex-shrink-0">
+        <div className="w-12 h-12 rounded-xl bg-accent/10 text-accent flex items-center justify-center flex-shrink-0">
           <IconHint />
         </div>
         <div className="flex-1 min-w-0">
@@ -85,12 +85,12 @@ function HintCard({ hintTokens, coinBalance, onBuy }: HintCardProps) {
         <button
           onClick={() => setConfirming(true)}
           disabled={!canAfford}
-          className={`mt-4 w-full py-2.5 rounded-[4px] text-sm font-semibold transition-colors
+          className={`mt-4 w-full py-2.5 rounded-xl text-sm font-semibold transition-colors
             ${canAfford
               ? 'bg-accent text-white hover:bg-accent-hover'
               : 'bg-rule/40 text-muted cursor-not-allowed'}`}
         >
-          {canAfford ? `Buy ${HINT_AMOUNT} hints` : `Need ${HINT_COST - coinBalance} more coins`}
+          {pending?'Working…':canAfford ? `Buy ${HINT_AMOUNT} hints` : `Need ${HINT_COST - coinBalance} more coins`}
         </button>
       ) : (
         <div className="mt-4 space-y-2">
@@ -100,13 +100,14 @@ function HintCard({ hintTokens, coinBalance, onBuy }: HintCardProps) {
           <div className="flex gap-2">
             <button
               onClick={() => setConfirming(false)}
-              className="flex-1 py-2.5 rounded-[4px] text-sm font-semibold border border-rule text-ink hover:bg-paper"
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-rule text-ink hover:bg-paper"
             >
               Not now
             </button>
             <button
               onClick={handleConfirm}
-              className="flex-1 py-2.5 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover"
+              disabled={pending}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover"
             >
               Yes, buy
             </button>
@@ -120,24 +121,23 @@ function HintCard({ hintTokens, coinBalance, onBuy }: HintCardProps) {
 interface RewardCardProps {
   reward: CustomReward;
   coinBalance: number;
-  onRedeem: (reward: CustomReward) => void;
+  onRedeem: (reward: CustomReward) => Promise<boolean>;
+  pending: boolean;
 }
 
-function RewardCard({ reward, coinBalance, onRedeem }: RewardCardProps) {
+function RewardCard({ reward, coinBalance, onRedeem, pending }: RewardCardProps) {
   const [confirming, setConfirming] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
-  const canAfford = coinBalance >= reward.cost;
+  const canAfford = coinBalance >= reward.cost && !pending;
 
-  const handleConfirm = () => {
-    onRedeem(reward);
-    setUnlocked(true);
-    setConfirming(false);
+  const handleConfirm = async () => {
+    if (await onRedeem(reward)) { setUnlocked(true); setConfirming(false); }
   };
 
   return (
-    <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
+    <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-[4px] bg-rule/40 flex items-center justify-center text-2xl flex-shrink-0">
+        <div className="w-12 h-12 rounded-xl bg-rule/40 flex items-center justify-center text-2xl flex-shrink-0">
           {reward.emoji}
         </div>
         <div className="flex-1 min-w-0">
@@ -165,7 +165,7 @@ function RewardCard({ reward, coinBalance, onRedeem }: RewardCardProps) {
           href={reward.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 w-full py-2.5 rounded-[4px] text-sm font-semibold bg-accent text-white
+          className="mt-4 w-full py-2.5 rounded-xl text-sm font-semibold bg-accent text-white
                      hover:bg-accent-hover transition-colors flex items-center justify-center gap-2"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -177,12 +177,12 @@ function RewardCard({ reward, coinBalance, onRedeem }: RewardCardProps) {
         <button
           onClick={() => setConfirming(true)}
           disabled={!canAfford}
-          className={`mt-4 w-full py-2.5 rounded-[4px] text-sm font-semibold transition-colors
+          className={`mt-4 w-full py-2.5 rounded-xl text-sm font-semibold transition-colors
             ${canAfford
               ? 'bg-accent text-white hover:bg-accent-hover'
               : 'bg-rule/40 text-muted cursor-not-allowed'}`}
         >
-          {canAfford ? 'Unlock' : `Need ${reward.cost - coinBalance} more coins`}
+          {pending?'Working…':canAfford ? 'Unlock' : `Need ${reward.cost - coinBalance} more coins`}
         </button>
       ) : (
         <div className="mt-4 space-y-2">
@@ -192,13 +192,14 @@ function RewardCard({ reward, coinBalance, onRedeem }: RewardCardProps) {
           <div className="flex gap-2">
             <button
               onClick={() => setConfirming(false)}
-              className="flex-1 py-2.5 rounded-[4px] text-sm font-semibold border border-rule text-ink hover:bg-paper"
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-rule text-ink hover:bg-paper"
             >
               Not now
             </button>
             <button
               onClick={handleConfirm}
-              className="flex-1 py-2.5 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover"
+              disabled={pending}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover"
             >
               Yes, unlock
             </button>
@@ -211,6 +212,8 @@ function RewardCard({ reward, coinBalance, onRedeem }: RewardCardProps) {
 
 export function RewardsPage() {
   const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
   const [coins, setCoins] = useState<CoinsState>({ balance: 0, totalEarned: 0, hintTokens: 0 });
   const [customRewards, setCustomRewards] = useState<CustomReward[]>([]);
 
@@ -219,20 +222,29 @@ export function RewardsPage() {
       const [c, r] = await Promise.all([loadCoins(), loadCustomRewards()]);
       setCoins(c); setCustomRewards(r);
       setLoading(false);
-    })();
+    })().catch(()=>{setError('Rewards could not be loaded. Reopen this page to try again.');setLoading(false);});
   }, []);
 
-  const handleBuyHints = async () => {
-    const next = await spendCoins(HINT_COST);
-    if (!next) return;
-    await addHintTokens(HINT_AMOUNT);
-    setCoins({ ...next, hintTokens: next.hintTokens + HINT_AMOUNT });
+  const handleBuyHints = async (): Promise<boolean> => {
+    if (pending) return false;
+    setPending(true); setError('');
+    try {
+      const next = await buyHintTokens(HINT_COST,HINT_AMOUNT);
+      if (!next) { setError('Not enough coins. Nothing was purchased.'); return false; }
+      setCoins(next); return true;
+    } catch { setError('The purchase was not confirmed. Reopen Rewards to check your balance before retrying.'); return false; }
+    finally { setPending(false); }
   };
 
-  const handleRedeemReward = async (reward: CustomReward) => {
-    const next = await spendCoins(reward.cost);
-    if (!next) return;
-    setCoins(next);
+  const handleRedeemReward = async (reward: CustomReward): Promise<boolean> => {
+    if (pending) return false;
+    setPending(true); setError('');
+    try {
+      const next = await spendCoins(reward.cost);
+      if (!next) { setError('Not enough coins. The video was not unlocked.'); return false; }
+      setCoins(next); return true;
+    } catch { setError('The purchase was not confirmed. Reopen Rewards to check your balance before retrying.'); return false; }
+    finally { setPending(false); }
   };
 
   if (loading) return <LoadingScreen />;
@@ -247,12 +259,14 @@ export function RewardsPage() {
         </div>
 
         <CoinDisplay balance={coins.balance} />
+        {error&&<p role="alert">{error}</p>}
 
         <section className="space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">Hint tokens</h2>
           <HintCard
             hintTokens={coins.hintTokens}
             coinBalance={coins.balance}
+            pending={pending}
             onBuy={handleBuyHints}
           />
         </section>
@@ -265,6 +279,7 @@ export function RewardsPage() {
                 key={reward.id}
                 reward={reward}
                 coinBalance={coins.balance}
+                pending={pending}
                 onRedeem={handleRedeemReward}
               />
             ))}
@@ -272,13 +287,13 @@ export function RewardsPage() {
         )}
 
         {customRewards.length === 0 && (
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-8 text-center">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-8 text-center">
             <p className="text-muted text-sm">No video rewards yet.</p>
             <p className="text-muted text-xs mt-1">Ask your parent to add some!</p>
           </div>
         )}
 
-        <div className="bg-surface rounded-[4px] border border-rule p-4 text-xs text-ink space-y-1.5">
+        <div className="bg-surface rounded-xl border border-rule p-4 text-xs text-ink space-y-1.5">
           <p className="font-semibold">How to earn coins:</p>
           <ul className="space-y-1 text-muted">
             <li className="flex items-center gap-1.5">Extra sessions beyond your daily goal <IconCoin size={11} /> 10 coins</li>

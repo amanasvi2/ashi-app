@@ -1,3 +1,5 @@
+import { Brand } from '../design/Brand';
+import { LoadFailure } from '../components/LoadingScreen';
 import { useEffect, useState } from 'react';
 import type { Difficulty, CustomReward, ParentConfig, SessionRecord, DifficultyState, CoinsState } from '../types';
 import {
@@ -86,6 +88,7 @@ function IconTrash() {
 }
 
 interface Props {
+  onCarryover?: () => void;
   onLogout: () => void;
   student: StudentSummary;
   // Only set for a parent with 2+ students — renders the pill switcher.
@@ -100,11 +103,14 @@ interface Props {
 }
 
 export function ParentDashboard({
-  onLogout, student, students, onSwitchStudent, onAddStudent, onBackToRoster, incompleteProfile, onFinishSetup,
+  onLogout, student, students, onSwitchStudent, onAddStudent, onBackToRoster, incompleteProfile, onFinishSetup, onCarryover,
 }: Props) {
   const kidName = student.displayName;
 
   const [loading, setLoading]   = useState(true);
+  const [loadFailed,setLoadFailed]=useState(false);
+  const [error,setError] = useState('');
+  const [savingReward,setSavingReward] = useState(false);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [levelSlice, setLevelSlice] = useState<LevelSlice>(initialLevelState);
   const [difficulty, setDifficulty] = useState<DifficultyState>(initialDifficulty);
@@ -126,6 +132,7 @@ export function ParentDashboard({
   const [newCost, setNewCost] = useState(50);
 
   useEffect(() => {
+    let active=true;setLoading(true);setLoadFailed(false);setError('');
     (async () => {
       const [s, l, d, c, cfg, rewards, jToday, days, alarms, prof, convos, convoEscalation] = await Promise.all([
         loadSessions(student.id), loadLevelSlice(student.id), loadDifficulty(student.id),
@@ -134,36 +141,48 @@ export function ParentDashboard({
         loadFloorAlarms(student.id), loadStudentProfile(student.id),
         loadConversationSessions(student.id), loadConversationEscalation(student.id),
       ]);
+      if(!active)return;
       setSessions(s); setLevelSlice(l); setDifficulty(d); setCoins(c); setConfig(cfg);
       setCustomRewards(rewards); setJournalToday(jToday); setActivityDays(days); setFloorAlarms(alarms);
       setProfile(prof);
       setConversations(convos); setConversationEscalation(convoEscalation);
       setExpandedConvoId(null);
       setLoading(false);
-    })();
+    })().catch(()=>{if(active){setLoadFailed(true);setLoading(false);}});
+    return()=>{active=false;};
   }, [student.id]);
 
   const totalScore = getTotalScore(sessions);
   const doneToday  = practicedToday(sessions);
 
   const updateDailyMinimum = async (n: number) => {
-    setConfig({ ...config, dailyMinimum: n });
-    await saveConfig({ ...config, dailyMinimum: n }, student.id);
+    try {await saveConfig({ ...config, dailyMinimum: n }, student.id);
+    setConfig({ ...config, dailyMinimum: n });}
+    catch {setError('The daily goal was not saved. Please try again.');}
   };
 
   const handleAddReward = async () => {
     if (!newLabel.trim() || !newUrl.trim()) return;
+    try { const url=new URL(newUrl.trim());
+      if(url.protocol!=='https:' || !['youtube.com','www.youtube.com','m.youtube.com','youtu.be'].includes(url.hostname))throw new Error();
+    } catch {setError('Enter a valid HTTPS YouTube link.');return;}
+    if(savingReward)return;
+    setSavingReward(true);setError('');
+    try {
     const reward = await addCustomReward(student.id, {
       label: newLabel.trim(), emoji: newEmoji, url: newUrl.trim(), cost: newCost,
     });
     setCustomRewards([...customRewards, reward]);
     setNewLabel(''); setNewUrl(''); setNewEmoji('🎬'); setNewCost(50);
     setShowAddReward(false);
+    } catch {setError('The reward was not saved. Please try again.');}
+    finally {setSavingReward(false);}
   };
 
   const handleDeleteReward = async (id: string) => {
-    await deleteCustomReward(id);
-    setCustomRewards(customRewards.filter(r => r.id !== id));
+    try {await deleteCustomReward(id);
+    setCustomRewards(customRewards.filter(r => r.id !== id));}
+    catch {setError('The reward was not deleted. Please try again.');}
   };
 
   function formatDate(iso: string) {
@@ -183,12 +202,15 @@ export function ParentDashboard({
 
   const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  if(loadFailed)return <LoadFailure/>;
   if (loading) return <LoadingScreen />;
 
   return (
     <div className="min-h-screen bg-paper">
       <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-8 space-y-8">
+        {error&&<p role="alert">{error}</p>}
 
+        <Brand small/>
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
@@ -200,7 +222,7 @@ export function ParentDashboard({
                 ← Back to caseload
               </button>
             )}
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-0.5">Parent view</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-0.5">{onBackToRoster?'Clinician view':'Parent view'}</p>
             <h1 className="text-2xl font-bold text-ink tracking-tight capitalize">{kidName}'s Progress</h1>
           </div>
           <button
@@ -219,7 +241,7 @@ export function ParentDashboard({
               <button
                 key={s.id}
                 onClick={() => onSwitchStudent?.(s.id)}
-                className={`px-3.5 py-1.5 rounded-[4px] text-sm font-medium capitalize transition-colors
+                className={`px-3.5 py-1.5 rounded-xl text-sm font-medium capitalize transition-colors
                   ${s.id === student.id ? 'bg-accent text-white' : 'bg-surface border border-rule text-muted hover:border-accent/40'}`}
               >
                 {s.displayName}
@@ -228,7 +250,7 @@ export function ParentDashboard({
             {onAddStudent && (
               <button
                 onClick={onAddStudent}
-                className="px-3.5 py-1.5 rounded-[4px] text-sm font-medium border border-dashed border-rule text-muted hover:border-accent/40 hover:text-accent transition-colors"
+                className="px-3.5 py-1.5 rounded-xl text-sm font-medium border border-dashed border-rule text-muted hover:border-accent/40 hover:text-accent transition-colors"
               >
                 + Add student
               </button>
@@ -247,7 +269,7 @@ export function ParentDashboard({
         {/* Finish-setup nudge — a profile exists (this owner's or another */}
         {/* one of theirs) with no login created yet */}
         {incompleteProfile && (
-          <div className="bg-surface border border-rule shadow-[var(--shadow-raised)] rounded-[4px] p-4 flex items-center justify-between gap-3">
+          <div className="bg-surface border border-rule shadow-[var(--shadow-raised)] rounded-xl p-4 flex items-center justify-between gap-3">
             <p className="text-sm text-ink">
               <span className="font-semibold capitalize">{incompleteProfile.displayName}</span>'s profile is saved,
               but they don't have a login yet.
@@ -265,7 +287,7 @@ export function ParentDashboard({
         {/* early because the student disclosed something serious. This is */}
         {/* the one time a conversation transcript matters more than usual. */}
         {conversationEscalation && (
-          <div className="bg-alert/5 border border-alert/25 rounded-[4px] p-5 space-y-1.5">
+          <div className="bg-alert/5 border border-alert/25 rounded-xl p-5 space-y-1.5">
             <p className="text-sm font-semibold text-alert">Worth a look</p>
             <p className="text-sm text-ink">
               {kidName} had a conversation-practice chat where she seemed to be going through something hard.
@@ -277,7 +299,7 @@ export function ParentDashboard({
         {/* Floor alarm — the adaptive engine has nothing left to offer for */}
         {/* this type (max support, easiest content) and has stopped serving it */}
         {(Object.keys(floorAlarms) as ItemType[]).some(t => floorAlarms[t]) && (
-          <div className="bg-alert/5 border border-alert/25 rounded-[4px] p-5 space-y-1.5">
+          <div className="bg-alert/5 border border-alert/25 rounded-xl p-5 space-y-1.5">
             <p className="text-sm font-semibold text-alert">Worth a look</p>
             {(Object.keys(floorAlarms) as ItemType[]).filter(t => floorAlarms[t]).map(t => (
               <p key={t} className="text-sm text-ink">
@@ -290,20 +312,24 @@ export function ParentDashboard({
         )}
 
         {/* Quick stats */}
+        {onCarryover&&<button onClick={onCarryover} className="w-full p-5 text-left bg-surface border border-accent rounded-xl text-ink">
+          <span className="block font-semibold">Carryover: practice for everyday life</span>
+          <span className="block text-sm text-muted">Capture a moment, review practice, and check what happens outside the app.</span>
+        </button>}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-4 text-center">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-4 text-center">
             <p className="text-2xl font-bold text-accent">{totalScore}</p>
             <p className="text-xs text-muted mt-0.5">total pts</p>
           </div>
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-4 text-center">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-4 text-center">
             <p className="text-2xl font-bold text-ink">{sessions.length}</p>
             <p className="text-xs text-muted mt-0.5">sessions done</p>
           </div>
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-4 text-center">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-4 text-center">
             <p className="flex items-center justify-center gap-1.5 text-2xl font-bold text-ink"><IconCoin size={18} />{coins.balance}</p>
             <p className="text-xs text-muted mt-0.5">coins available</p>
           </div>
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-4 text-center">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-4 text-center">
             <p className={`text-2xl font-bold ${journalToday ? 'text-ink' : 'text-muted'}`}>
               {journalToday ? <IconCheck size={20} /> : '–'}
             </p>
@@ -314,7 +340,7 @@ export function ParentDashboard({
         {/* Activity this week */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Activity — last 7 days</h2>
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5">
             <div className="flex gap-2 justify-between">
               {activityDays.map(({ date, hasEntry }) => {
                 const d = new Date(date);
@@ -331,7 +357,7 @@ export function ParentDashboard({
                       {/* Practice dot */}
                       <div
                         title={practicedOnDay ? 'Practiced' : 'No practice'}
-                        className={`w-6 h-6 rounded-[4px] flex items-center justify-center
+                        className={`w-6 h-6 rounded-xl flex items-center justify-center
                           ${practicedOnDay ? 'bg-accent text-white' : 'bg-rule/40 text-muted'}`}
                       >
                         {practicedOnDay && <IconCheck />}
@@ -339,7 +365,7 @@ export function ParentDashboard({
                       {/* Journal dot */}
                       <div
                         title={hasEntry ? 'Journal written' : 'No journal'}
-                        className={`w-6 h-6 rounded-[4px] flex items-center justify-center
+                        className={`w-6 h-6 rounded-xl flex items-center justify-center
                           ${hasEntry ? 'bg-accent text-white' : 'bg-rule/40 text-muted'}`}
                       >
                         {hasEntry && <IconJournal />}
@@ -351,10 +377,10 @@ export function ParentDashboard({
             </div>
             <div className="flex gap-4 mt-4 justify-center">
               <span className="flex items-center gap-1.5 text-xs text-muted">
-                <span className="w-4 h-4 rounded-[4px] bg-accent text-white flex items-center justify-center"><IconCheck size={10} /></span> Practice
+                <span className="w-4 h-4 rounded-xl bg-accent text-white flex items-center justify-center"><IconCheck size={10} /></span> Practice
               </span>
               <span className="flex items-center gap-1.5 text-xs text-muted">
-                <span className="w-4 h-4 rounded-[4px] bg-accent text-white flex items-center justify-center"><IconJournal size={10} /></span> Journal
+                <span className="w-4 h-4 rounded-xl bg-accent text-white flex items-center justify-center"><IconJournal size={10} /></span> Journal
               </span>
             </div>
           </div>
@@ -363,7 +389,7 @@ export function ParentDashboard({
         {/* Today's status */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Today</h2>
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
             <div className="flex items-center justify-between px-5 py-3.5">
               <span className="text-sm text-ink">Practice session</span>
               <span className={`text-sm font-medium ${doneToday ? 'text-ink' : 'text-muted'}`}>
@@ -385,7 +411,7 @@ export function ParentDashboard({
         {/* Skill levels */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Current skill levels</h2>
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
             {(['social', 'nonverbal', 'inference'] as const).map(key => {
               const level = levelSlice.levels[key];
               const diff  = difficulty[key];
@@ -410,14 +436,14 @@ export function ParentDashboard({
                     <span className="text-sm font-medium text-ink">{TYPE_LABELS[key]}</span>
                     <div className="flex items-center gap-2">
                       <LevelPips level={level} />
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-[4px] ${LEVEL_COLORS[level]}`}>
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-xl ${LEVEL_COLORS[level]}`}>
                         {LEVEL_LABELS[level]}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-xs text-muted">Question difficulty:</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-[4px] ${DIFF_COLORS[diff]}`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-xl ${DIFF_COLORS[diff]}`}>
                       {DIFF_LABELS[diff]}
                     </span>
                     {trendEl}
@@ -435,7 +461,7 @@ export function ParentDashboard({
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
               How this is tailored to {kidName}
             </h2>
-            <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5 space-y-5">
+            <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5 space-y-5">
               <p className="text-sm text-muted">
                 This comes from what you told us about {kidName} when you set up her profile.
                 It shapes which kinds of questions she gets and how much support she starts with.
@@ -473,7 +499,7 @@ export function ParentDashboard({
                   <p className="text-sm font-semibold text-ink mb-2">Strengths</p>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.strengths.map(id => (
-                      <span key={id} className="text-xs text-ink bg-rule/40 px-2.5 py-1 rounded-[4px]">
+                      <span key={id} className="text-xs text-ink bg-rule/40 px-2.5 py-1 rounded-xl">
                         {skillById(id)?.label ?? id}
                       </span>
                     ))}
@@ -486,7 +512,7 @@ export function ParentDashboard({
                   <p className="text-sm font-semibold text-ink mb-2">Supports we use</p>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.supports.map(id => (
-                      <span key={id} className="text-xs text-ink bg-rule/40 px-2.5 py-1 rounded-[4px]">
+                      <span key={id} className="text-xs text-ink bg-rule/40 px-2.5 py-1 rounded-xl">
                         {supportById(id)?.label ?? id}
                       </span>
                     ))}
@@ -500,7 +526,7 @@ export function ParentDashboard({
                   <p className="text-xs text-muted mb-2">Used to make scenarios feel more familiar to her.</p>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.interests.map(interest => (
-                      <span key={interest} className="text-xs text-ink bg-rule/40 px-2.5 py-1 rounded-[4px]">
+                      <span key={interest} className="text-xs text-ink bg-rule/40 px-2.5 py-1 rounded-xl">
                         {interest}
                       </span>
                     ))}
@@ -520,7 +546,7 @@ export function ParentDashboard({
         {sessions.length > 0 && (
           <section>
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Recent practice sessions</h2>
-            <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
+            <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
               {sessions.slice(0, 10).map(s => {
                 const pct = s.maxScore > 0 ? Math.round((s.score / s.maxScore) * 100) : 0;
                 return (
@@ -552,7 +578,7 @@ export function ParentDashboard({
             <p className="text-xs text-muted mb-3">
               {kidName} is told you can read these — that's different from her journal, which always stays private.
             </p>
-            <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
+            <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] divide-y divide-rule">
               {conversations.map(c => {
                 const isOpen = expandedConvoId === c.id;
                 const topicLabel = conversationTopicById(c.topic)?.label ?? c.topic;
@@ -594,7 +620,7 @@ export function ParentDashboard({
         {/* App settings */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">App settings</h2>
-          <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5 space-y-4">
+          <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5 space-y-4">
             <div>
               <p className="text-sm font-semibold text-ink mb-1">Daily session goal</p>
               <p className="text-xs text-muted mb-3">
@@ -605,7 +631,7 @@ export function ParentDashboard({
                   <button
                     key={n}
                     onClick={() => updateDailyMinimum(n)}
-                    className={`flex-1 py-2.5 rounded-[4px] text-sm font-semibold border transition-colors
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-colors
                       ${config.dailyMinimum === n
                         ? 'bg-accent text-white border-accent'
                         : 'border-rule text-muted hover:border-accent/40'}`}
@@ -623,13 +649,14 @@ export function ParentDashboard({
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">Video rewards</h2>
           <div className="space-y-2">
             {customRewards.map(r => (
-              <div key={r.id} className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] px-4 py-3 flex items-center gap-3">
+              <div key={r.id} className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] px-4 py-3 flex items-center gap-3">
                 <span className="text-xl">{r.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-ink truncate">{r.label}</p>
                   <p className="flex items-center gap-1 text-xs text-muted"><IconCoin />{r.cost} coins</p>
                 </div>
                 <button
+                  aria-label={`Delete reward ${r.label}`}
                   onClick={() => handleDeleteReward(r.id)}
                   className="text-muted hover:text-ink transition-colors p-1"
                 >
@@ -641,27 +668,27 @@ export function ParentDashboard({
             {!showAddReward ? (
               <button
                 onClick={() => setShowAddReward(true)}
-                className="w-full py-3 rounded-[4px] border-2 border-dashed border-rule text-sm text-muted
+                className="w-full py-3 rounded-xl border-2 border-dashed border-rule text-sm text-muted
                            hover:border-accent/40 hover:text-accent transition-colors"
               >
                 + Add a video reward
               </button>
             ) : (
-              <div className="bg-surface rounded-[4px] border border-rule shadow-[var(--shadow-raised)] p-5 space-y-3">
+              <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5 space-y-3">
                 <p className="text-sm font-semibold text-ink">Add reward</p>
                 <div className="flex gap-2">
                   <input
                     value={newEmoji}
                     onChange={e => setNewEmoji(e.target.value)}
                     maxLength={2}
-                    className="w-14 rounded-[4px] border border-rule px-3 py-2.5 text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent/40"
+                    className="w-14 rounded-xl border border-rule px-3 py-2.5 text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent/40"
                     placeholder="🎬"
                   />
                   <input
                     value={newLabel}
                     onChange={e => setNewLabel(e.target.value)}
                     placeholder="Reward name"
-                    className="flex-1 rounded-[4px] border border-rule px-4 py-2.5 text-sm text-ink
+                    className="flex-1 rounded-xl border border-rule px-4 py-2.5 text-sm text-ink
                                placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40"
                   />
                 </div>
@@ -670,7 +697,7 @@ export function ParentDashboard({
                   onChange={e => setNewUrl(e.target.value)}
                   placeholder="YouTube URL"
                   type="url"
-                  className="w-full rounded-[4px] border border-rule px-4 py-2.5 text-sm text-ink
+                  className="w-full rounded-xl border border-rule px-4 py-2.5 text-sm text-ink
                              placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40"
                 />
                 <div>
@@ -680,7 +707,7 @@ export function ParentDashboard({
                       <button
                         key={c}
                         onClick={() => setNewCost(c)}
-                        className={`flex items-center justify-center gap-1 flex-1 py-2 rounded-[4px] text-xs font-semibold border transition-colors
+                        className={`flex items-center justify-center gap-1 flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors
                           ${newCost === c ? 'bg-accent text-white border-accent' : 'border-rule text-muted hover:border-accent/40'}`}
                       >
                         <IconCoin />{c}
@@ -691,14 +718,14 @@ export function ParentDashboard({
                 <div className="flex gap-2">
                   <button
                     onClick={() => { setShowAddReward(false); setNewLabel(''); setNewUrl(''); }}
-                    className="flex-1 py-2.5 rounded-[4px] text-sm font-semibold border border-rule text-ink hover:bg-paper"
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-rule text-ink hover:bg-paper"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleAddReward}
-                    disabled={!newLabel.trim() || !newUrl.trim()}
-                    className="flex-1 py-2.5 rounded-[4px] text-sm font-semibold bg-accent text-white hover:bg-accent-hover
+                    disabled={savingReward||!newLabel.trim() || !newUrl.trim()}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-accent text-white hover:bg-accent-hover
                                disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Add reward

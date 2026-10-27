@@ -28,7 +28,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const token = String(req.headers.authorization).replace(/^Bearer\s+/i, '');
-    const { error } = await supabaseAsUser(token).from('item_attempts').insert({
+    const client = supabaseAsUser(token);
+    const { source = 'generated', carryoverItemId } = req.body ?? {};
+    if (!['generated','carryover'].includes(source)) return res.status(400).json({error:'Invalid item source'});
+    let provenance = {};
+    if (source === 'carryover') {
+      const { data: approved } = await client.from('carryover_items').select('id,skill_id,item,difficulty')
+        .eq('id',carryoverItemId).eq('student_id',user.id).eq('status','approved').maybeSingle();
+      if (!approved || approved.item.type !== itemType || approved.difficulty !== difficulty) return res.status(400).json({error:'Approved carryover item not found'});
+      provenance = { source, carryover_item_id:approved.id, skill_id:approved.skill_id };
+    }
+    const { error } = await client.from('item_attempts').insert({
+      ...provenance,
       student_id: user.id,
       item_type: itemType,
       support_level: supportLevel,

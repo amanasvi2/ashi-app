@@ -16,7 +16,7 @@ export function JournalFAB({ onOpen }: Props) {
     <button
       onClick={onOpen}
       aria-label={done ? 'You wrote in your journal today. Tap to see it.' : 'Open your journal'}
-      className="fixed z-40 right-4 bottom-[76px] lg:bottom-6 w-14 h-14 rounded-[4px] shadow-[var(--shadow-raised)]
+      className="fixed z-40 right-4 bottom-[76px] lg:bottom-6 w-14 h-14 rounded-xl shadow-[var(--shadow-raised)]
                  flex items-center justify-center text-white bg-accent
                  transition-transform hover:scale-105 active:scale-95"
     >

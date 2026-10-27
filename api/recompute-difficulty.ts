@@ -70,6 +70,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .update({ state: difficulty, mastery, floor_alarm: floorAlarm })
       .eq('student_id', user.id);
 
+    // Historical, broad-type engine snapshots. They are never described as
+    // clinical proof or as mastery of each more-specific Carryover skill.
+    await client.from('carryover_snapshots').insert(types.map(type => ({
+      student_id:user.id, item_type:type, mastered:mastery[type],
+      support_level:levels[type], difficulty:difficulty[type],
+    })));
+
     res.status(200).json({ difficulty, mastery, floorAlarm });
   } catch (err) {
     console.error(err);

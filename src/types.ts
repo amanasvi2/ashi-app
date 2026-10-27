@@ -17,6 +17,9 @@ export interface Question {
 }
 
 export interface Item {
+  source?: 'generated' | 'carryover';
+  momentId?: string;
+  skillId?: string;
   id: string;
   type: ItemType;
   difficulty: Difficulty;
