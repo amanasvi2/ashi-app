@@ -1,3 +1,4 @@
+import { PlayLogo,PlayBuddy } from '../design/PlayArt';
 import { Brand, JourneyIllustration } from '../design/Brand';
 import { useState } from 'react';
 import { signInParent, signUpOwner, signInKid } from '../auth';
@@ -136,14 +137,14 @@ function KidAuth({ onLogin }: { onLogin: (s: Session) => void }) {
 export function Login({ onLogin }: { onLogin: (session: Session) => void }) {
   const [tab, setTab] = useState<'parent' | 'kid'>('kid');
 
-  return <main className="login-page">
-    <header className="login-nav"><Brand/><span>A little practice, every day.</span></header>
-    <div className="login-layout"><section className="login-story"><span className="eyebrow">A LITTLE MORE UNDERSTANDING</span><h1>Little moments.<br/><em>Bigger possibilities.</em></h1><p>A space to practice understanding people, finding your words, and feeling ready for everyday life.</p><JourneyIllustration/><div className="login-story-note"><span className="note-spark" aria-hidden="true">✳</span><p>There is no one way to grow.<br/><strong>Let’s find the next small step.</strong></p></div></section>
-    <section className="login-card"><span className="eyebrow">YOUR NEXT SMALL STEP</span><h2>Welcome back.</h2><p className="text-sm text-muted">A little practice can go a long way.</p>
+  return <main className={`login-page ${tab==='kid'?'kid-zone kid-login':''}`}>
+    <header className="login-nav">{tab==='kid'?<PlayLogo/>:<Brand/>}<span>{tab==='kid'?'Big brain energy.':'A little practice, every day.'}</span></header>
+    <div className="login-layout"><section className="login-story">{tab==='kid'?<><span className="play-tag">YOUR NEXT QUEST IS WAITING</span><h1>Ready.<br/>Set. <span>Play.</span></h1><p>Find clues. Try new moves. Be you.</p><div className="login-buddy-scene"><PlayBuddy/><span aria-hidden="true" className="login-sticker">LET’S GO!</span></div></>:<><span className="eyebrow">A LITTLE MORE UNDERSTANDING</span><h1>Little moments.<br/><em>Bigger possibilities.</em></h1><p>A space to practice understanding people, finding your words, and feeling ready for everyday life.</p><JourneyIllustration/></>}</section>
+    <section className="login-card"><span className="eyebrow">{tab==='kid'?'PLAYER SIGN-IN':'YOUR NEXT SMALL STEP'}</span><h2>{tab==='kid'?'Jump back in.':'Welcome back.'}</h2>{tab==='parent'&&<p className="text-sm text-muted">A little practice can go a long way.</p>}
       <div className="login-role-switch" aria-label="Choose account type"><button aria-pressed={tab==='kid'} onClick={()=>setTab('kid')}>Student</button><button aria-pressed={tab==='parent'} onClick={()=>setTab('parent')}>Parent or clinician</button></div>
       {tab==='kid'?<KidAuth onLogin={onLogin}/>:<ParentAuth onLogin={onLogin}/>}
-      <p className="login-privacy">Practice with a computer partner.<br/>A grown-up can review conversations.</p>
+      <p className="login-privacy">{tab==='kid'?<>Alex is a computer. Your grown-up can read chats.</>:<>Practice with a computer partner.<br/>A grown-up can review conversations.</>}</p>
     </section></div>
-    <footer className="login-footer"><span>At your pace. With the support you need.</span><span>Made for the moments that matter.</span></footer>
+    <footer className="login-footer"><span>{tab==='kid'?'Your pace. Your space.':'At your pace. With the support you need.'}</span><span>{tab==='kid'?'Small rounds. Real skills.':'Made for the moments that matter.'}</span></footer>
   </main>;
 }

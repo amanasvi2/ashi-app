@@ -3,7 +3,7 @@ import { SETTINGS, SITUATIONS, SKILL_LABELS, type CarryoverSkill, type Workspace
 import { skillTier, TIER_RULES, TIER_NAMES, validateAssessment, type Assessment, type Task } from './model';
 const field='ashi-field';
 const button='ashi-button';
-export function TierPanel({data,owner,busy,onSave,heading=true}:{data:Workspace;owner:boolean;busy:boolean;heading?:boolean;onSave:(assessment:Omit<Assessment,'id'|'created_at'>)=>Promise<boolean>}) {
+export function TierPanel({data,owner,busy,onSave,heading=true,childView=false}:{data:Workspace;owner:boolean;busy:boolean;heading?:boolean;childView?:boolean;onSave:(assessment:Omit<Assessment,'id'|'created_at'>)=>Promise<boolean>}) {
   const [skill,setSkill]=useState<CarryoverSkill>('perspective_taking');
   const [task,setTask]=useState<Task>('recognition');
   const [situation,setSituation]=useState<keyof typeof SITUATIONS>('excluded');
@@ -12,6 +12,7 @@ export function TierPanel({data,owner,busy,onSave,heading=true}:{data:Workspace;
   const [result,setResult]=useState<Assessment['result']>('correct');
   const [help,setHelp]=useState<Assessment['help']>('independent');
   const [confirmed,setConfirmed]=useState(false);
+  if(childView)return <section><div className="kid-skill-grid">{(Object.keys(SKILL_LABELS) as CarryoverSkill[]).map(s=>{const progress=skillTier(s,data.assessments??[],data.events,data.checks,data.skillAttempts??[]);return <article className="kid-skill-card" key={s}><strong>{progress.tier?`Step ${progress.tier} of 5`:'Getting started'}</strong><h2>{SKILL_LABELS[s]}</h2><p>{progress.tier?progress.name:"Try it with the help you need."}</p><div className="tier-progress" aria-label={`Tier ${progress.tier} of 5 supported by current evidence`}>{[1,2,3,4,5].map(n=><span key={n} data-met={n<=progress.tier}/>)}</div></article>;})}</div><details className="kid-skill-note"><summary>How do my steps work?</summary><p>Practice and grown-up check-ins help show your skills. Each skill has its own path. These are practice indicators, not a test or grade. Steps can change as examples get older. Help and breaks are always okay.</p></details></section>;
   return <section className="space-y-5">
     <header>{heading&&<h2 className="font-serif text-2xl">Skill tiers</h2>}<p className="text-sm mt-2">Each skill develops separately. Grade, reading level, difficulty, and adaptive support are separate from these tiers.</p>
       <p className="text-xs text-muted mt-2">Pilot progress indicators · not a validated assessment. Based on the last {TIER_RULES.days} days, latest 10 distinct examples per task. Tiers can change as evidence ages or performance changes.</p></header>

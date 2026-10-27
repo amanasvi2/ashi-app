@@ -1,3 +1,4 @@
+import { PlayBuddy } from '../design/PlayArt';
 import { WorkspaceFrame } from '../design/WorkspaceFrame';
 import { TierPanel } from '../tiers/Panel';
 import { useEffect, useMemo, useState } from 'react';
@@ -11,8 +12,8 @@ const box='ashi-card space-y-4';
 const button='ashi-button';
 const field='ashi-field';
 const EMPTY:Data={moments:[],items:[],checks:[],events:[],snapshots:[],mission:null};
-export function CarryoverWorkspace({studentId,studentName,owner,onBack,transport=liveTransport}: {
-  studentId:string;studentName:string;owner:boolean;onBack:()=>void;transport?:Transport;
+export function CarryoverWorkspace({studentId,studentName,owner,onBack,transport=liveTransport,initialLab}: {
+  studentId:string;studentName:string;owner:boolean;onBack:()=>void;transport?:Transport;initialLab?:{activity:LabActivity;scene:number};
 }) {
   const [data,setData]=useState<Data>(EMPTY);
   const [error,setError]=useState('');const [notice,setNotice]=useState('');const [busy,setBusy]=useState(false);
@@ -36,7 +37,7 @@ export function CarryoverWorkspace({studentId,studentName,owner,onBack,transport
   const due=recentSkills.filter(skill=>!data.checks.some(c=>c.skill_id===skill&&c.week===weekKey()));
   return <WorkspaceFrame owner={owner} studentName={studentName} tab={tab} onTab={setTab} onBack={onBack} pending={data.items.filter(i=>i.status==='pending').length} moments={data.moments.length} due={due.length}>
       {error&&<p role="alert" className="border border-alert p-3">{error}</p>}{notice&&<p role="status">{notice}</p>}
-      {tab==='tiers'&&<TierPanel heading={false} data={data} owner={owner} busy={busy} onSave={assessment=>act({action:'assessment',assessment},'Skill check saved. Tiers updated from the available evidence.')}/>}
+      {tab==='tiers'&&<TierPanel childView={!owner} heading={false} data={data} owner={owner} busy={busy} onSave={assessment=>act({action:'assessment',assessment},'Skill check saved. Tiers updated from the available evidence.')}/>}
       {owner&&tab==='moments'&&<div className="capture-layout">
         <form className={box} onSubmit={async e=>{e.preventDefault();if(!confirmed)return;
           if(await act({action:'capture',capture:safeCapture(capture)},'Anonymous moment saved. Generate practice below.')){setNotes('');setConfirmed(false);}}}>
@@ -76,8 +77,8 @@ export function CarryoverWorkspace({studentId,studentName,owner,onBack,transport
         <p className="text-sm">Suggested next focus: compare the next real-life opportunity with the help used. This is a rule-based suggestion, not an AI clinical judgment.</p>
         <button className={button} onClick={()=>window.print()}>Print or save brief as PDF</button>
       </section>}
-      {!owner&&tab==='mission'&&<section className={box}><h2 className="font-serif text-xl">What would you like to practice?</h2><p>Your choice can include saying no or asking for a break.</p>{MISSIONS.map(m=><button key={m} className={`${button} block ${data.mission===m?'bg-accent text-white':''}`} disabled={busy} onClick={()=>void act({action:'mission',mission:m},'Your mission is saved.')}>{m}</button>)}</section>}
-      {!owner&&tab==='practice'&&<LabPanel key={studentId} mission={data.mission} events={data.events} transport={transport} studentId={studentId} refresh={()=>transport<Data>({action:'load',studentId}).then(setData)}/>}
+      {!owner&&tab==='mission'&&<section className={`${box} mission-card`}><h2 className="font-serif text-xl">What would you like to practice?</h2><p>Pick what matters to you. You can change your mind.</p>{MISSIONS.map(m=><button key={m} aria-pressed={data.mission===m} className={`${button} block ${data.mission===m?'bg-accent text-white':''}`} disabled={busy} onClick={()=>void act({action:'mission',mission:m},'Your mission is saved.')}>{m}</button>)}</section>}
+      {!owner&&tab==='practice'&&<LabPanel initialLab={initialLab} key={studentId} mission={data.mission} events={data.events} transport={transport} studentId={studentId} refresh={()=>transport<Data>({action:'load',studentId}).then(setData)}/>}
   </WorkspaceFrame>;
 }
 
@@ -108,27 +109,27 @@ function TransferForm({skill,existing,busy,onSave}:{skill:TransferCheck['skill_i
     {error&&<p role="alert">{error}</p>}<button disabled={busy} className={button}>Save observation</button>
   </form>;
 }
-function LabPanel({events,transport,studentId,refresh,mission}:{mission:string|null;events:Data['events'];transport:Transport;studentId:string;refresh:()=>Promise<void>}){
-  const start=MISSION_PRACTICE[mission??'']??{activity:'unfamiliar' as const,scene:0};
+function LabPanel({events,transport,studentId,refresh,mission,initialLab}:{initialLab?:{activity:LabActivity;scene:number};mission:string|null;events:Data['events'];transport:Transport;studentId:string;refresh:()=>Promise<void>}){
+  const start=initialLab??MISSION_PRACTICE[mission??'']??{activity:'unfamiliar' as const,scene:0};
   const [activity,setActivity]=useState<LabActivity>(start.activity);const [scene,setScene]=useState(start.scene);
   const [hint,setHint]=useState(false);const [feedback,setFeedback]=useState('');const [busy,setBusy]=useState(false);const [answered,setAnswered]=useState(false);
   const [count,setCount]=useState(0);const [expired,setExpired]=useState(false);
   useEffect(()=>{const id=setTimeout(()=>setExpired(true),12*60*1000);return()=>clearTimeout(id);},[]);
   const choices=useMemo(()=>LAB[activity][scene].choices.map((text,index)=>({text,index})).sort(()=>Math.random()-.5),[activity,scene]);
   const s=LAB[activity][scene];const seen=events.some(e=>e.activity===activity&&e.scene===scene);
-  const labels={unfamiliar:'New situations',repair:'Fix a misunderstanding',interpretations:'More than one meaning',tone:'Same words, different context'};
+  const labels={unfamiliar:'New moves',repair:'Fix a mix-up',interpretations:'Plot twists',tone:'Vibe check'};
   function reset(a:LabActivity,n:number){window.speechSynthesis?.cancel();setActivity(a);setScene(n);setHint(false);setFeedback('');setAnswered(false);}
   useEffect(()=>()=>{window.speechSynthesis?.cancel();},[]);
-  if(count>=5||expired)return <section className={box}><h2 className="font-serif text-xl">Practice complete</h2><p>You can take a break. Your saved results are in the evidence brief.</p></section>;
-  return <section className={box}>{mission&&<p className="text-sm font-semibold">Your mission: {mission}</p>}{recheckDue(events)&&<p role="status">A one-week recheck is due. Try a new-situation exercise again with as little help as you need.</p>}<div className="flex flex-wrap gap-2">{(Object.keys(LAB) as LabActivity[]).map(a=><button key={a} className={button} onClick={()=>reset(a,0)}>{labels[a]}</button>)}</div>
-    <p className="text-xs text-muted">{seen?'Practiced situation':'Unseen situation'} · {scene+1} of {LAB[activity].length}</p><h2 className="font-serif text-xl">{s.text}</h2>
-    <button className={button} onClick={()=>{const utterance=new SpeechSynthesisUtterance(s.text);utterance.rate=.88;window.speechSynthesis.speak(utterance);}}>Read aloud</button>
-    {activity==='tone'&&<p className="text-xs text-muted">This activity compares context clues. The computer voice does not demonstrate reliable emotional tone.</p>}
-    <button className={button} disabled={answered} onClick={()=>setHint(true)}>Show a cue</button>{hint&&<p>{s.hint}</p>}
-    <div className="space-y-2">{choices.map(({text:c,index:i})=><button className={`${button} block w-full text-left`} key={c} disabled={busy||answered} onClick={async()=>{setBusy(true);try{
+  if(count>=5||expired)return <section className={`${box} lab-complete`}><PlayBuddy win/><h2>Practice complete</h2><p>Nice exploring. Time for a break!</p><p className="text-sm">{count>0?"Your answers are saved for your grown-up.":"Come back when you’re ready."}</p></section>;
+  return <section className={`${box} lab-card`}>{mission&&<p className="text-sm font-semibold">Your mission: {mission}</p>}{recheckDue(events)&&<p role="status">A one-week recheck is due. Try a new-situation exercise again with as little help as you need.</p>}<div className="lab-activity-nav">{(Object.keys(LAB) as LabActivity[]).map(a=><button key={a} aria-pressed={activity===a} disabled={busy} className={button} onClick={()=>reset(a,0)}>{labels[a]}</button>)}</div>
+    <div className="lab-round"><span>Round {count+(answered?0:1)} / 5</span><span className="lab-round-dots" aria-hidden="true">{[0,1,2,3,4].map(n=><span key={n} data-done={n<count}/>)}</span></div><p className="text-xs text-muted">{seen?'Practiced situation':'Unseen situation'} · {scene+1} of {LAB[activity].length}</p><h2 className="lab-scenario">{s.text}</h2>
+    <div className="lab-tools"><button className={button} onClick={()=>{const utterance=new SpeechSynthesisUtterance(s.text);utterance.rate=.88;window.speechSynthesis.speak(utterance);}}>Read aloud</button>
+
+    <button className={button} disabled={answered} onClick={()=>setHint(true)}>Show a cue</button></div>{hint&&<p className="lab-hint">{s.hint}</p>}
+    <div className="lab-answers">{choices.map(({text:c,index:i})=><button className={`${button} block w-full text-left`} key={c} disabled={busy||answered} onClick={async()=>{setBusy(true);try{
       const result=await transport<{result:string;feedback:string}>({action:'lab',studentId,activity,scene,choice:i,help:hint});setFeedback(result.feedback);setAnswered(true);setCount(n=>n+1);await refresh().catch(()=>setFeedback(result.feedback+' Your answer was saved; reopen the lab to refresh the summary.'));
     }catch{setFeedback('Your result was not saved. Please try again.');}finally{setBusy(false);}}}>{c}</button>)}</div>
-    {feedback&&<p role="status">{feedback}</p>}{answered&&<button className={button} onClick={()=>reset(activity,(scene+1)%LAB[activity].length)}>Next situation</button>}
-    <p className="text-xs text-muted">These short exercises are separate from your adaptive practice score. Your parent or clinician can see results.</p>
+    {feedback&&<p className="lab-feedback" role="status">{feedback}</p>}{answered&&<button className={`${button} lab-next`} onClick={()=>reset(activity,(scene+1)%LAB[activity].length)}>Next situation</button>}
+    <details className="lab-disclosure"><summary>About this game</summary><p>These exercises have their own results. Your grown-up can see your answers.</p>{activity==='tone'&&<p>Use the story clues. The computer voice does not act out emotional tone.</p>}</details>
   </section>;
 }

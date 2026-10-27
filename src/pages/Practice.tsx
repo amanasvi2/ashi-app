@@ -267,7 +267,7 @@ export function QuestionPanel(props: QuestionPanelProps) {
             <button
               key={idx}
               onClick={() => setSelected(idx)}
-              className={`w-full text-left px-4 py-3.5 rounded-xl border font-serif text-[17px] leading-snug transition-colors
+              className={`play-answer w-full text-left px-4 py-3.5 rounded-xl border font-serif text-[17px] leading-snug transition-colors
                 ${selected === idx
                   ? 'border-accent bg-accent/5 text-ink'
                   : 'border-rule bg-surface text-ink hover:border-muted'
@@ -347,7 +347,7 @@ function FinishedScreen({ score, maxScore, mode, coinsEarned, journalDone, floor
   const message =
     pct >= 90 ? 'Excellent work.' : pct >= 70 ? 'Great effort.' :
     pct >= 50 ? 'Good work. Keep going.' : 'Nice try. Every session counts.';
-  const modeLabel = { mixed: 'Mixed', social: 'Social Skills', nonverbal: 'Body Language', inference: 'Reading Clues' }[mode];
+  const modeLabel = { mixed: 'Remix', social: 'Squad Quest', nonverbal: 'Vibe Check', inference: 'Plot Twist' }[mode];
 
   return (
     <div className="min-h-screen bg-paper flex items-center justify-center px-4">
@@ -631,17 +631,17 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  const TYPE_LABELS    = { social: 'Social Skills', nonverbal: 'Body Language', inference: 'Reading Clues' };
+  const TYPE_LABELS    = { social: 'Squad Quest', nonverbal: 'Vibe Check', inference: 'Plot Twist' };
   const DIFF_LABELS    = { 1: 'Straightforward', 2: 'Read carefully', 3: 'Look for clues' };
   const SUPPORT_LABELS: Record<SupportLevel, string> = { 3: 'Most help', 2: 'Word bank', 1: 'Some help', 0: 'Open question' };
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col">
+    <div className="play-practice min-h-screen bg-paper flex flex-col">
 
       {/* Top bar — quiet on purpose, the passage below is the hero */}
       <div className="sticky top-0 z-10 bg-paper/95 backdrop-blur-sm border-b border-rule">
         <div className="max-w-[70ch] mx-auto px-4 md:px-6 py-3 flex items-center gap-4">
-          <button onClick={() => { stop(); onExit(); }}
+          <button aria-label="Exit practice" onClick={() => { stop(); onExit(); }}
             className="text-muted hover:text-ink transition-colors p-1 -ml-1">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -679,7 +679,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
           text={currentItem.scenario}
           speakingText={speakingText}
           activeCharIndex={activeCharIndex}
-          className="font-serif text-[19px] leading-[1.75] text-ink"
+          className="play-passage font-serif text-[19px] leading-[1.75] text-ink"
         />
         <div className="mt-4">
           <SpeakButton text={currentItem.scenario} speak={speak} stop={stop} speakingText={speakingText} />

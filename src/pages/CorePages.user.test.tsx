@@ -17,10 +17,10 @@ beforeEach(()=>{vi.resetAllMocks();m.loadSessions.mockResolvedValue([]);m.loadLe
 afterEach(cleanup);
 it('opens all four practice modes from the student home',async()=>{
  const start=vi.fn();render(<Home username="fake" onStart={start} onConversation={()=>{}} onLogout={()=>{}} onOpenProfile={()=>{}} onCarryover={()=>{}}/>);
- await screen.findByText('Mixed');for(const name of ['Mixed','Social Skills','Body Language','Reading Clues'])fireEvent.click(screen.getByRole('button',{name:new RegExp('^'+name)}));
+ await screen.findByText('Remix');for(const name of ['Remix','Squad Quest','Vibe Check','Plot Twist'])fireEvent.click(screen.getByRole('button',{name:new RegExp('^'+name)}));
  expect(new Set(start.mock.calls.map(c=>c[0])).size).toBe(4);
 });
-it('opens conversation and carryover from home',async()=>{const conversation=vi.fn(),carryover=vi.fn();render(<Home username="fake" onStart={()=>{}} onConversation={conversation} onLogout={()=>{}} onOpenProfile={()=>{}} onCarryover={carryover}/>);await screen.findByText('Mixed');fireEvent.click(screen.getByRole('button',{name:'Start a conversation'}));fireEvent.click(screen.getByRole('button',{name:/My practice lab and missions/}));expect(conversation).toHaveBeenCalled();expect(carryover).toHaveBeenCalled();});
+it('opens conversation and carryover from home',async()=>{const conversation=vi.fn(),carryover=vi.fn();render(<Home username="fake" onStart={()=>{}} onConversation={conversation} onLogout={()=>{}} onOpenProfile={()=>{}} onCarryover={carryover}/>);await screen.findByText('Remix');fireEvent.click(screen.getByRole('button',{name:/Chat with Alex/}));fireEvent.click(screen.getByRole('button',{name:/Quick Play/}));expect(conversation).toHaveBeenCalled();expect(carryover).toHaveBeenCalled();});
 it('shows an empty progress page without inventing sessions',async()=>{render(<ProgressPage/>);await screen.findByRole('heading',{name:'Your Progress'});expect(screen.getByText(/No practice sessions yet/i)).toBeTruthy();});
 it('shows stored session scores and mode on progress',async()=>{m.loadSessions.mockResolvedValue([{id:'session',date:new Date().toISOString(),mode:'inference',score:3,maxScore:4,itemCount:4,endedBy:'completed',levelSnapshot:levels.levels,difficultySnapshot:{social:1,nonverbal:2,inference:3}}]);render(<ProgressPage/>);await screen.findByRole('heading',{name:'Recent sessions'});expect(screen.getByText('3 / 4')).toBeTruthy();});
 it('can choose a journal mood, request a prompt, and save writing',async()=>{render(<Journal onBack={()=>{}}/>);const input=await screen.findByPlaceholderText('Write anything you want here…');fireEvent.click(screen.getByRole('button',{name:'Need a prompt?'}));fireEvent.change(input,{target:{value:'Today I asked for more time.'}});fireEvent.click(screen.getByRole('button',{name:'Happy'}));fireEvent.click(screen.getByRole('button',{name:'Save'}));await screen.findByRole('button',{name:'Saved'});expect(m.saveJournalEntry).toHaveBeenCalledWith(expect.objectContaining({mood:'happy',content:'Today I asked for more time.'}));});
@@ -40,13 +40,13 @@ it('shows and expands simulated conversation history',async()=>{m.loadConversati
 it('reports a rejected profile preference save',async()=>{m.updateKidGender.mockRejectedValue(new Error('Denied'));render(<ProfilePanel username="fake" onClose={()=>{}} onLogout={()=>{}}/>);fireEvent.click(await screen.findByRole('button',{name:'Boy'}));await screen.findByRole('alert');});
 
 it('walks the actual student app navigation, journal, profile and sign out with a simulated session',async()=>{
- render(<App/>);await screen.findByText('Mixed');
+ render(<App/>);await screen.findByText('Remix');
  fireEvent.click(screen.getAllByRole('button',{name:'Progress'})[0]);await screen.findByRole('heading',{name:'Your Progress'});
  fireEvent.click(screen.getAllByRole('button',{name:'Rewards'})[0]);await screen.findByRole('heading',{name:'Rewards'});
- fireEvent.click(screen.getAllByRole('button',{name:'Home'})[0]);await screen.findByText('Mixed');
+ fireEvent.click(screen.getAllByRole('button',{name:'Home'})[0]);await screen.findByText('Remix');
  fireEvent.click(screen.getByRole('button',{name:'Open your journal'}));await screen.findByRole('heading',{name:'Your Journal'});
- fireEvent.click(screen.getByRole('button',{name:'Back'}));await screen.findByText('Mixed');
- fireEvent.click(screen.getAllByRole('button',{name:'F'})[0]);await screen.findByRole('heading',{name:'Profile & Settings'});
+ fireEvent.click(screen.getByRole('button',{name:'Back'}));await screen.findByText('Remix');
+ fireEvent.click(screen.getAllByRole('button',{name:'Open profile'})[0]);await screen.findByRole('heading',{name:'Profile & Settings'});
  fireEvent.click(screen.getByRole('button',{name:'Sign out'}));await screen.findByLabelText('Username');
 });
 it('ignores a late dashboard response from a previous child',async()=>{
