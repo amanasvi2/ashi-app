@@ -1,0 +1,20 @@
+ASHI — 75-second walkthrough
+All examples and results are fictional. No clinical benefit is claimed.
+
+0–15 seconds · Try practice
+A friend asks, “Is there room for one more?” Try a response and reveal a clue. ASHI practices possibilities; a clue cannot tell us everything another person thinks or feels.
+
+15–30 seconds · Capture a moment
+An adult selects what happened, where, and the other person's role. The saved summary uses roles rather than real names. This demo keeps everything in memory.
+
+30–45 seconds · Review practice
+The child’s account owner reviews moment-based practice. Try approving, editing or rejecting the sample. This is fixed example content, not a live AI call or professional approval.
+
+45–60 seconds · Check transfer
+App scores and everyday observations answer different questions. Record whether there was an opportunity to use the skill. No opportunity gets no success or failure rating.
+
+60–75 seconds · Make it fit
+School grade, reading grade, plain wording and adaptive support are separate. Try the learning-profile editor. Demo changes do not affect any real account or earned skill evidence.
+
+Explore manually: https://ashiapp.vercel.app/demo
+Play the timed tour: https://ashiapp.vercel.app/demo?play=1

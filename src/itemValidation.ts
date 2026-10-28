@@ -39,11 +39,16 @@ export function isValidItem(
     if (typeof qr.text !== 'string' || qr.text.trim().length === 0) return false;
     if (!Array.isArray(qr.choices) || qr.choices.length !== 3) return false;
     if (!qr.choices.every((c: unknown) => typeof c === 'string' && c.trim().length > 0)) return false;
-    if (typeof qr.evidence !== 'string' || qr.evidence.trim().length < 8) return false;
+    if (typeof qr.evidence !== 'string' || qr.evidence.trim().length < 8 || !r.scenario.includes(qr.evidence)) return false;
+    if (new Set((qr.choices as string[]).map(c => c.trim().toLowerCase())).size !== 3) return false;
     // Only questions[0] is ever actually rendered (Practice.tsx always uses
     // the first question; any follow-up is generated but unused) — so the
     // word-bank requirement only applies there.
-    if (i === 0 && needsWordBank && !isValidWordBank(qr.wordBank)) return false;
+    if (i === 0 && needsWordBank) {
+      if (typeof qr.stem !== 'string' || !qr.stem.trim() || !isValidWordBank(qr.wordBank)) return false;
+      const bank = qr.wordBank as {text:string}[];
+      if (new Set(bank.map(w => w.text.trim().toLowerCase())).size !== bank.length) return false;
+    }
   }
   return true;
 }

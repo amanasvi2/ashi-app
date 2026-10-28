@@ -1,0 +1,10 @@
+import {afterEach,beforeEach,it,expect,vi} from 'vitest';
+import {render,screen,cleanup} from '@testing-library/react';
+const m=vi.hoisted(()=>({app:vi.fn(),tour:vi.fn()}));
+vi.mock('./App',()=>({default:m.app}));
+vi.mock('./public/Walkthrough',()=>({Walkthrough:m.tour}));
+import {Entry} from './Entry';
+beforeEach(()=>{vi.clearAllMocks();m.app.mockReturnValue(<p>Account app boundary</p>);m.tour.mockReturnValue(<p>Fictional tour boundary</p>);});
+afterEach(()=>{cleanup();window.history.replaceState({},'','/');});
+it('opens the public demo without mounting account startup or account services',async()=>{window.history.replaceState({},'','/demo');render(<Entry/>);await screen.findByText('Fictional tour boundary');expect(m.app).not.toHaveBeenCalled();});
+it('preserves the existing account app at the normal entry',async()=>{window.history.replaceState({},'','/');render(<Entry/>);await screen.findByText('Account app boundary');expect(m.tour).not.toHaveBeenCalled();});

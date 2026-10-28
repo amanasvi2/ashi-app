@@ -22,7 +22,7 @@ describe('Generation and review validation',()=>{
  const row=seedWorkspace('test').items[0];const item=row.item;
  it('accepts 3 well-formed items at the requested support and difficulty',()=>expect(validatedBatch([item,item,item],row.skill_id,levels,difficulty)).toHaveLength(3));
  it.each([0,1,2,6])('rejects a batch of %s items',count=>expect(()=>validatedBatch(Array(count).fill(item),row.skill_id,levels,difficulty)).toThrow());
- it('rejects evidence not actually present in the scenario',()=>expect(()=>validateEditedItem({...item,questions:[{...item.questions[0],evidence:'This sentence is not in the story.'}]},row.skill_id,levels,difficulty)).toThrow(/Evidence/));
+ it('rejects evidence not actually present in the scenario',()=>expect(()=>validateEditedItem({...item,questions:[{...item.questions[0],evidence:'This sentence is not in the story.'}]},row.skill_id,levels,difficulty)).toThrow(/evidence/i));
  it('rejects wrong difficulty',()=>expect(()=>validateEditedItem({...item,difficulty:2},row.skill_id,levels,difficulty)).toThrow());
  it('requires a word bank at level 2',()=>expect(()=>validateEditedItem(item,row.skill_id,{...levels,social:2},difficulty)).toThrow());
  it('rejects duplicate choices',()=>expect(()=>validateEditedItem({...item,questions:[{...item.questions[0],choices:['same','same','different']}]},row.skill_id,levels,difficulty)).toThrow());

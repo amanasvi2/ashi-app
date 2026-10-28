@@ -8,7 +8,7 @@ export function validatedBatch(raw: unknown, skill: CarryoverSkill, levels: Leve
 }
 export function validateEditedItem(raw: unknown, skill: CarryoverSkill, levels: LevelState, difficulty: DifficultyState): Item {
   const type = SKILL_TYPES[skill];
-  if (!isValidItem(raw, levels, { [type]: difficulty[type] }) || raw.type !== type || raw.questions.length !== 1) throw new Error('Item format or support level did not match.');
+  if (!isValidItem(raw, levels, { [type]: difficulty[type] }) || raw.type !== type || raw.questions.length !== 1) throw new Error('Item format, evidence, choices or support level did not match.');
   for (const q of raw.questions) {
     if (!q.evidence || !raw.scenario.includes(q.evidence)) throw new Error('Evidence must occur exactly in the scenario.');
     if (new Set(q.choices?.map(c => c.trim().toLowerCase())).size !== 3) throw new Error('Answer choices must differ.');
