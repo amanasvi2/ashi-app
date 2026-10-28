@@ -422,6 +422,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
   const [readingReady, setReadingReady] = useState(false);
   const [readProgress, setReadProgress] = useState(0);
   const [evaluating, setEvaluating] = useState(false);
+  const [answerError, setAnswerError] = useState('');
 
   const endedByRef         = useRef<SessionRecord['endedBy']>('completed');
   const questionStartRef   = useRef(Date.now());
@@ -583,6 +584,8 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
   };
 
   const handleAnswer = async (answer: string) => {
+    if (evaluating) return;
+    setAnswerError('');
     const correctAnswer = currentQuestion.choices?.[0] ?? '';
     let result: AnswerResult;
     let feedbackText: string;
@@ -600,10 +603,14 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
       optionCount = currentQuestion.wordBank?.length ?? null;
     } else {
       setEvaluating(true);
-      const ev = await evaluateFreeText(answer, correctAnswer, currentItem.scenario, currentQuestion.text);
-      setEvaluating(false);
-      result = ev.result;
-      feedbackText = ev.feedback;
+      try {
+        const ev = await evaluateFreeText(answer, correctAnswer, currentItem.scenario, currentQuestion.text);
+        result = ev.result;
+        feedbackText = ev.feedback;
+      } catch (error) {
+        setAnswerError(error instanceof Error ? error.message : 'Your answer could not be checked. Please try again.');
+        return;
+      } finally { setEvaluating(false); }
       optionCount = null;
     }
 
@@ -688,6 +695,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
         </div>
       </div>
 
+      {answerError && <p role="alert" className="mx-5 my-3 p-4 rounded-xl border border-rule text-sm">{answerError}</p>}
       {/* Question / evidence — the workspace beneath the page, given just
           enough separation (one shadow, no heavy border) to read as
           distinct from the passage above it. */}

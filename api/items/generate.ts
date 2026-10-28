@@ -40,10 +40,10 @@ export function buildPrompt(
     const typeGuide =
       r.type === 'social'
         ? `Social problem: a short scenario where someone is left out, misunderstood, or in conflict.
-   2 questions: (1) "What is the problem?" stem "The problem is that", (2) "Name 2 things [name] could do." stem "One thing [name] could do is".`
+   1 question: identify an observable problem or ask for one safe response. Include a matching sentence stem.`
         : r.type === 'nonverbal'
         ? `Nonverbal cue: a short description of specific body language, facial expression, or tone of voice.
-   1 question: "What does that mean?" stem "[Name] is probably"`
+   1 question: ask what the context might suggest or what the student could ask to check. Never treat one gesture as proof of an emotion. Include a matching stem.`
         : `Text inference: a short passage where the answer is NOT stated directly.
    1 question whose answer requires inference. Include a short stem.`;
 
@@ -57,7 +57,10 @@ export function buildPrompt(
 ${languagePrompt(profile)}
 
 STRICT RULES:
-- Use brief scenarios and one clear question at a time; preserve the requested inference difficulty.
+- Exactly ONE question per item; only the first question is displayed. Use brief scenarios; preserve the requested inference difficulty.
+- A gesture, eye contact, voice or sensory preference is not proof of intent or emotion. Use context, uncertainty and respectful clarification. Take stated needs seriously; do not teach that a person saying they need quiet is secretly lying.
+- Do not mark asking for help, setting a boundary, taking a break or leaving an unsafe situation as wrong merely because another response is preferred.
+- The example answer must be supported by context. If two choices could reasonably fit, rewrite the scenario or choices. Distinct choices and word-bank options are required.
 - NO idioms, sarcasm, metaphor, or figurative language in question text or answer choices
 - choices[0] is ALWAYS the correct answer (shuffled before display)
 - Wrong choices must be plausible on the surface but clearly wrong on reflection

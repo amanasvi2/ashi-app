@@ -48,7 +48,7 @@ it('walks the actual student app navigation, journal, profile and sign out with 
  fireEvent.click(screen.getByRole('button',{name:'Open your journal'}));await screen.findByRole('heading',{name:'Your Journal'});
  fireEvent.click(screen.getByRole('button',{name:'Back'}));await screen.findByText('Play All');
  fireEvent.click(screen.getAllByRole('button',{name:'Open profile'})[0]);await screen.findByRole('heading',{name:'Profile & Settings'});
- fireEvent.click(screen.getByRole('button',{name:'Sign out'}));await screen.findByLabelText('Username');
+ fireEvent.click(screen.getByRole('button',{name:'Sign out'}));await screen.findByRole('link',{name:/Try the demo/});
 });
 it('ignores a late dashboard response from a previous child',async()=>{
  let finishOld!:(value:unknown[])=>void;

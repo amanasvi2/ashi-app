@@ -1,3 +1,4 @@
+import {Landing} from './public/Landing';
 import {StudentLanguage} from './language/ChildLanguage';
 import { PlayLogo } from './design/PlayArt';
 import { useEffect, useState } from 'react';
@@ -123,7 +124,7 @@ export default function App() {
   if (authLoading) return <LoadingScreen />;
 
   // ── Not logged in ─────────────────────────────────────────────────────────
-  if (!session) return <Login onLogin={handleLogin} />;
+  if (!session) return window.location.pathname === '/login' ? <Login onLogin={handleLogin} /> : <Landing/>;
 
   if (carryoverStudent) {const workspace=<CarryoverWorkspace key={carryoverStudent.id} studentId={carryoverStudent.id}
     studentName={carryoverStudent.name} owner={session.role==='parent'} onBack={()=>setCarryoverStudent(null)}/>;return session.role==='kid'?<StudentLanguage studentId={session.userId}>{workspace}</StudentLanguage>:workspace;}

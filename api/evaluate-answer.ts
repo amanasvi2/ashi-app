@@ -14,6 +14,7 @@ export function buildPrompt(scenario: string, questionText: string, correctAnswe
 reasoning question.
 ${languagePrompt(profile)}
 There are many valid ways to correctly answer — judge for MEANING, not exact wording.
+The example is not the only possible answer. Accept any context-supported interpretation or safe response, including clarification, boundaries, asking for help or taking a break when relevant. Do not infer feelings from a gesture alone or contradict stated sensory needs without evidence. Explain uncertainty rather than claiming to know someone’s thoughts.
 
 Scenario:
 """

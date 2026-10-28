@@ -1,7 +1,7 @@
 // Regression guard for the free-text scoring pipeline: runs every sample
 // answer in review/golden/items.json through the REAL
 // api/evaluate-answer.ts prompt + model call and checks the verdict
-// matches what a human expects. Not part of `npm test` — ~90 real Groq
+// matches retained draft labels. See quality-review.json for editorial exclusions. Not part of `npm test` — ~90 real Groq
 // calls is too slow/costly/nondeterministic for every `vitest run`, and
 // LLM grading has some irreducible variance even at low temperature, so
 // this checks aggregate accuracy against a threshold rather than
@@ -53,7 +53,10 @@ async function evaluate(item: GoldenItem, answer: string): Promise<'correct' | '
 }
 
 async function main() {
-  const items: GoldenItem[] = JSON.parse(readFileSync(path.join(ROOT, 'review', 'golden', 'items.json'), 'utf-8'));
+  const allItems: GoldenItem[] = JSON.parse(readFileSync(path.join(ROOT, 'review', 'golden', 'items.json'), 'utf-8'));
+  const quality = JSON.parse(readFileSync(path.join(ROOT, 'review', 'golden', 'quality-review.json'), 'utf-8')) as {held:Record<string,string>};
+  const items=allItems.filter(item=>!Object.hasOwn(quality.held,item.id));
+  console.log(`Editorial hold: ${allItems.length-items.length} cases excluded. Remaining labels are drafts, not clinical validation.`);
   const totalAnswers = items.reduce((sum, i) => sum + i.sampleAnswers.length, 0);
   console.log(`Running ${totalAnswers} sample answers across ${items.length} golden items against the real scoring pipeline...\n`);
 
@@ -77,7 +80,7 @@ async function main() {
   console.log('\n');
 
   const accuracy = correct / totalAnswers;
-  console.log(`Accuracy: ${(accuracy * 100).toFixed(1)}% (${correct}/${totalAnswers}), threshold ${(ACCURACY_THRESHOLD * 100).toFixed(0)}%\n`);
+  console.log(`Draft-label agreement: ${(accuracy * 100).toFixed(1)}% (${correct}/${totalAnswers}), threshold ${(ACCURACY_THRESHOLD * 100).toFixed(0)}%\n`);
 
   if (mismatches.length > 0) {
     console.log('Mismatches:');

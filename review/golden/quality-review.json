@@ -1,0 +1,22 @@
+{
+  "scope": "Editorial screening of fixed developer benchmark; not professional approval or clinical validation. Held cases are excluded from model-label agreement checks until relabeled.",
+  "held": {
+    "golden_social_01": "Drawing separately does not establish refusal to contribute; task assignment is missing.",
+    "golden_social_02": "Sitting alone does not establish a desire for company or a social problem.",
+    "golden_nonverbal_01": "Flat voice, crossed arms and looking down do not establish a hidden negative test result.",
+    "golden_nonverbal_03": "Avoid teaching that repeated clarification requests justify an assumed hostile response; add explicit context and accept clarification.",
+    "golden_nonverbal_05": "Movement and gaze alone do not establish anxiety; a stated concern or check-in is needed.",
+    "golden_nonverbal_07": "Phone use and limited visible reaction do not establish disinterest.",
+    "golden_nonverbal_09": "Distance from a dog can reflect a boundary or preference; do not require a fear label.",
+    "golden_nonverbal_10": "The expected label contradicts a stated okay response based on a smile/nod alone.",
+    "golden_inference_02": "Repeated message checking can have several explanations; anxiety is not established.",
+    "golden_inference_03": "Putting a report card away does not establish bad grades or deception.",
+    "golden_inference_04": "Sharing an extra sandwich does not establish advance knowledge of the friend’s need.",
+    "golden_inference_05": "Phone checking does not establish a specific important-message motive.",
+    "golden_inference_06": "Expected answer dismisses the stated sensory need for a quieter lunch location.",
+    "golden_inference_09": "Keeping a jacket on does not establish concealment; several comfort/privacy reasons fit.",
+    "golden_inference_10": "Volunteering to clean does not establish avoidance of someone outside class."
+  },
+  "reviewed_on": "2026-10-28",
+  "remaining_status": "Retained draft labels still need professional review; agreement is not an efficacy measure."
+}
