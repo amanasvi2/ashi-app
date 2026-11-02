@@ -1,3 +1,4 @@
+import {SignOutButton} from '../components/SignOutButton';
 import {LearningProfileEditor} from '../pilot/LearningProfileEditor';
 import { Brand } from '../design/Brand';
 import { LoadFailure } from '../components/LoadingScreen';
@@ -234,12 +235,7 @@ export function ParentDashboard({
             <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-0.5">{onBackToRoster?'Clinician view':'Parent view'}</p>
             <h1 className="text-2xl font-bold text-ink tracking-tight capitalize">{kidName}'s Progress</h1>
           </div>
-          <button
-            onClick={onLogout}
-            className="text-xs text-muted hover:text-ink transition-colors mt-1"
-          >
-            Log out
-          </button>
+          <SignOutButton onSignOut={onLogout}/>
         </div>
 
         {/* Student switcher — only meaningful for a parent (a clinician adds ─ */}
@@ -300,7 +296,7 @@ export function ParentDashboard({
             <p className="text-sm font-semibold text-alert">Worth a look</p>
             <p className="text-sm text-ink">
               {kidName} had a conversation-practice chat where they seemed to be going through something hard.
-              The chat ended early. Check the conversation history below, and it may be worth checking in with her.
+              The chat ended early. Check the conversation history below, and it may be worth checking in with them.
             </p>
           </div>
         )}
@@ -473,7 +469,7 @@ export function ParentDashboard({
             <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-5 space-y-5">
               <p className="text-sm text-muted">
                 This comes from what you told us about {kidName} when you set up their profile.
-                It shapes which kinds of questions they get and how much support they start with.
+                Focus areas guide the mix of questions. Everyone starts with easy questions and answer choices, then practice adjusts from their answers.
               </p>
 
               <p className="text-sm text-muted">School grade: {profile.grade===0?'K':profile.grade} · Reading grade: {profile.reading_level}</p>
@@ -522,7 +518,7 @@ export function ParentDashboard({
 
               {profile.supports.length > 0 && (
                 <div>
-                  <p className="text-sm font-semibold text-ink mb-2">Supports we use</p>
+                  <p className="text-sm font-semibold text-ink mb-2">Saved support preferences</p><p className="text-xs text-muted mb-2">Plain language changes labels and AI wording. Other selections record what helps; they do not all turn on a feature.</p>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.supports.map(id => (
                       <span key={id} className="text-xs text-ink bg-rule/40 px-2.5 py-1 rounded-xl">
@@ -536,7 +532,7 @@ export function ParentDashboard({
               {profile.interests.length > 0 && (
                 <div>
                   <p className="text-sm font-semibold text-ink mb-2">Interests</p>
-                  <p className="text-xs text-muted mb-2">Used to make scenarios feel more familiar to them.</p>
+                  <p className="text-xs text-muted mb-2">Used in new AI stories. Story pictures uses a fixed library.</p>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.interests.map(interest => (
                       <span key={interest} className="text-xs text-ink bg-rule/40 px-2.5 py-1 rounded-xl">

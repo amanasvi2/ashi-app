@@ -1,16 +1,22 @@
-// Only the raw description text is persisted — an accidental reload
-// shouldn't lose a parent's paragraph, but there's little value in
-// persisting the confirm screen's edits too (it's a quick single pass).
-const DRAFT_KEY = 'ashi_intake_description_v1';
-
-export function saveDescriptionDraft(text: string): void {
-  try { localStorage.setItem(DRAFT_KEY, text); } catch { /* storage unavailable */ }
+// Raw school/IEP descriptions stay in this tab, scoped to the signed-in
+// owner. Never restore a shared, persistent draft into a different account.
+const LEGACY_KEY='ashi_intake_description_v1';
+const PREFIX='ashi_intake_description_v2:';
+export function clearLegacyDescriptionDraft():void {
+ try{localStorage.removeItem(LEGACY_KEY);sessionStorage.removeItem(LEGACY_KEY);}catch{/* storage unavailable */}
 }
-
-export function loadDescriptionDraft(): string {
-  try { return localStorage.getItem(DRAFT_KEY) ?? ''; } catch { return ''; }
+export function saveDescriptionDraft(text:string,ownerId?:string):void {
+ clearLegacyDescriptionDraft();if(!ownerId)return;
+ try{sessionStorage.setItem(PREFIX+ownerId,text);}catch{/* storage unavailable */}
 }
-
-export function clearDescriptionDraft(): void {
-  try { localStorage.removeItem(DRAFT_KEY); } catch { /* storage unavailable */ }
+export function loadDescriptionDraft(ownerId?:string):string {
+ clearLegacyDescriptionDraft();if(!ownerId)return '';
+ try{return sessionStorage.getItem(PREFIX+ownerId)??'';}catch{return '';}
+}
+export function clearDescriptionDraft(ownerId?:string):void {
+ clearLegacyDescriptionDraft();if(!ownerId)return;
+ try{sessionStorage.removeItem(PREFIX+ownerId);}catch{/* storage unavailable */}
+}
+export function clearAllDescriptionDrafts():void {
+ clearLegacyDescriptionDraft();try{for(let i=sessionStorage.length-1;i>=0;i--){const key=sessionStorage.key(i);if(key?.startsWith(PREFIX))sessionStorage.removeItem(key);}}catch{/* storage unavailable */}
 }
