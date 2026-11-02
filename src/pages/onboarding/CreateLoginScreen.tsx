@@ -1,14 +1,20 @@
+import {SignOutButton} from '../../components/SignOutButton';
 import { useState } from 'react';
 import { createStudent } from '../../students';
 import type { StudentSummary } from '../../students';
 import type { ProfileSummary } from '../../profiles';
 
+const loginServices={createStudent};
 interface Props {
+  services?:typeof loginServices;
+  onLogout?:()=>void|Promise<void>;
+  onCancel?:()=>void;
   profile: ProfileSummary;
   onDone: (student: StudentSummary) => void;
 }
 
-export function CreateLoginScreen({ profile, onDone }: Props) {
+export function CreateLoginScreen({ profile, onDone,onLogout,onCancel,services=loginServices }: Props) {
+  const {createStudent}=services;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -38,9 +44,10 @@ export function CreateLoginScreen({ profile, onDone }: Props) {
     <div className="min-h-screen bg-paper flex items-center justify-center px-4">
       <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-8 w-full max-w-sm space-y-5">
         <div>
+          {(onLogout||onCancel)&&<div className="flex justify-between items-center mb-4">{onCancel?<button type="button" className="text-sm text-muted" onClick={onCancel}>Back to dashboard</button>:<span/>}{onLogout&&<SignOutButton onSignOut={onLogout}/>}</div>}
           <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Profile saved</p>
           <h2 className="text-base font-semibold text-ink">Set up {profile.displayName}'s login</h2>
-          <p className="text-sm text-muted mt-1">She will use this username and password to sign in and start practicing.</p>
+          <p className="text-sm text-muted mt-1">Your child will use this username and password to sign in and start practicing.</p>
         </div>
 
         {error && (
@@ -70,7 +77,7 @@ export function CreateLoginScreen({ profile, onDone }: Props) {
           </div>
         </div>
         <div>
-          <p className="text-xs font-medium text-muted mb-2">How does she identify? (optional)</p>
+          <p className="text-xs font-medium text-muted mb-2">How does your child identify? (optional)</p>
           <div className="flex gap-2">
             {([{ v: 'girl', l: 'Girl' }, { v: 'boy', l: 'Boy' }, { v: 'other', l: 'Something else' }] as const).map(o => (
               <button key={o.v} onClick={() => setGender(o.v)}

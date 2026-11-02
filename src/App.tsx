@@ -1,3 +1,4 @@
+import {clearLegacyDescriptionDraft} from './pages/onboarding/draftStorage';
 import {Landing} from './public/Landing';
 import {StudentLanguage} from './language/ChildLanguage';
 import { PlayLogo } from './design/PlayArt';
@@ -65,6 +66,7 @@ export default function App() {
   const [carryoverStudent, setCarryoverStudent] = useState<{id:string;name:string}|null>(null);
 
   useEffect(() => {
+    clearLegacyDescriptionDraft();
     getSession().then(s => { setSessionState(s); setAuthLoading(false); }).catch(()=>{setStartupFailed(true);setAuthLoading(false);});
   }, []);
 
@@ -135,7 +137,10 @@ export default function App() {
 
     if (profiles.length === 0 || addingStudent) {
       return (
-        <IntakeFlow
+        <IntakeFlow key={session.userId}
+          ownerId={session.userId}
+          onLogout={handleLogout}
+          onCancel={addingStudent&&students.length>0?()=>setAddingStudent(false):undefined}
           onDone={p => {
             setProfiles(prev => [...prev, p]);
             setAddingStudent(false);
@@ -149,6 +154,8 @@ export default function App() {
       return (
         <CreateLoginScreen
           profile={pendingLoginProfile}
+          onLogout={handleLogout}
+          onCancel={students.length>0?()=>setPendingLoginProfile(null):undefined}
           onDone={s => {
             setStudents(prev => [...prev, s]);
             setProfiles(prev => prev.map(p => (p.id === pendingLoginProfile.id ? { ...p, studentId: s.id } : p)));

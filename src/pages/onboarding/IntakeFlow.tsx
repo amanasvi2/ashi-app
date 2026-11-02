@@ -1,3 +1,4 @@
+import {SignOutButton} from '../../components/SignOutButton';
 import { useEffect, useState } from 'react';
 import { SKILLS, SUPPORTS, DOMAIN_LABELS, isActionableFocusSkill } from '../../skills';
 import type { SkillDomain } from '../../skills';
@@ -7,6 +8,7 @@ import type { StudentProfileInput } from '../../profileTypes';
 import { defaultProfile, validateStudentProfile, MAX_FOCUS_SKILLS, DEFAULT_SESSION_LENGTH_MIN } from '../../profileValidation';
 import { saveDescriptionDraft, loadDescriptionDraft, clearDescriptionDraft } from './draftStorage';
 
+const intakeServices={extractProfile,saveProfile};
 const DOMAINS: SkillDomain[] = ['reading', 'writing', 'math', 'comm', 'exec'];
 
 function skillsByDomain(domain: SkillDomain) {
@@ -14,10 +16,15 @@ function skillsByDomain(domain: SkillDomain) {
 }
 
 interface Props {
+  onLogout?:()=>void|Promise<void>;
+  onCancel?:()=>void;
+  ownerId?:string;
+  services?:typeof intakeServices;
   onDone: (profile: ProfileSummary) => void;
 }
 
-export function IntakeFlow({ onDone }: Props) {
+export function IntakeFlow({ onDone,ownerId,onLogout,onCancel,services=intakeServices }: Props) {
+  const {extractProfile,saveProfile}=services;
   const [step, setStep] = useState<'describe' | 'confirm'>('describe');
   const [description, setDescription] = useState('');
   const [extracting, setExtracting] = useState(false);
@@ -27,12 +34,12 @@ export function IntakeFlow({ onDone }: Props) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setDescription(loadDescriptionDraft());
-  }, []);
+    setDescription(loadDescriptionDraft(ownerId));
+  }, [ownerId]);
 
   const updateDescription = (value: string) => {
     setDescription(value);
-    saveDescriptionDraft(value);
+    saveDescriptionDraft(value,ownerId);
   };
 
   const handleContinue = async () => {
@@ -108,7 +115,7 @@ export function IntakeFlow({ onDone }: Props) {
     setSaving(true);
     try {
       const saved = await saveProfile(toSave);
-      clearDescriptionDraft();
+      clearDescriptionDraft(ownerId);
       onDone(saved);
     } catch (err) {
       console.error('Profile save failed:', err);
@@ -122,6 +129,7 @@ export function IntakeFlow({ onDone }: Props) {
     <div className="min-h-screen bg-paper flex items-center justify-center px-4 py-10">
       <div className="bg-surface rounded-xl border border-rule shadow-[var(--shadow-raised)] p-8 w-full max-w-lg space-y-6">
         <div>
+          {(onLogout||onCancel)&&<div className="flex justify-between items-center mb-4">{onCancel?<button type="button" className="text-sm text-muted" onClick={onCancel}>Back to dashboard</button>:<span/>}{onLogout&&<SignOutButton onSignOut={onLogout}/>}</div>}
           <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-1">Tell us about your child</p>
           <p className="text-sm text-muted">{step === 'describe' ? 'Step 1 of 2' : 'Step 2 of 2, review'}</p>
         </div>
@@ -145,6 +153,7 @@ export function IntakeFlow({ onDone }: Props) {
               className="w-full rounded-xl border border-rule px-4 py-3 text-sm text-ink placeholder:text-muted
                          focus:outline-none focus:ring-2 focus:ring-accent/40 resize-none"
             />
+            <p className="text-xs text-muted">Use a nickname and leave out identifying details. Continue sends this description to AI to draft a profile. You can enter the details yourself instead.</p>
             <button
               onClick={handleContinue}
               disabled={extracting || description.trim().length < 5}
@@ -153,13 +162,14 @@ export function IntakeFlow({ onDone }: Props) {
             >
               {extracting ? 'Reading that' : 'Continue →'}
             </button>
+            <button type="button" disabled={extracting} className="w-full py-3 rounded-xl border border-rule text-sm text-ink" onClick={()=>{setError('');setStep('confirm');}}>Enter details myself</button>
           </div>
         )}
 
         {step === 'confirm' && (
           <div className="space-y-5">
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-muted">Her name or nickname</label>
+              <label className="block text-xs font-medium text-muted">Name or nickname</label>
               <input aria-label="Name or nickname" value={profile.display_name} onChange={e => setProfile(p => ({ ...p, display_name: e.target.value }))}
                 className="w-full rounded-xl border border-rule px-4 py-2.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/40" />
             </div>
@@ -229,13 +239,13 @@ export function IntakeFlow({ onDone }: Props) {
               </div>
               {profile.focus.some(id => !isActionableFocusSkill(id)) && (
                 <p className="text-xs text-muted mt-1.5">
-                  Some selected focus areas are not used in practice sessions yet. They are saved, but will not change what she practices.
+                  Some selected focus areas are not used in practice sessions yet. They are saved, but will not change what they practice.
                 </p>
               )}
             </div>
 
             <div>
-              <p className="text-xs font-medium text-muted mb-2">What helps her</p>
+              <p className="text-xs font-medium text-muted mb-2">What helps your child</p>
               <div className="flex flex-wrap gap-1.5">
                 {SUPPORTS.map(s => (
                   <button key={s.id} onClick={() => toggleSupport(s.id)}
@@ -274,7 +284,7 @@ export function IntakeFlow({ onDone }: Props) {
             </div>
 
             <div>
-              <p className="text-xs font-medium text-muted mb-2">Session length</p>
+              <p className="text-xs font-medium text-muted mb-2">Preferred practice time</p><p className="text-xs text-muted mb-2">Saved as a preference. Rounds currently vary by question count, not a time limit.</p>
               <div className="flex gap-2">
                 {[5, 10, 15, 20, 30].map(n => (
                   <button key={n} onClick={() => setProfile(p => ({ ...p, session_length_min: n }))}

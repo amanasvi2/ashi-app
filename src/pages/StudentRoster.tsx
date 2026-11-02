@@ -1,3 +1,4 @@
+import {SignOutButton} from '../components/SignOutButton';
 import { useEffect, useState } from 'react';
 import type { StudentSummary } from '../students';
 import type { ProfileSummary } from '../profiles';
@@ -75,9 +76,7 @@ export function StudentRoster({
             <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-0.5">Caseload</p>
             <h1 className="text-2xl font-bold text-ink tracking-tight">{rows.length} {rows.length === 1 ? 'student' : 'students'}</h1>
           </div>
-          <button onClick={onLogout} className="text-xs text-muted hover:text-ink transition-colors mt-1">
-            Log out
-          </button>
+          <SignOutButton onSignOut={onLogout}/>
         </div>
 
         {incompleteProfile && (

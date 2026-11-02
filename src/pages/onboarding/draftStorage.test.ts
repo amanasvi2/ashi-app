@@ -1,29 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { saveDescriptionDraft, loadDescriptionDraft, clearDescriptionDraft } from './draftStorage';
-
-beforeEach(() => {
-  localStorage.clear();
-});
-
-describe('draftStorage', () => {
-  it('returns an empty string when nothing has been saved', () => {
-    expect(loadDescriptionDraft()).toBe('');
-  });
-
-  it('round-trips saved description text', () => {
-    saveDescriptionDraft('She loves Minecraft and struggles with group projects.');
-    expect(loadDescriptionDraft()).toBe('She loves Minecraft and struggles with group projects.');
-  });
-
-  it('clearDescriptionDraft removes the saved draft', () => {
-    saveDescriptionDraft('some text');
-    clearDescriptionDraft();
-    expect(loadDescriptionDraft()).toBe('');
-  });
-
-  it('overwrites a previous draft with the latest save', () => {
-    saveDescriptionDraft('first draft');
-    saveDescriptionDraft('second draft');
-    expect(loadDescriptionDraft()).toBe('second draft');
-  });
-});
+import {it,expect,beforeEach} from 'vitest';
+import {saveDescriptionDraft,loadDescriptionDraft,clearDescriptionDraft,clearAllDescriptionDrafts} from './draftStorage';
+beforeEach(()=>{sessionStorage.clear();localStorage.clear();});
+it('keeps a draft across reloads in the same tab and owner scope',()=>{saveDescriptionDraft('Fictional school description','fake-a');expect(loadDescriptionDraft('fake-a')).toBe('Fictional school description');expect(localStorage.length).toBe(0);});
+it('never restores another owner’s draft',()=>{saveDescriptionDraft('A description','fake-a');expect(loadDescriptionDraft('fake-b')).toBe('');saveDescriptionDraft('B description','fake-b');clearDescriptionDraft('fake-a');expect(loadDescriptionDraft('fake-a')).toBe('');expect(loadDescriptionDraft('fake-b')).toBe('B description');});
+it('does not persist descriptions without an authenticated owner scope',()=>{saveDescriptionDraft('Unscoped text');expect(sessionStorage.length).toBe(0);expect(loadDescriptionDraft()).toBe('');});
+it('removes legacy shared persistent text instead of importing it',()=>{localStorage.setItem('ashi_intake_description_v1','Old fictional IEP');expect(loadDescriptionDraft('fake-a')).toBe('');expect(localStorage.getItem('ashi_intake_description_v1')).toBeNull();});
+it('clears all intake drafts on logout and preserves unrelated tab storage',()=>{saveDescriptionDraft('A','fake-a');saveDescriptionDraft('B','fake-b');sessionStorage.setItem('unrelated','keep');clearAllDescriptionDrafts();expect(loadDescriptionDraft('fake-a')).toBe('');expect(loadDescriptionDraft('fake-b')).toBe('');expect(sessionStorage.getItem('unrelated')).toBe('keep');});
