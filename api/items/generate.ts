@@ -1,3 +1,4 @@
+import {selectAnimatedItems} from '../../src/scenes/liveCatalog.js';
 import {languagePrompt,type LanguageProfile} from '../../src/language/wording.js';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyUser } from '../../server/verifyUser.js';
@@ -149,14 +150,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       levels = DEFAULT_LEVELS,
       count,
       interests = [],
+      presentation = 'text',
     }: {
       mode: SessionMode;
       difficulty: DifficultyState;
       levels?: LevelState;
       count: number;
       interests?: string[];
+      presentation?: 'animated' | 'text';
     } = req.body ?? {};
 
+    if (!['animated','text'].includes(presentation) || !['mixed','social','nonverbal','inference'].includes(mode) || !Number.isInteger(count) || count<1 || count>20 || !difficulty || !['social','nonverbal','inference'].every(t=>[1,2,3].includes(difficulty[t as ItemType]))) return res.status(400).json({error:'Invalid practice request'});
     if (!mode || !difficulty || !count) return res.status(400).json({ error: 'Missing mode, difficulty, or count' });
 
     const token = String(req.headers.authorization).replace(/^Bearer\s+/i, '');
@@ -171,6 +175,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const floorAlarm: Record<ItemType, boolean> = diffRow?.floor_alarm ?? DEFAULT_FLAGS;
 
     // A floor-alarmed type is stopped entirely — even if explicitly requested.
+    if (mode==='mixed' && (['social','nonverbal','inference'] as const).every(t=>floorAlarm[t])) return res.status(409).json({error:'floor_alarm',blockedType:'social'});
     if (mode !== 'mixed' && floorAlarm[mode]) {
       return res.status(409).json({ error: 'floor_alarm', blockedType: mode });
     }
@@ -182,8 +187,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const {data:profileRow,error:profileError}=await client.from('student_profiles').select('focus,grade,reading_level,supports').eq('student_id',user.id).eq('is_active',true).maybeSingle();
     if(profileError)return res.status(503).json({error:'Student profile could not be loaded.'});
     let itemTypeWeights: Record<ItemType, number> | undefined;
-    if(mode==='mixed'&&profileRow){
-      let weights=deriveItemTypeWeights(profileRow.focus as string[]);
+    if(mode==='mixed'){
+      let weights=profileRow?deriveItemTypeWeights(profileRow.focus as string[]):{social:1,nonverbal:1,inference:1};
       weights=applyMasteryToWeights(weights,mastery);
       itemTypeWeights=excludeFloorAlarmed(weights,floorAlarm);
     }
@@ -196,6 +201,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (carryover.length > 0) return res.status(200).json({ items: carryover });
 
     const requests = buildRequests(mode, difficulty, count, itemTypeWeights);
+    if(presentation==='animated'){
+      const items=selectAnimatedItems(requests,floorAlarm);
+      if(!items.length)return res.status(409).json({error:'No animated stories available for the current skill settings.'});
+      return res.status(200).json({items});
+    }
     const text = await groqChat([{ role: 'user', content: buildPrompt(requests, levels, interests,profileRow) }], {
       temperature: 0.85,
       maxTokens: 4096,

@@ -41,3 +41,8 @@
 .kid-login .login-story h1>span{color:var(--play-purple)}
 @media(max-width:360px){.kid-login .login-story{padding-right:65px}.kid-login .login-story h1{font-size:52px}.kid-login .login-buddy-scene{width:90px;right:0;top:60px}.kid-login .login-buddy-scene .play-buddy{width:90px}}
 @media(min-width:1024px){.kid-app .play-home-header>.play-logo,.kid-app .play-home-header .play-avatar{display:none}.kid-app .play-home-header{justify-content:flex-end}}
+
+.play-format{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 24px}
+.play-format button{border:2px solid #b3c9a7;border-radius:15px;padding:12px 18px;font:800 17px 'Nunito Sans',sans-serif;background:#fffdf4;color:#294d42;cursor:pointer;min-height:48px}
+.play-format button[aria-pressed=true]{background:#285c4d;color:#fff;border-color:#285c4d}
+.play-format p{width:100%;margin:0;font-size:15px;color:#4e6b53}

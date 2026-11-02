@@ -28,12 +28,12 @@ import { JournalFAB } from './components/JournalFAB';
 import { BottomNav } from './components/BottomNav';
 import type { MainTab } from './components/BottomNav';
 import type { LevelSlice } from './adaptiveEngine';
-import type { DifficultyState } from './types';
+import type { DifficultyState, PracticePresentation } from './types';
 import { CarryoverWorkspace } from './carryover/Workspace';
 
 type Page =
   | { tag: 'home' }
-  | { tag: 'practice'; mode: SessionMode; levelSlice: LevelSlice; difficulty: DifficultyState }
+  | { tag: 'practice'; mode: SessionMode; levelSlice: LevelSlice; difficulty: DifficultyState; presentation:PracticePresentation }
   | { tag: 'conversation' }
   | { tag: 'journal' };
 
@@ -103,9 +103,9 @@ export default function App() {
     setMainTab('home');
   };
 
-  const handleStart = async (mode: SessionMode) => {
+  const handleStart = async (mode: SessionMode, presentation:PracticePresentation='animated') => {
     const [levelSlice, difficulty] = await Promise.all([loadLevelSlice(), loadDifficulty()]);
-    setPage({ tag: 'practice', mode, levelSlice, difficulty });
+    setPage({ tag: 'practice', mode, levelSlice, difficulty, presentation });
   };
 
   const handleLogout = async () => {
@@ -202,6 +202,7 @@ export default function App() {
     return (
       <StudentLanguage studentId={session.userId}><div className="kid-zone kid-screen"><Practice
         mode={page.mode}
+        presentation={page.presentation}
         initialLevelSlice={page.levelSlice}
         initialDifficulty={page.difficulty}
         onExit={() => setPage({ tag: 'home' })}

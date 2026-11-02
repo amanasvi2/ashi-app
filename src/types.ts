@@ -1,3 +1,4 @@
+export type PracticePresentation = 'animated' | 'text';
 export type ItemType = 'social' | 'nonverbal' | 'inference';
 export type SessionMode = 'mixed' | 'social' | 'nonverbal' | 'inference';
 export type SupportLevel = 0 | 1 | 2 | 3;
