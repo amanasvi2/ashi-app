@@ -3,7 +3,7 @@ import { sceneForItem } from '../scenes/catalog';
 import {useChildWording} from '../language/useChildWording';
 import { LoadFailure } from '../components/LoadingScreen';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { Item, SessionMode, AnswerResult, SupportLevel, DifficultyState, WordBankOption, ItemType } from '../types';
+import type { Item, SessionMode, AnswerResult, SupportLevel, DifficultyState, WordBankOption, ItemType, PracticePresentation } from '../types';
 import type { SessionRecord } from '../types';
 import type { LevelSlice } from '../adaptiveEngine';
 import { levelReducer } from '../adaptiveEngine';
@@ -396,6 +396,7 @@ function FinishedScreen({ score, maxScore, mode, coinsEarned, journalDone, floor
 // ── Practice ──────────────────────────────────────────────────────────────────
 
 interface Props {
+  presentation?: PracticePresentation;
   mode: SessionMode;
   initialLevelSlice: LevelSlice;
   initialDifficulty: DifficultyState;
@@ -403,7 +404,7 @@ interface Props {
   onComplete: () => void;
 }
 
-export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, onComplete }: Props) {
+export function Practice({ presentation='animated', mode, initialLevelSlice, initialDifficulty, onExit, onComplete }: Props) {
   const words=useChildWording();
   // ── State & refs ──────────────────────────────────────────────────────────
   const [loadFailed,setLoadFailed]=useState(false);
@@ -445,7 +446,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
       const count = pickSessionCount(sessions);
       setHintTokens(coins.hintTokens);
       try {
-        setItems(await generateItems(mode, initialDifficulty, initialLevelSlice.levels, count, interests));
+        setItems(await generateItems(mode, initialDifficulty, initialLevelSlice.levels, count, interests, presentation));
       } catch (err) {
         // A floor-alarmed type is stopped entirely — falling back to
         // hardcoded items would defeat that, so show a paused notice instead.
@@ -686,7 +687,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
       {/* The passage — the hero. A book page, not an app card: no border,
           generous margin, a real measure. */}
       <div className="max-w-[70ch] mx-auto w-full px-4 md:px-6 pt-6 pb-8">
-        {sceneForItem(currentItem) && <AnimatedScene key={currentItem.id} scene={sceneForItem(currentItem)!}/>}
+        {presentation==='animated' && sceneForItem(currentItem) && <AnimatedScene key={currentItem.id} scene={sceneForItem(currentItem)!}/>}
         <HighlightedText
           text={currentItem.scenario}
           speakingText={speakingText}

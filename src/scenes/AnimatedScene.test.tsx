@@ -62,3 +62,15 @@ it('offers a short child-facing preview without adult tour instructions',()=>{
  expect(screen.getByRole('heading',{name:'Watch. Think. Choose.'})).toBeTruthy();expect(screen.queryByText('STOP 1 OF 5')).toBeNull();expect(screen.getByRole('link',{name:'Full demo'}).getAttribute('href')).toBe('/demo');
  window.history.replaceState({},'','/');
 });
+it('offers the full live story library in the unsigned preview',()=>{
+ window.history.replaceState({},'','/demo?stories=1');render(<Walkthrough/>);
+ fireEvent.change(screen.getByRole('combobox',{name:'Story library'}),{target:{value:'13'}});
+ expect(screen.getByRole('heading',{name:'A shaded drawing'})).toBeTruthy();expect(screen.getByRole('region',{name:'Story scene'})).toBeTruthy();
+ expect(screen.queryByRole('status')).toBeNull();window.history.replaceState({},'','/');
+});
+it('restarts playback when switching between two library scenes of the same drawing kind',()=>{
+ vi.useFakeTimers();window.history.replaceState({},'','/demo?stories=1');render(<Walkthrough/>);
+ fireEvent.change(screen.getByRole('combobox',{name:'Story library'}),{target:{value:'10'}});
+ fireEvent.click(screen.getByRole('button',{name:'Next picture'}));fireEvent.click(screen.getByRole('button',{name:'Next picture'}));expect(screen.getByLabelText('Scene part 3 of 3')).toBeTruthy();
+ fireEvent.change(screen.getByRole('combobox',{name:'Story library'}),{target:{value:'12'}});expect(screen.getByLabelText('Scene part 1 of 3')).toBeTruthy();expect(screen.getByText('The library closes at four.')).toBeTruthy();window.history.replaceState({},'','/');
+});

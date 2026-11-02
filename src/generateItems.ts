@@ -1,5 +1,5 @@
 import { callApi } from './api';
-import type { Item, SessionMode, DifficultyState, LevelState } from './types';
+import type { Item, SessionMode, DifficultyState, LevelState, PracticePresentation } from './types';
 
 export async function generateItems(
   mode: SessionMode,
@@ -7,6 +7,7 @@ export async function generateItems(
   levels: LevelState,
   count: number,
   interests: string[] = [],
+  presentation: PracticePresentation = 'animated',
 ): Promise<Item[]> {
   const { items } = await callApi<{ items: Item[] }>('/api/items/generate', {
     mode,
@@ -14,6 +15,7 @@ export async function generateItems(
     levels,
     count,
     interests,
+    presentation,
   });
   return items;
 }

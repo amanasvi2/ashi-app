@@ -32,3 +32,13 @@
 .scene-preview-main .public-answer-list button{font-size:18px;min-height:58px}
 .scene-preview-main .public-demo-panel-head{display:none}
 @media(max-width:420px){.scene-preview-main{padding:0 12px 32px}.scene-preview-main .public-demo-panel{padding:16px}.scene-preview-main>h1{font-size:30px}.scene-preview .public-nav{min-height:88px}}
+.story-person-approach{transform:translateX(35px);transition:transform 1s ease}
+.story-sheet-away{transform:translate(55px,35px);opacity:.3;transition:transform 1s,opacity 1s}
+.story-ball-held{transform:translateX(20px);transition:transform 1s}
+.story-pencil-tap{animation:story-tap .7s ease-in-out 2;transform-origin:239px 132px}
+.story-hands-shake{animation:story-shake .25s ease-in-out 4}
+.scene-paused .story-pencil-tap,.scene-paused .story-hands-shake{animation-play-state:paused}
+@keyframes story-tap{50%{transform:rotate(-12deg)}}
+@keyframes story-shake{50%{transform:translateX(3px)}}
+.scene-stage:has(.story-props){padding-top:84px}
+.scene-library-label{font-size:14px!important;margin-top:14px!important}

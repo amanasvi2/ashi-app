@@ -1,18 +1,21 @@
+import {StoryProps} from './StoryDrawing';
 import {useEffect, useState} from 'react';
 import type {SceneSpec} from './catalog';
 import './scenes.css';
 
-function Person({x,shirt,reach=false}:{x:number;shirt:string;reach?:boolean}) {
+function Person({x,shirt,reach=false,smile=false}:{x:number;shirt:string;reach?:boolean;smile?:boolean}) {
   return <g transform={`translate(${x} 92)`} className="scene-person">
     <circle cy="-22" r="16" fill="#f5e5c9" stroke="#294d42" strokeWidth="3"/>
     <path d="M-5-24h.1M5-24h.1" stroke="#294d42" strokeWidth="3" strokeLinecap="round"/>
-    <path d="M-3-16h6" stroke="#294d42" strokeWidth="2" strokeLinecap="round"/>
+    <path d={smile?'M-5-17q5 6 10 0':'M-3-16h6'} stroke="#294d42" strokeWidth="2" strokeLinecap="round"/>
     <path d="M0-3v49" stroke={shirt} strokeWidth="15" strokeLinecap="round"/>
     <path d="M0 44l-17 38m17-38 17 38" stroke="#294d42" strokeWidth="6" fill="none" strokeLinecap="round"/>
     <path className={reach?'scene-arm scene-arm-reach':'scene-arm'} d={reach?(x<210?'M0 10l-22 25m22-25 82 27':'M0 10l22 25m-22-25-82 27'):'M0 10l-22 25m22-25 22 25'} stroke="#294d42" strokeWidth="5" fill="none" strokeLinecap="round"/>
   </g>;
 }
-function SceneDrawing({kind,beat}:{kind:SceneSpec['kind'];beat:number}) {
+function SceneDrawing({scene,beat}:{scene:SceneSpec;beat:number}) {
+  const {kind,visual}=scene;
+  if(kind==='story'&&visual)return <svg viewBox="0 0 420 230" aria-hidden="true" focusable="false"><path d="M24 192h372" stroke="#bed1b5" strokeWidth="3"/><ellipse cx="210" cy="192" rx="150" ry="12" fill="#dce9d1"/><g className={['waiting','welcome'].includes(visual)&&beat>0?'story-person-approach':''}><Person x={82} shirt="#72ae91"/></g><Person x={326} shirt="#d89871" smile={visual==='welcome'&&beat>0}/><StoryProps visual={visual} beat={beat}/></svg>;
   return <svg viewBox="0 0 420 230" aria-hidden="true" focusable="false">
     <path d="M24 192h372" stroke="#bed1b5" strokeWidth="3"/>
     <ellipse cx="210" cy="192" rx="150" ry="12" fill="#dce9d1"/>
@@ -41,7 +44,7 @@ export function AnimatedScene({scene}:{scene:SceneSpec}) {
   return <section className="animated-scene" aria-label="Story scene">
     <div className="scene-toolbar"><span>Watch the story</span><button type="button" onClick={()=>{setVisible(!visible);setPlaying(false);}}>{visible?'Hide scene':'Show scene'}</button></div>
     {visible&&<><div className={`scene-stage scene-${scene.kind} ${reduced?'scene-still':''} ${playing?'':'scene-paused'}`} role="img" aria-label={scene.label}>
-      <SceneDrawing kind={scene.kind} beat={beat}/>
+      <SceneDrawing scene={scene} beat={beat}/>
       {scene.speech&&beat===2&&<p className="scene-speech">“{scene.speech}”</p>}
     </div><div className="scene-caption"><span>{scene.beats[beat]}</span><span className="scene-count" aria-label={`Scene part ${beat+1} of 3`}>{beat+1}/3</span></div>
     <div className="scene-controls">
