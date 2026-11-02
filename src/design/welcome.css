@@ -1,0 +1,94 @@
+/* The same welcome for kids and adults: warm green, soft edges, a little play. */
+.shared-welcome {
+  --welcome-green: #285c4d;
+  --welcome-ink: #243c35;
+  --welcome-mint: #e6efdf;
+  --welcome-gold: #f4eccb;
+  --welcome-peach: #f3e0cf;
+  --font-serif: 'Fredoka', ui-rounded, sans-serif;
+  --font-sans: 'Nunito Sans', system-ui, sans-serif;
+  color: var(--welcome-ink);
+  font-family: var(--font-sans);
+}
+.welcome-mark { display: inline-flex; align-items: center; gap: 5px; color: #285c4d; font: 600 39px/1 'Fredoka', sans-serif; letter-spacing: -1.7px; }
+.welcome-mark svg { width: 31px; height: 31px; }
+.welcome-mark-dot { color: #b17b52; }
+.ashi-public .public-logo .welcome-mark, .ashi-public .public-logo .welcome-mark > span { color: #285c4d; }
+.ashi-public .public-logo .welcome-mark-dot { color: #b17b52; }
+.welcome-login { max-width: none; background: #f7f8f0; padding: 35px max(5.5vw, calc((100vw - 1150px)/2)) 24px; }
+.welcome-login .login-nav a { text-decoration: none; }
+.welcome-demo-link { font-size: 14px; font-weight: 700; color: #285c4d; }
+.welcome-login .login-layout { grid-template-columns: 1fr 1fr; gap: 9%; max-width: 1150px; width: 100%; margin: auto; padding: 58px 0; }
+.welcome-kicker { font-size: 10px; font-weight: 800; letter-spacing: 1.6px; color: #526b57; }
+.welcome-login .login-story h1 { font: 500 clamp(48px, 5vw, 68px)/1.07 'Fredoka', sans-serif; letter-spacing: -1.5px; margin: 22px 0; }
+.welcome-login .login-story h1 span { color: #4f7957; }
+.welcome-login .login-story > p { font-size: 19px; line-height: 1.5; margin: 0; }
+.welcome-scene { display: flex; align-items: center; gap: 5px; margin-top: 32px; min-height: 200px; }
+.welcome-buddy { --play-ink: #243c35; --play-mint: #b7d9b9; --play-yellow: #edda83; --play-coral: #d9916e; width: 200px; flex-shrink: 0; }
+.welcome-buddy .play-buddy { width: 100%; height: auto; }
+.welcome-speech { background: #f4eccb; padding: 25px 24px; border: 1.5px solid #bbcba9; border-radius: 20px 20px 20px 4px; font-size: 17px; line-height: 1.6; font-weight: 700; transform: rotate(3deg); position: relative; }
+.welcome-speech > span { position: absolute; right: -13px; top: -30px; font-size: 47px; color: #ae704c; }
+.welcome-login .login-card { border: 1.5px solid #a6b99e; box-shadow: 5px 6px 0 #d9e5d0; border-radius: 25px; max-width: 460px; padding: 35px; }
+.welcome-login .login-card h2 { font: 500 36px/1.15 'Fredoka', sans-serif; letter-spacing: -.6px; margin: 13px 0 20px; }
+.welcome-login .login-role-switch { border: 1px solid #d3dfcb; border-radius: 14px; margin: 22px 0; padding: 5px; background: #f3f6eb; }
+.welcome-login .login-role-switch button { font-size: 14px; font-weight: 800; min-height: 45px; font-family: inherit; }
+.welcome-login .login-role-switch button[aria-pressed=true] { color: white; background: #285c4d; box-shadow: 0 2px 0 #193f34; }
+.welcome-login .login-card label { font-size: 14px; font-weight: 800; color: #344f40; }
+.welcome-login .login-card input { min-height: 52px; border: 1px solid #b8c9ae; background: #fafbf5; font: 400 17px/1.4 'Nunito Sans', sans-serif; }
+.welcome-login .login-card button[type=submit] { min-height: 52px; font-size: 17px; font-weight: 800; border: 1px solid #214b3d; box-shadow: 0 3px 0 #d2dfc9; border-radius: 13px; }
+.welcome-login .login-privacy { font-size: 12px; line-height: 1.6; margin-top: 25px; padding-top: 18px; }
+.welcome-login .login-footer { max-width: 1150px; width: 100%; margin: auto; font-size: 12px; }
+.welcome-login :focus-visible { outline: 3px solid #a76236; outline-offset: 4px; }
+.ashi-public.shared-welcome { font-family: 'Nunito Sans', system-ui, sans-serif; }
+.ashi-public.shared-welcome h1, .ashi-public.shared-welcome h2 { font-family: 'Fredoka', ui-rounded, sans-serif; font-weight: 500; }
+.ashi-public.shared-welcome .public-hero h1 { font-size: clamp(49px, 5.2vw, 69px); letter-spacing: -1.5px; line-height: 1.1; }
+.ashi-public.shared-welcome .public-hero h1 > span { color: #4f7957; }
+.ashi-public.shared-welcome .public-lede { font-size: 19px; line-height: 1.65; max-width: 365px; }
+.ashi-public.shared-welcome .public-hero-art { background: #e6efdf; border-radius: 100px 100px 28px 28px; }
+.ashi-public.shared-welcome .public-sample { border: 1.5px solid #a6b99e; box-shadow: 5px 6px 0 #cfdcc5; }
+.ashi-public.shared-welcome .public-sample-answer { border: 1px solid #adc59b; background: #eaf2dc; }
+.ashi-public.shared-welcome .public-parent-note { border: 1px solid #c7d6bd; box-shadow: 3px 4px 0 #d9e5d0; }
+.ashi-public.shared-welcome .public-button, .ashi-public.shared-welcome .public-outline-button { border-radius: 13px; font-family: inherit; font-weight: 800; box-shadow: 0 3px 0 #d2dfc9; }
+.ashi-public.shared-welcome .public-text-link, .ashi-public.shared-welcome .public-tour-tabs button { font-family: inherit; }
+.ashi-public.shared-welcome .public-nav nav { font-weight: 800; }
+.ashi-public.shared-welcome .public-section h2, .ashi-public.shared-welcome .public-audience h2 { font-size: 39px; line-height: 1.14; letter-spacing: -.8px; }
+.ashi-public.shared-welcome .public-last h2 { font-size: 44px; letter-spacing: -1px; }
+.ashi-public.shared-welcome .public-process-art { border: 1px solid #d4dfca; }
+.ashi-public.shared-welcome .public-section { padding-top: 72px; padding-bottom: 72px; }
+.ashi-public.shared-welcome .public-demo-panel { border-color: #a6b99e; box-shadow: 4px 5px 0 #d9e5d0; }
+.ashi-public.shared-welcome .public-demo-intro h1 { font-size: 49px; letter-spacing: -1px; }
+.ashi-public.shared-welcome em { font-style: normal; }
+@media(max-width:900px) {
+  .welcome-login .login-layout { gap: 6%; }
+  .welcome-login .login-card { padding: 27px; }
+  .welcome-buddy { width: 155px; }
+  .welcome-speech { padding: 20px 18px; font-size: 15px; }
+}
+@media(max-width:720px) {
+  .welcome-login { padding: 25px 22px; }
+  .welcome-login .login-layout { display: flex; flex-direction: column; gap: 28px; padding: 35px 0; }
+  .welcome-login .login-story { position: relative; padding-right: 95px; max-width: none; }
+  .welcome-login .login-story h1 { font-size: 43px; letter-spacing: -.9px; margin: 15px 0; }
+  .welcome-login .login-story > p { font-size: 15px; max-width: 220px; }
+  .welcome-scene { position: absolute; right: -8px; bottom: -5px; width: 112px; min-height: 120px; margin: 0; }
+  .welcome-buddy { width: 112px; }
+  .welcome-speech { display: none; }
+  .welcome-login .login-card { max-width: none; padding: 27px; }
+  .welcome-login .login-card h2 { font-size: 32px; }
+  .welcome-login .login-footer > span:last-child { display: block; }
+}
+@media(max-width:650px) {
+  .ashi-public.shared-welcome .public-hero h1 { font-size: 45px; letter-spacing: -1.3px; }
+  .ashi-public.shared-welcome .public-lede { font-size: 17px; max-width: 310px; }
+  .ashi-public.shared-welcome .public-section h2, .ashi-public.shared-welcome .public-audience h2 { font-size: 33px; }
+  .ashi-public.shared-welcome .public-last h2 { font-size: 35px; }
+  .ashi-public.shared-welcome .public-section { padding-top: 48px; padding-bottom: 48px; }
+  .ashi-public.shared-welcome .public-demo-intro h1 { font-size: 43px; }
+}
+@media(max-width:360px) {
+  .welcome-login .login-story { padding-right: 70px; }
+  .welcome-login .login-story h1 { font-size: 37px; }
+  .welcome-scene, .welcome-buddy { width: 87px; }
+  .welcome-login .login-card { padding: 22px; }
+  .welcome-login .login-role-switch button { font-size: 12px; }
+}
