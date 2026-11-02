@@ -1,0 +1,26 @@
+import {useEffect,useRef,useState} from 'react';
+import {WelcomeMark} from '../design/WelcomeMark';
+import {RECOVERY_KEY,recoveryServices,type RecoveryServices} from './recoveryServices';
+export function RecoveryPage({incoming=false,expired=false,services=recoveryServices}:{incoming?:boolean;expired?:boolean;services?:RecoveryServices}){
+ const [phase,setPhase]=useState<'checking'|'request'|'ready'|'done'>('checking');const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [confirm,setConfirm]=useState('');const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');const alive=useRef(false);const authorized=useRef<string|null>(null);const finished=useRef(false);
+ useEffect(()=>{
+  alive.current=true;
+  let stopped=false;let accepted=false;
+  const accept=(id:string)=>{if(stopped)return;accepted=true;authorized.current=id;try{sessionStorage.setItem(RECOVERY_KEY,id);}catch{/* reload recovery may require a new link */}window.history.replaceState({},'','/account-recovery');setError('');setPhase('ready');};
+  if(expired){try{sessionStorage.removeItem(RECOVERY_KEY);}catch{/* unavailable */}window.history.replaceState({},'','/account-recovery');setPhase('request');setError('That reset link is invalid or expired. Request a new one.');return()=>{alive.current=false;};}
+  const stop=services.watch((event,id)=>{if(event==='PASSWORD_RECOVERY'&&id)accept(id);if(event==='SIGNED_OUT'){try{sessionStorage.removeItem(RECOVERY_KEY);}catch{/* unavailable */}if(!stopped&&!finished.current){accepted=false;authorized.current=null;setPhase('request');}}});
+  void services.session().then(async id=>{if(stopped||accepted)return;let saved:string|null=null;try{saved=sessionStorage.getItem(RECOVERY_KEY);}catch{/* unavailable */}if(id&&(incoming||saved===id)){const verified=await services.verify();if(verified!==id)throw new Error('Account changed. Request a new reset link.');accept(id);}else{setPhase('request');if(incoming)setError('That reset link is invalid or expired. Request a new one.');}}).catch(()=>{if(!stopped){setPhase('request');setError('That reset link is invalid or expired. Request a new one.');}});
+  return()=>{stopped=true;alive.current=false;stop();};
+ },[incoming,expired,services]);
+ return <main className="shared-welcome welcome-login recovery-page"><header className="login-nav"><a href="/" aria-label="ASHI home"><WelcomeMark/></a><a href="/login?role=parent">Back to sign in</a></header><section className="login-card recovery-card"><span className="welcome-kicker">PARENT ACCOUNT</span><h1>{phase==='done'?'Password updated.':'Reset your password.'}</h1>
+ {phase==='checking'?<p role="status">Checking your reset link…</p>:phase==='done'?<><p>{notice||'Sign in with your new password.'}</p>{error&&<button className="ashi-button" onClick={async()=>{try{await services.logout();setError('');setNotice('Sign in with your new password.');}catch{setError('Please try signing out again.');}}}>Try signing out again</button>}<a className="ashi-button ashi-button-primary" href="/login?role=parent">Go to sign in</a></>:<form className="space-y-4" onSubmit={async e=>{
+  e.preventDefault();if(busy)return;setError('');setNotice('');
+  if(phase==='ready'&&(password.length<8||password!==confirm)){setError(password.length<8?'Use at least 8 characters.':'The passwords do not match.');return;}
+  setBusy(true);try{if(phase==='request'){await services.request(email);if(alive.current)setNotice('If an account uses that email, a reset link will arrive. Check your spam folder too.');}else{if(await services.verify()!==authorized.current)throw new Error('The account changed. Request a new reset link.');await services.update(password);finished.current=true;try{sessionStorage.removeItem(RECOVERY_KEY);}catch{/* unavailable */}if(alive.current){setPassword('');setConfirm('');setPhase('done');}try{await services.logout();}catch{if(alive.current){setNotice('Your password was updated. Sign out before signing in again.');setError('Sign out did not finish. Please retry.');}}}}catch(e){if(alive.current)setError(e instanceof Error?e.message:'That did not work. Please try again.');}finally{if(alive.current)setBusy(false);}
+ }}>
+ {phase==='request'?<><p>Enter the email you use for your parent or clinician account.</p><label htmlFor="recovery-email">Email</label><input id="recovery-email" type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} disabled={busy}/></>:<><p>Choose a new password with at least 8 characters.</p><label htmlFor="recovery-password">New password</label><input id="recovery-password" type="password" autoComplete="new-password" minLength={8} required value={password} onChange={e=>setPassword(e.target.value)} disabled={busy}/><label htmlFor="recovery-confirm">Confirm new password</label><input id="recovery-confirm" type="password" autoComplete="new-password" minLength={8} required value={confirm} onChange={e=>setConfirm(e.target.value)} disabled={busy}/></>}
+ <button type="submit" disabled={busy} className="ashi-button ashi-button-primary">{busy?'Please wait':phase==='request'?'Send reset link':'Save new password'}</button>
+ </form>}
+ {notice&&phase!=='done'&&<p role="status">{notice}</p>}{error&&<p role="alert">{error}</p>}
+ </section></main>;
+}

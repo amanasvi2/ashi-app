@@ -1,0 +1,11 @@
+import {it,expect,vi,afterEach} from 'vitest';
+import {render,screen,cleanup,act} from '@testing-library/react';
+const m=vi.hoisted(()=>({callback:undefined as undefined|((event:string,session:unknown)=>void),get:vi.fn(),stop:vi.fn()}));
+vi.mock('./supabase',()=>({supabase:{auth:{onAuthStateChange:(cb:typeof m.callback)=>{m.callback=cb;return {data:{subscription:{unsubscribe:m.stop}}};}}}}));
+vi.mock('./auth',()=>({getSession:m.get,signOut:async()=>{}}));
+vi.mock('./pages/Home',()=>({Home:({username}:{username:string})=><p>Child home {username}</p>}));
+vi.mock('./storage',async original=>({...await original<typeof import('./storage')>(),journalWrittenToday:async()=>false,loadStudentProfile:async()=>null}));
+import App from './App';
+afterEach(()=>{cleanup();vi.clearAllMocks();});
+it('clears cached learner screens when an external signout event arrives',async()=>{m.get.mockResolvedValue({role:'kid',userId:'child-a',username:'A'});render(<App/>);await screen.findByText('Child home A');act(()=>m.callback?.('SIGNED_OUT',null));await screen.findByRole('link',{name:/Try the demo/});expect(screen.queryByText('Child home A')).toBeNull();});
+it('loads the new account after an external account switch and unsubscribes',async()=>{m.get.mockResolvedValueOnce({role:'kid',userId:'child-a',username:'A'}).mockResolvedValueOnce({role:'kid',userId:'child-b',username:'B'});const view=render(<App/>);await screen.findByText('Child home A');act(()=>m.callback?.('SIGNED_IN',{user:{id:'child-b'}}));expect(screen.queryByText('Child home A')).toBeNull();await screen.findByText('Child home B');view.unmount();expect(m.stop).toHaveBeenCalled();});
