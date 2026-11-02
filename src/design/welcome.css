@@ -92,3 +92,11 @@
   .welcome-login .login-card { padding: 22px; }
   .welcome-login .login-role-switch button { font-size: 12px; }
 }
+.recovery-page{min-height:100vh}
+.recovery-card{max-width:460px;margin:65px auto;background:#fff;padding:30px;border:1.5px solid #a6b99e;border-radius:25px;box-shadow:5px 6px 0 #d9e5d0}
+.recovery-card h1{font:500 36px/1.15 'Fredoka',sans-serif;margin:14px 0 22px}
+.recovery-card p{font-size:16px;line-height:1.5;margin:14px 0}
+.recovery-card label{display:block;font-size:14px;font-weight:800}
+.recovery-card input{display:block;width:100%;min-height:50px;border:1px solid #b8c9ae;background:#fafbf5;border-radius:12px;padding:10px;font-size:17px}
+.recovery-card form>button{width:100%;min-height:48px}
+@media(max-width:500px){.recovery-card{margin:35px auto;padding:24px}.recovery-card h1{font-size:31px}}

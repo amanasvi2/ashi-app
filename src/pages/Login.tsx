@@ -23,7 +23,7 @@ function Field({ label, id, type = 'text', value, onChange, autoComplete }: {
   );
 }
 
-function ParentAuth({ onLogin }: { onLogin: (s: Session) => void }) {
+function ParentAuth({ onLogin,onMode }: { onLogin: (s: Session) => void;onMode:(mode:'signin'|'signup')=>void }) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,6 +65,7 @@ function ParentAuth({ onLogin }: { onLogin: (s: Session) => void }) {
           </div>
         </div>
       )}
+      {mode==='signin'&&<a href="/account-recovery" className="block text-sm text-accent underline underline-offset-4">Forgot your password?</a>}
       {error && (
         <p role="alert" className="flex items-start gap-2 text-sm text-ink">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0">
@@ -83,7 +84,7 @@ function ParentAuth({ onLogin }: { onLogin: (s: Session) => void }) {
       </button>
       <button
         type="button"
-        onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(''); }}
+        onClick={() => { const next=mode==='signin'?'signup':'signin';setMode(next);onMode(next);setError(''); }}
         className="w-full text-center text-xs text-muted hover:text-ink transition-colors"
       >
         {mode === 'signin' ? 'New here? Create an account' : 'Already have an account? Sign in'}
@@ -135,7 +136,8 @@ function KidAuth({ onLogin }: { onLogin: (s: Session) => void }) {
 }
 
 export function Login({ onLogin }: { onLogin: (session: Session) => void }) {
-  const [tab, setTab] = useState<'parent' | 'kid'>('kid');
+  const [parentMode,setParentMode]=useState<'signin'|'signup'>('signin');
+  const [tab, setTab] = useState<'parent' | 'kid'>(()=>new URLSearchParams(window.location.search).get('role')==='parent'?'parent':'kid');
 
   return <main className="login-page shared-welcome welcome-login">
     <header className="login-nav"><a href="/" aria-label="ASHI home"><WelcomeMark/></a><a className="welcome-demo-link" href="/demo">Try the demo <span aria-hidden="true">↗</span></a></header>
@@ -147,9 +149,9 @@ export function Login({ onLogin }: { onLogin: (session: Session) => void }) {
         <div className="welcome-scene"><div className="welcome-buddy"><PlayBuddy/></div><div className="welcome-speech">Find a clue.<br/>Try something new.<span aria-hidden="true">✳</span></div></div>
       </section>
       <section className="login-card" aria-labelledby="login-heading">
-        <span className="welcome-kicker">COME ON IN</span><h2 id="login-heading">Welcome back.</h2>
-        <div className="login-role-switch" aria-label="Choose account type"><button type="button" aria-pressed={tab==='kid'} onClick={()=>setTab('kid')}>Student</button><button type="button" aria-pressed={tab==='parent'} onClick={()=>setTab('parent')}>Parent or clinician</button></div>
-        {tab==='kid'?<KidAuth onLogin={onLogin}/>:<ParentAuth onLogin={onLogin}/>}
+        <span className="welcome-kicker">COME ON IN</span><h2 id="login-heading">{tab==='parent'&&parentMode==='signup'?'Create your account.':'Welcome back.'}</h2>
+        <div className="login-role-switch" aria-label="Choose account type"><button type="button" aria-pressed={tab==='kid'} onClick={()=>setTab('kid')}>Student</button><button type="button" aria-pressed={tab==='parent'} onClick={()=>{setParentMode('signin');setTab('parent');}}>Parent or clinician</button></div>
+        {tab==='kid'?<KidAuth onLogin={onLogin}/>:<ParentAuth onLogin={onLogin} onMode={setParentMode}/>}
         <p className="login-privacy">{tab==='kid'?'Alex is a computer. An adult can read your chats.':'Alex is a computer partner. You can review your learners’ chats.'}</p>
       </section>
     </div>

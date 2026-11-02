@@ -1,3 +1,4 @@
+import {RECOVERY_KEY} from './account/recoveryLocation';
 import {clearAllDescriptionDrafts} from './pages/onboarding/draftStorage';
 import { supabase } from './supabase';
 import type { OwnerType } from './ownerCaps';
@@ -96,4 +97,5 @@ export async function signOut(): Promise<void> {
   const {error}=await supabase.auth.signOut();
   if(error)throw new Error('Could not sign out. Please try again.');
   clearAllDescriptionDrafts();
+  try{sessionStorage.removeItem(RECOVERY_KEY);}catch{/* storage unavailable */}
 }

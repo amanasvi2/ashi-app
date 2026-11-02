@@ -1,8 +1,9 @@
-import {clearLegacyDescriptionDraft} from './pages/onboarding/draftStorage';
+import {supabase} from './supabase';
+import {clearLegacyDescriptionDraft,clearAllDescriptionDrafts} from './pages/onboarding/draftStorage';
 import {Landing} from './public/Landing';
 import {StudentLanguage} from './language/ChildLanguage';
 import { PlayLogo } from './design/PlayArt';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SessionMode } from './types';
 import { getSession, signOut } from './auth';
 import type { Session } from './auth';
@@ -65,9 +66,18 @@ export default function App() {
   const [showProfile, setShowProfile] = useState(false);
   const [carryoverStudent, setCarryoverStudent] = useState<{id:string;name:string}|null>(null);
 
+  const sessionId=useRef<string|null>(null);sessionId.current=session?.userId??null;
   useEffect(() => {
-    clearLegacyDescriptionDraft();
-    getSession().then(s => { setSessionState(s); setAuthLoading(false); }).catch(()=>{setStartupFailed(true);setAuthLoading(false);});
+    clearLegacyDescriptionDraft();let active=true;let run=0;let timer:ReturnType<typeof setTimeout>|undefined;
+    const clearViews=()=>{setProfiles([]);setStudents([]);setSelectedStudentId(null);setPendingLoginProfile(null);setAddingStudent(false);setCarryoverStudent(null);setShowProfile(false);setPage({tag:'home'});setMainTab('home');setOwnerLoadedFor(null);};
+    const load=()=>{const id=++run;setAuthLoading(true);setStartupFailed(false);setSessionState(null);clearViews();getSession().then(s=>{if(active&&id===run){setSessionState(s);setAuthLoading(false);}}).catch(()=>{if(active&&id===run){setStartupFailed(true);setAuthLoading(false);}});};
+    load();
+    const subscription=supabase.auth?.onAuthStateChange?.((event,next)=>{
+      if(!active)return;
+      if(event==='SIGNED_OUT'){setStartupFailed(false);run++;clearTimeout(timer);setSessionState(null);clearViews();clearAllDescriptionDrafts();setAuthLoading(false);}
+      else if(event==='SIGNED_IN'&&next&&next.user.id!==sessionId.current){run++;setSessionState(null);setAuthLoading(true);clearViews();clearTimeout(timer);timer=setTimeout(load,0);}
+    });
+    return()=>{active=false;run++;clearTimeout(timer);subscription?.data.subscription.unsubscribe();};
   }, []);
 
   useEffect(() => {
@@ -101,6 +111,7 @@ export default function App() {
 
   const handleLogin = (s: Session) => {
     setSessionState(s);
+    setCarryoverStudent(null);setShowProfile(false);
     setPage({ tag: 'home' });
     setMainTab('home');
   };
@@ -118,6 +129,7 @@ export default function App() {
     setSelectedStudentId(null);
     setPendingLoginProfile(null);
     setAddingStudent(false);
+    setCarryoverStudent(null);setShowProfile(false);
     setPage({ tag: 'home' });
     setMainTab('home');
   };
