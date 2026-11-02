@@ -1,3 +1,5 @@
+import { AnimatedScene } from '../scenes/AnimatedScene';
+import { sceneForItem } from '../scenes/catalog';
 import {useChildWording} from '../language/useChildWording';
 import { LoadFailure } from '../components/LoadingScreen';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
@@ -684,6 +686,7 @@ export function Practice({ mode, initialLevelSlice, initialDifficulty, onExit, o
       {/* The passage — the hero. A book page, not an app card: no border,
           generous margin, a real measure. */}
       <div className="max-w-[70ch] mx-auto w-full px-4 md:px-6 pt-6 pb-8">
+        {sceneForItem(currentItem) && <AnimatedScene key={currentItem.id} scene={sceneForItem(currentItem)!}/>}
         <HighlightedText
           text={currentItem.scenario}
           speakingText={speakingText}
