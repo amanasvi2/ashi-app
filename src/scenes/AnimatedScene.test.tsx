@@ -52,9 +52,9 @@ it('keeps scene speech verbatim in the corresponding story without revealing the
 });
 it('switches all three animated questions and clears old answers and clues',()=>{
  render(<Walkthrough/>);fireEvent.click(screen.getByRole('button',{name:/A They may want/}));fireEvent.click(screen.getByRole('button',{name:'Show me a clue'}));
- fireEvent.click(screen.getByRole('button',{name:'Share scissors',exact:true}));expect(screen.getByRole('heading',{name:'What is the problem?'})).toBeTruthy();expect(screen.queryByRole('status')).toBeNull();expect(screen.getByRole('button',{name:'Show me a clue'})).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Share scissors'}));expect(screen.getByRole('heading',{name:'What is the problem?'})).toBeTruthy();expect(screen.queryByRole('status')).toBeNull();expect(screen.getByRole('button',{name:'Show me a clue'})).toBeTruthy();
  fireEvent.click(screen.getByRole('button',{name:/A Both friends/}));expect(screen.getByRole('status').textContent).toContain('sharing');
- fireEvent.click(screen.getByRole('button',{name:'A quiet minute',exact:true}));fireEvent.click(screen.getByRole('button',{name:/A Would you like/}));expect(screen.getByRole('status').textContent).toContain('what the friend needs');
+ fireEvent.click(screen.getByRole('button',{name:'A quiet minute'}));fireEvent.click(screen.getByRole('button',{name:/A Would you like/}));expect(screen.getByRole('status').textContent).toContain('what the friend needs');
  fireEvent.click(screen.getByRole('button',{name:/Reset demo/}));expect(screen.getByRole('heading',{name:'Room for one more?'})).toBeTruthy();expect(screen.queryByRole('status')).toBeNull();
 });
 it('offers a short child-facing preview without adult tour instructions',()=>{
