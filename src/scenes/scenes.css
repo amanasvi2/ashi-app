@@ -1,0 +1,34 @@
+.animated-scene{background:#f0f5e8;border:1.5px solid #bbccb2;border-radius:22px;overflow:hidden;color:#294d42;margin:18px 0 24px;font-family:'Nunito Sans',system-ui,sans-serif}
+.scene-toolbar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;font-size:14px;font-weight:800;gap:12px}
+.scene-toolbar button,.scene-controls button{font:700 13px/1.3 'Nunito Sans',sans-serif;cursor:pointer;color:#294d42;border:1px solid #afc4a6;background:#fffef8;border-radius:10px;padding:9px 12px;min-height:40px}
+.animated-scene button:focus-visible{outline:3px solid #a76236;outline-offset:2px}
+.animated-scene button:disabled{opacity:.45;cursor:default}
+.scene-stage{position:relative;background:linear-gradient(#fafbf2,#e5efda);padding-top:54px}
+.scene-stage svg{display:block;width:100%;max-height:240px}
+.scene-speech{position:absolute;top:6px;left:12%;right:12%;border:1.5px solid #8fa680;border-radius:16px 16px 16px 4px;padding:9px 12px;margin:0!important;background:#fffdf4;font-size:clamp(15px,3vw,19px)!important;line-height:1.3!important;text-align:center;font-weight:800}
+.scene-caption{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 16px;font-size:16px;line-height:1.4;min-height:68px;border-top:1px solid #d1dec7}
+.scene-count{font-size:12px;white-space:nowrap;color:#567348}
+.scene-controls{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 12px}
+.scene-controls button:first-child{background:#285c4d;color:#fff}
+.scene-arrival{transform:translateX(0);transition:transform 1.2s ease-in-out}
+.scene-arrived{transform:translateX(65px)}
+.scene-reaching-left{transform:rotate(-10deg);transform-origin:102px 174px;transition:transform .9s ease}
+.scene-reaching-right{transform:rotate(10deg);transform-origin:318px 174px;transition:transform .9s ease}
+.scene-game-piece{transition:transform .9s ease}
+.scene-piece-down{transform:translate(58px,20px)}
+.scene-still *{transition:none!important}
+.scene-samples{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.scene-samples button{border:1px solid #b0c4a7;background:#fffdf4;color:#294d42;border-radius:12px;padding:9px 12px;font:700 14px 'Nunito Sans',sans-serif;min-height:42px;cursor:pointer}
+.scene-samples button[aria-pressed=true]{background:#285c4d;color:#fff}
+.public-demo-practice .public-demo-buddy{display:none}
+@media(prefers-reduced-motion:reduce){.animated-scene *{transition:none!important;animation:none!important}}
+@media(max-width:420px){.scene-controls button{padding:8px;font-size:12px}.scene-caption{font-size:15px}.scene-toolbar{padding:10px 12px}}
+.scene-preview-main{max-width:660px;margin:0 auto;padding:8px 22px 50px}
+.scene-preview-main>h1{font-size:36px;margin:12px 0 4px;letter-spacing:-.7px}
+.scene-preview-main>p{font-size:16px;margin:8px 0 20px}
+.scene-preview-main .public-demo-panel{padding:24px}
+.scene-preview-main .public-story{font-size:18px;line-height:1.5}
+.scene-preview-main h4{font-family:'Fredoka',sans-serif;font-size:24px;font-weight:500;margin:20px 0 14px}
+.scene-preview-main .public-answer-list button{font-size:18px;min-height:58px}
+.scene-preview-main .public-demo-panel-head{display:none}
+@media(max-width:420px){.scene-preview-main{padding:0 12px 32px}.scene-preview-main .public-demo-panel{padding:16px}.scene-preview-main>h1{font-size:30px}.scene-preview .public-nav{min-height:88px}}

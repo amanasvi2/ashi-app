@@ -19,3 +19,13 @@ it('shows the paused state on a floor alarm rather than falling back to practice
 it('still offers fallback items when generation has an ordinary connection failure',async()=>{m.generate.mockRejectedValue(new Error('Offline'));render(<Practice mode="inference" initialLevelSlice={initialLevelState} initialDifficulty={{social:1,nonverbal:1,inference:1}} onExit={()=>{}} onComplete={()=>{}}/>);await screen.findAllByRole('button',{name:'Read aloud'});expect(screen.queryByText('This practice is paused for now.')).toBeNull();});
 
 it('leaves failed typed evaluation unscored and allows retry without recording an attempt',async()=>{vi.useFakeTimers();m.evaluate.mockRejectedValueOnce(new Error('Your answer has not been scored.')).mockResolvedValueOnce({result:'correct',feedback:'That fits the situation.'});render(<Practice mode="social" initialLevelSlice={{...initialLevelState,levels:{social:0,nonverbal:0,inference:0}}} initialDifficulty={{social:1,nonverbal:1,inference:1}} onExit={()=>{}} onComplete={()=>{}}/>);await act(async()=>{});await act(async()=>vi.advanceTimersByTime(20000));fireEvent.change(screen.getByPlaceholderText('Type your answer here'),{target:{value:'Ask if the classmate wants a turn.'}});fireEvent.click(screen.getByRole('button',{name:'Check my answer'}));await act(async()=>{});expect(screen.getByRole('alert').textContent).toContain('has not been scored');expect(m.recordAttempt).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Check my answer'}));await act(async()=>{});expect(m.recordAttempt).toHaveBeenCalledOnce();expect(screen.queryByRole('alert')).toBeNull();});
+
+it('adds a story-matched scene without changing the adaptive answer format',async()=>{
+ const {ITEMS}=await import('../items');m.generate.mockResolvedValue([ITEMS.find(i=>i.id==='s1')]);
+ render(<Practice mode="social" initialLevelSlice={initialLevelState} initialDifficulty={{social:1,nonverbal:1,inference:1}} onExit={()=>{}} onComplete={()=>{}}/>);
+ await screen.findByRole('region',{name:'Story scene'});expect(await screen.findByRole('button',{name:/both friends need the same scissors/})).toBeTruthy();expect(screen.queryByPlaceholderText('Type your answer here')).toBeNull();
+});
+it('does not attach a guessed animation to generated or carryover stories',async()=>{
+ m.generate.mockResolvedValue([{...item,source:'carryover'}]);render(<Practice mode="social" initialLevelSlice={initialLevelState} initialDifficulty={{social:1,nonverbal:1,inference:1}} onExit={()=>{}} onComplete={()=>{}}/>);
+ await screen.findByRole('button',{name:/Offer a turn/});expect(screen.queryByRole('region',{name:'Story scene'})).toBeNull();
+});
