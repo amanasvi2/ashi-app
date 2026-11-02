@@ -2,6 +2,7 @@
 @import "./tokens.css";
 @import "./design/design.css";
 @import "./design/kid.css";
+@import "./design/welcome.css";
 
 @theme {
   --animate-soundbar: soundbar 0.6s ease-in-out infinite;
